@@ -237,7 +237,8 @@ const SettingsPage = () => {
         email: user.email || '',
         phone: user.phone || '',
         country: user.country || '',
-        bio: user.bio || ''
+        bio: user.bio || '',
+        avatar: user.avatar || ''
       });
     }
   }, [user]);
@@ -247,57 +248,18 @@ const SettingsPage = () => {
     applyTheme(displayPrefs.theme);
   }, [displayPrefs.theme]);
 
-  const loadUserData = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate API call to load user data
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data - in real app this would come from API
+  const loadUserData = () => {
+    const { user } = useAuth();
+    if (user) {
       setSettingsData({
-        firstName: 'John',
-        lastName: 'Trader',
-        email: user?.email || '',
-        phone: '+1 (555) 123-4567',
-        country: 'United States',
-        bio: 'Professional crypto trader with 5+ years of experience.'
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        country: user.country || '',
+        bio: user.bio || '',
+        avatar: user.avatar || ''
       });
-      
-      setSecuritySettings({
-        twoFactorEnabled: true,
-        withdrawalWhitelist: false,
-        antiPhishingCode: true,
-        deviceVerification: true
-      });
-      
-      setNotificationPrefs({
-        emailNotifications: true,
-        pushNotifications: true,
-        tradingAlerts: true
-      });
-      
-      setDisplayPrefs({
-        theme: 'dark',
-        language: 'en',
-        currency: 'USD',
-        timezone: 'UTC'
-      });
-      
-      setKycSettings({
-        level1: { completed: false, status: 'pending' },
-        level2: { completed: false, status: 'pending' },
-        level3: { completed: false, status: 'pending' }
-      });
-      
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user data",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -871,7 +833,12 @@ const SettingsPage = () => {
                   
                   <div>
                     <Label htmlFor="phone">{t('phone')}</Label>
-                    <Input id="phone" placeholder="+1 (555) 123-4567" value={settingsData.phone} onChange={(e) => setSettingsData({...settingsData, phone: e.target.value})} />
+                    <Input 
+                      id="phone" 
+                      placeholder="Enter your phone number" 
+                      value={settingsData.phone} 
+                      onChange={(e) => setSettingsData({...settingsData, phone: e.target.value})} 
+                    />
                   </div>
                   
                   <div>

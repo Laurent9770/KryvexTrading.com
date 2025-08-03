@@ -40,75 +40,49 @@ export interface UserWallet {
   lastUpdated: string;
 }
 
-class WalletService {
+export class WalletService {
   private withdrawalRequests: Map<string, WithdrawalRequest> = new Map();
-  private walletTransactions: Map<string, WalletTransaction> = new Map();
   private userWallets: Map<string, UserWallet> = new Map();
+  private listeners: Map<string, Function[]> = new Map();
 
   constructor() {
-    this.initializeMockData();
+    // Initialize with empty state - no mock data
+    this.loadPersistedData();
   }
 
-  private initializeMockData() {
-    // Initialize some mock withdrawal requests
-    const mockRequests: WithdrawalRequest[] = [
-      {
-        id: 'withdraw-1',
-        userId: 'user-1',
-        username: 'trader1',
-        userEmail: 'trader1@example.com',
-        amount: 500,
-        asset: 'USDT',
-        blockchain: 'TRC20',
-        walletAddress: 'TQn9Y2khDD95GJdQKj8J9X9Y2khDD95GJdQK',
-        status: 'pending',
-        requestDate: new Date().toISOString(),
-        remarks: 'Withdrawal for trading'
-      },
-      {
-        id: 'withdraw-2',
-        userId: 'user-2',
-        username: 'trader2',
-        userEmail: 'trader2@example.com',
-        amount: 1000,
-        asset: 'BTC',
-        blockchain: 'Bitcoin',
-        walletAddress: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-        status: 'approved',
-        requestDate: new Date(Date.now() - 86400000).toISOString(),
-        processedDate: new Date().toISOString(),
-        processedBy: 'admin@kryvex.com',
-        txHash: '0x1234567890abcdef'
+  private loadPersistedData() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const savedRequests = localStorage.getItem('withdrawalRequests');
+        const savedWallets = localStorage.getItem('userWallets');
+        
+        if (savedRequests) {
+          const requests = JSON.parse(savedRequests);
+          this.withdrawalRequests = new Map(Object.entries(requests));
+        }
+        
+        if (savedWallets) {
+          const wallets = JSON.parse(savedWallets);
+          this.userWallets = new Map(Object.entries(wallets));
+        }
       }
-    ];
+    } catch (error) {
+      console.warn('Error loading persisted wallet data:', error);
+    }
+  }
 
-    mockRequests.forEach(request => {
-      this.withdrawalRequests.set(request.id, request);
-    });
-
-    // Initialize mock user wallets
-    const mockWallets: UserWallet[] = [
-      {
-        userId: 'user-1',
-        username: 'trader1',
-        email: 'trader1@example.com',
-        fundingWallet: { USDT: 2000, BTC: 0.05 },
-        tradingWallet: { USDT: 1000, BTC: 0.02 },
-        lastUpdated: new Date().toISOString()
-      },
-      {
-        userId: 'user-2',
-        username: 'trader2',
-        email: 'trader2@example.com',
-        fundingWallet: { USDT: 1500, BTC: 0.03 },
-        tradingWallet: { USDT: 800, BTC: 0.01 },
-        lastUpdated: new Date().toISOString()
+  private persistData() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const requestsObj = Object.fromEntries(this.withdrawalRequests);
+        const walletsObj = Object.fromEntries(this.userWallets);
+        
+        localStorage.setItem('withdrawalRequests', JSON.stringify(requestsObj));
+        localStorage.setItem('userWallets', JSON.stringify(walletsObj));
       }
-    ];
-
-    mockWallets.forEach(wallet => {
-      this.userWallets.set(wallet.userId, wallet);
-    });
+    } catch (error) {
+      console.warn('Error persisting wallet data:', error);
+    }
   }
 
   // Get all withdrawal requests
@@ -154,6 +128,7 @@ class WalletService {
     };
 
     this.withdrawalRequests.set(request.id, request);
+    this.persistData(); // Persist after each action
     return request;
   }
 
@@ -181,6 +156,7 @@ class WalletService {
     request.txHash = txHash;
 
     this.withdrawalRequests.set(requestId, request);
+    this.persistData(); // Persist after each action
 
     // Log transaction
     this.logWalletTransaction(
@@ -210,6 +186,7 @@ class WalletService {
     request.remarks = remarks;
 
     this.withdrawalRequests.set(requestId, request);
+    this.persistData(); // Persist after each action
 
     // Log transaction
     this.logWalletTransaction(
@@ -250,6 +227,7 @@ class WalletService {
 
     userWallet.lastUpdated = new Date().toISOString();
     this.userWallets.set(userId, userWallet);
+    this.persistData(); // Persist after each action
 
     // Log transaction
     this.logWalletTransaction(
@@ -290,6 +268,7 @@ class WalletService {
     wallet[asset] -= amount;
     userWallet.lastUpdated = new Date().toISOString();
     this.userWallets.set(userId, userWallet);
+    this.persistData(); // Persist after each action
 
     // Log transaction
     this.logWalletTransaction(

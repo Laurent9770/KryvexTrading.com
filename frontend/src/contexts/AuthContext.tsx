@@ -513,35 +513,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
       
-      // Regular user authentication
-      const mockUser = {
-        id: 'user-' + Date.now(),
-        email,
-        username: email.split('@')[0]
-      };
-      
-      // Generate a mock token
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      
-      // Persist authentication data to localStorage with safety checks
+      // Check if user exists in localStorage (real registration)
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
+          const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+          const user = registeredUsers.find((u: any) => u.email === email && u.password === password);
+          
+          if (!user) {
+            throw new Error('Invalid credentials. Please register first.');
+          }
+          
+          const mockToken = 'user-jwt-token-' + Date.now();
+          
           localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('authUser', JSON.stringify(mockUser));
+          localStorage.setItem('authUser', JSON.stringify(user));
           localStorage.setItem('authIsAdmin', 'false');
+          
+          setUser(user);
+          setIsAuthenticated(true);
+          setIsAdmin(false);
+          
+          websocketService.authenticate(email, password);
+          
+          console.log('User login successful');
+          return;
         }
       } catch (localStorageError) {
-        console.warn('Error persisting to localStorage:', localStorageError);
+        console.warn('Error accessing localStorage:', localStorageError);
       }
       
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setIsAdmin(false);
-      
-      // Send authentication to websocket
-      websocketService.authenticate(email, password);
-      
-      console.log('Login successful, user data persisted');
+      throw new Error('Invalid credentials. Please register first.');
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -550,28 +551,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, firstName: string, lastName: string, phone: string) => {
     try {
-      // Mock registration - in real app, this would call the API
-      const mockUser = {
-        id: 'user-' + Date.now(),
-        email,
-        firstName,
-        lastName,
-        phone,
-        username: `${firstName} ${lastName}`
-      };
+      // Check if user already exists
+      let newUser: any = null;
       
-      // Generate a mock token
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      
-      // Persist authentication data to localStorage with safety checks
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
+          const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+          const existingUser = registeredUsers.find((u: any) => u.email === email);
+          
+          if (existingUser) {
+            throw new Error('User already exists. Please login instead.');
+          }
+          
+          // Create clean user object with only provided data
+          newUser = {
+            id: 'user-' + Date.now(),
+            email,
+            firstName,
+            lastName,
+            phone,
+            username: `${firstName} ${lastName}`,
+            // Clean initial state - no mock data
+            country: '',
+            bio: '',
+            avatar: ''
+          };
+          
+          // Store user in registered users list
+          registeredUsers.push({ ...newUser, password });
+          localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+          
+          // Generate a token
+          const mockToken = 'user-jwt-token-' + Date.now();
+          
           localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('authUser', JSON.stringify(mockUser));
+          localStorage.setItem('authUser', JSON.stringify(newUser));
           localStorage.setItem('authIsAdmin', 'false');
         }
       } catch (localStorageError) {
         console.warn('Error persisting to localStorage:', localStorageError);
+        throw new Error('Failed to create account. Please try again.');
+      }
+      
+      if (!newUser) {
+        throw new Error('Failed to create user account.');
       }
       
       // Reset all user data to clean state for new users
@@ -595,17 +618,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         activePositions: 0
       });
       
-      setUser(mockUser);
+      setUser(newUser);
       setIsAuthenticated(true);
       setIsAdmin(false);
       
       // Notify admin panel about new user registration
-      // Wait a moment to ensure WebSocket is connected
       setTimeout(() => {
-        websocketService.notifyUserRegistration(mockUser);
+        websocketService.notifyUserRegistration(newUser);
       }, 1000);
       
-      console.log('Registration successful, user data persisted with clean state');
+      console.log('Registration successful, clean user data created');
     } catch (error) {
       console.error('Registration error:', error);
       throw error;

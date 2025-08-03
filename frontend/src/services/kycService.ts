@@ -49,58 +49,48 @@ export interface KYCUser {
   };
 }
 
-class KYCService {
-  private static instance: KYCService;
+export class KYCService {
   private users: Map<string, KYCUser> = new Map();
   private submissions: Map<string, KYCSubmission> = new Map();
   private listeners: Map<string, Function[]> = new Map();
 
-  private constructor() {
-    this.initializeService();
-  }
-
-  static getInstance(): KYCService {
-    if (!KYCService.instance) {
-      KYCService.instance = new KYCService();
-    }
-    return KYCService.instance;
-  }
-
-  private initializeService() {
-    // Load persisted data
+  constructor() {
+    // Initialize with empty state - no mock data
     this.loadPersistedData();
-    
-    // Set up WebSocket listeners
-    this.setupWebSocketListeners();
   }
 
   private loadPersistedData() {
     try {
-      const persistedUsers = localStorage.getItem('kycUsers');
-      if (persistedUsers) {
-        const usersData = JSON.parse(persistedUsers);
-        this.users = new Map(Object.entries(usersData));
-      }
-
-      const persistedSubmissions = localStorage.getItem('kycSubmissions');
-      if (persistedSubmissions) {
-        const submissionsData = JSON.parse(persistedSubmissions);
-        this.submissions = new Map(Object.entries(submissionsData));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const savedUsers = localStorage.getItem('kycUsers');
+        const savedSubmissions = localStorage.getItem('kycSubmissions');
+        
+        if (savedUsers) {
+          const users = JSON.parse(savedUsers);
+          this.users = new Map(Object.entries(users));
+        }
+        
+        if (savedSubmissions) {
+          const submissions = JSON.parse(savedSubmissions);
+          this.submissions = new Map(Object.entries(submissions));
+        }
       }
     } catch (error) {
-      console.error('Error loading KYC data:', error);
+      console.warn('Error loading persisted KYC data:', error);
     }
   }
 
-  private savePersistedData() {
+  private persistData() {
     try {
-      const usersData = Object.fromEntries(this.users);
-      localStorage.setItem('kycUsers', JSON.stringify(usersData));
-
-      const submissionsData = Object.fromEntries(this.submissions);
-      localStorage.setItem('kycSubmissions', JSON.stringify(submissionsData));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const usersObj = Object.fromEntries(this.users);
+        const submissionsObj = Object.fromEntries(this.submissions);
+        
+        localStorage.setItem('kycUsers', JSON.stringify(usersObj));
+        localStorage.setItem('kycSubmissions', JSON.stringify(submissionsObj));
+      }
     } catch (error) {
-      console.error('Error saving KYC data:', error);
+      console.warn('Error persisting KYC data:', error);
     }
   }
 
@@ -135,7 +125,7 @@ class KYCService {
     };
 
     this.users.set(userId, user);
-    this.savePersistedData();
+    this.persistData();
     this.emit('user_created', user);
     return user;
   }
@@ -170,7 +160,7 @@ class KYCService {
 
       this.updateUserRestrictions(user);
       this.users.set(userId, user);
-      this.savePersistedData();
+      this.persistData();
 
       // Notify admin
       websocketService.updateKYCStatus(userId, {
@@ -224,7 +214,7 @@ class KYCService {
 
     this.submissions.set(submissionId, submission);
     user.submissions.push(submission);
-    this.savePersistedData();
+    this.persistData();
 
     // Notify admin
     websocketService.updateKYCStatus(userId, {
@@ -274,7 +264,7 @@ class KYCService {
 
     this.submissions.set(submissionId, submission);
     user.submissions.push(submission);
-    this.savePersistedData();
+    this.persistData();
 
     // Notify admin
     websocketService.updateKYCStatus(userId, {
@@ -318,7 +308,7 @@ class KYCService {
 
     this.submissions.set(submissionId, submission);
     this.users.set(submission.userId, user);
-    this.savePersistedData();
+    this.persistData();
 
     // Notify user
     websocketService.updateKYCStatus(submission.userId, {
@@ -357,7 +347,7 @@ class KYCService {
 
     this.updateUserRestrictions(user);
     this.users.set(userId, user);
-    this.savePersistedData();
+    this.persistData();
     this.emit('user_updated', user);
   }
 
@@ -425,5 +415,5 @@ class KYCService {
   }
 }
 
-const kycService = KYCService.getInstance();
+const kycService = new KYCService();
 export default kycService; 
