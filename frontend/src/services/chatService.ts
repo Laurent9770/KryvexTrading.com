@@ -137,7 +137,10 @@ class ChatService {
   // Data retrieval
   async getMessages(roomId: string): Promise<ChatMessage[]> {
     try {
-      const response = await fetch(`/api/chat/messages/${roomId}`);
+      // Clean the roomId to remove any invalid characters
+      const cleanRoomId = roomId.replace(/[^a-zA-Z0-9-_]/g, '');
+      
+      const response = await fetch(`/api/chat/messages/${cleanRoomId}`);
       if (response.ok) {
         const apiMessages = await response.json();
         // Merge with local messages
@@ -145,9 +148,15 @@ class ChatService {
         const allMessages = [...apiMessages, ...localMessages];
         // Sort by timestamp
         return allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      } else if (response.status === 404) {
+        console.warn(`Chat room '${cleanRoomId}' not found, using local messages only`);
+        // Return local messages if API returns 404
+        return this.messages.get(roomId) || [];
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+      // Return local messages on error
+      return this.messages.get(roomId) || [];
     }
     return this.messages.get(roomId) || [];
   }

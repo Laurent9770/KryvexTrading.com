@@ -808,7 +808,9 @@ app.get('/api/chat/messages/:roomId', (req, res) => {
     ]
   };
   
-  res.json(mockMessages[roomId] || []);
+  // Return messages for the requested room, or empty array if room doesn't exist
+  const messages = mockMessages[roomId] || [];
+  res.json(messages);
 });
 
 app.get('/api/chat/users', (req, res) => {
@@ -1050,4 +1052,25 @@ server.listen(PORT, () => {
   console.log(`✅ WebSocket server running on port ${PORT}`);
   console.log(`✅ HTTP API available at http://localhost:${PORT}`);
   console.log(`✅ Test endpoint: http://localhost:${PORT}/api/test`);
+});
+
+// Catch-all handler for undefined routes
+app.use('*', (req, res) => {
+  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ 
+    error: 'Route not found',
+    message: `The requested endpoint ${req.method} ${req.originalUrl} does not exist`,
+    availableEndpoints: [
+      'GET /api/test',
+      'GET /api/users',
+      'GET /api/chat/rooms',
+      'GET /api/chat/messages/:roomId',
+      'GET /api/chat/users',
+      'GET /api/withdrawal-requests',
+      'GET /api/user-wallets',
+      'GET /api/wallet-transactions',
+      'GET /api/kyc-submissions',
+      'GET /api/kyc-actions'
+    ]
+  });
 }); 
