@@ -171,67 +171,23 @@ wss.on('connection', (ws) => {
             }));
           }
         });
-              } else if (data.type === 'user_registered') {
-          // Handle new user registration and broadcast to admin
-          console.log('New user registered:', data);
-          
-          // Send to all connected clients (admin users will filter this)
-          wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === 1) {
-              client.send(JSON.stringify({
-                type: 'user_registered',
-                user: data.user,
-                timestamp: data.timestamp
-              }));
-            }
-          });
-        } else if (data.type === 'kyc_status_update') {
-          // Handle KYC status updates
-          console.log('KYC status update:', data);
-          
-          // Broadcast to all connected clients
-          wss.clients.forEach((client) => {
-            if (client.readyState === 1) {
-              client.send(JSON.stringify({
-                type: 'kyc_level_updated',
-                userId: data.userId,
-                level: data.kycData.level,
-                status: data.kycData.status,
-                timestamp: data.timestamp
-              }));
-            }
-          });
-        } else if (data.type === 'kyc_submission') {
-          // Handle KYC submission notifications
-          console.log('KYC submission:', data);
-          
-          // Broadcast to admin clients
-          wss.clients.forEach((client) => {
-            if (client.readyState === 1) {
-              client.send(JSON.stringify({
-                type: 'kyc_submission_created',
-                submissionId: data.submissionId,
-                data: data.data,
-                timestamp: data.timestamp
-              }));
-            }
-          });
+      } else if (data.type === 'user_registered') {
+        // Handle new user registration and broadcast to admin
+        console.log('New user registered:', data);
         
-        console.log(`Broadcasted user registration to ${wss.clients.size - 1} clients`);
-      } else if (data.type === 'profile_update') {
-        // Handle profile updates and broadcast to admin
-        console.log('Profile update received:', data);
+        // Broadcast to all connected clients (admin users will filter this)
         wss.clients.forEach((client) => {
           if (client.readyState === 1) {
             client.send(JSON.stringify({
-              type: 'profile_updated',
-              userId: data.userId,
-              profileData: data.profileData,
-              timestamp: data.timestamp
+              type: 'user_registered',
+              user: data.user,
+              timestamp: data.timestamp || new Date().toISOString()
             }));
           }
         });
-      } else if (data.type === 'wallet_update') {
+        
+        console.log(`Broadcasted user registration to ${wss.clients.size} clients`);
+      } else if (data.type === 'wallet_updated') {
         // Handle wallet updates and broadcast to admin
         console.log('Wallet update received:', data);
         wss.clients.forEach((client) => {
@@ -240,12 +196,12 @@ wss.on('connection', (ws) => {
               type: 'wallet_updated',
               userId: data.userId,
               walletData: data.walletData,
-              timestamp: data.timestamp
+              timestamp: data.timestamp || new Date().toISOString()
             }));
           }
         });
       } else if (data.type === 'trade_completed') {
-        // Handle trade completion
+        // Handle trade completion and broadcast to admin
         console.log('Trade completed:', data);
         wss.clients.forEach((client) => {
           if (client.readyState === 1) {
@@ -253,23 +209,92 @@ wss.on('connection', (ws) => {
               type: 'trade_completed',
               userId: data.userId,
               tradeData: data.tradeData,
-              timestamp: data.timestamp
+              timestamp: data.timestamp || new Date().toISOString()
             }));
           }
         });
-      } else if (data.type === 'analytics_update') {
-        // Handle analytics updates
-        console.log('Analytics update received:', data);
+      } else if (data.type === 'kyc_status_updated') {
+        // Handle KYC status updates and broadcast to admin
+        console.log('KYC status update:', data);
         wss.clients.forEach((client) => {
           if (client.readyState === 1) {
             client.send(JSON.stringify({
-              type: 'analytics_updated',
+              type: 'kyc_status_updated',
               userId: data.userId,
-              analyticsData: data.analyticsData,
+              kycData: data.kycData,
+              timestamp: data.timestamp || new Date().toISOString()
+            }));
+          }
+        });
+      } else if (data.type === 'kyc_submission') {
+        // Handle KYC submission notifications
+        console.log('KYC submission:', data);
+        
+        // Broadcast to admin clients
+        wss.clients.forEach((client) => {
+          if (client.readyState === 1) {
+            client.send(JSON.stringify({
+              type: 'kyc_submission_created',
+              submissionId: data.submissionId,
+              data: data.data,
               timestamp: data.timestamp
             }));
           }
         });
+      
+      console.log(`Broadcasted user registration to ${wss.clients.size - 1} clients`);
+    } else if (data.type === 'profile_update') {
+      // Handle profile updates and broadcast to admin
+      console.log('Profile update received:', data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({
+            type: 'profile_updated',
+            userId: data.userId,
+            profileData: data.profileData,
+            timestamp: data.timestamp
+          }));
+        }
+      });
+    } else if (data.type === 'wallet_update') {
+      // Handle wallet updates and broadcast to admin
+      console.log('Wallet update received:', data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({
+            type: 'wallet_updated',
+            userId: data.userId,
+            walletData: data.walletData,
+            timestamp: data.timestamp
+          }));
+        }
+      });
+    } else if (data.type === 'trade_completed') {
+      // Handle trade completion
+      console.log('Trade completed:', data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({
+            type: 'trade_completed',
+            userId: data.userId,
+            tradeData: data.tradeData,
+            timestamp: data.timestamp
+          }));
+        }
+      });
+    } else if (data.type === 'analytics_update') {
+      // Handle analytics updates
+      console.log('Analytics update received:', data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({
+            type: 'analytics_updated',
+            userId: data.userId,
+            analyticsData: data.analyticsData,
+            timestamp: data.timestamp
+          }));
+        }
+      });
              } else if (data.type === 'create_room') {
          // Only admins can create rooms
          const userId = data.userId;

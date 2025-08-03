@@ -110,15 +110,16 @@ export default function AdminAuditTrail() {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('actions');
 
-  // Mock analytics data
+  // TODO: Implement real analytics data from API
   const mockActivityData: any[] = []; // Empty array - only real data will be shown
 
+  // TODO: Implement real action type data from API
   const actionTypeData = [
-    { type: 'user_status_change', count: 23, color: '#3b82f6' },
-    { type: 'wallet_adjustment', count: 45, color: '#10b981' },
-    { type: 'kyc_review', count: 18, color: '#f59e0b' },
-    { type: 'send_message', count: 12, color: '#8b5cf6' },
-    { type: 'deposit_approval', count: 31, color: '#ef4444' }
+    { type: 'user_status_change', count: 0, color: '#3b82f6' },
+    { type: 'wallet_adjustment', count: 0, color: '#10b981' },
+    { type: 'kyc_review', count: 0, color: '#f59e0b' },
+    { type: 'send_message', count: 0, color: '#8b5cf6' },
+    { type: 'deposit_approval', count: 0, color: '#ef4444' }
   ];
 
   useEffect(() => {
@@ -131,18 +132,29 @@ export default function AdminAuditTrail() {
 
   const fetchAuditData = async () => {
     try {
-      // Mock data for admin actions
-      const mockAdminActions: any[] = []; // Empty array - only real data will be shown
+      // TODO: Implement real API calls to fetch audit data
+      // const [adminActionsRes, userSessionsRes, walletAdjustmentsRes] = await Promise.all([
+      //   fetch('/api/admin/audit/actions'),
+      //   fetch('/api/admin/audit/sessions'),
+      //   fetch('/api/admin/audit/wallet-adjustments')
+      // ]);
+      // 
+      // const adminActions = await adminActionsRes.json();
+      // const userSessions = await userSessionsRes.json();
+      // const walletAdjustments = await walletAdjustmentsRes.json();
+      // 
+      // setAdminActions(adminActions);
+      // setUserSessions(userSessions);
+      // setWalletAdjustments(walletAdjustments);
 
-      // Mock data for user sessions
-      const mockUserSessions: any[] = []; // Empty array - only real data will be shown
+      // For now, load from localStorage until real API is implemented
+      const storedActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      const storedSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+      const storedWalletAdjustments = JSON.parse(localStorage.getItem('wallet_adjustments') || '[]');
 
-      // Mock data for wallet adjustments
-      const mockWalletAdjustments: any[] = []; // Empty array - only real data will be shown
-
-      setAdminActions(mockAdminActions);
-      setUserSessions(mockUserSessions);
-      setWalletAdjustments(mockWalletAdjustments);
+      setAdminActions(storedActions);
+      setUserSessions(storedSessions);
+      setWalletAdjustments(storedWalletAdjustments);
     } catch (error) {
       console.error('Error fetching audit data:', error);
       toast({
@@ -150,6 +162,24 @@ export default function AdminAuditTrail() {
         description: "Failed to load audit data",
         variant: "destructive"
       });
+    }
+  };
+
+  const logAdminAction = (action: any) => {
+    try {
+      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      const newAction = {
+        id: `action-${Date.now()}`,
+        ...action,
+        timestamp: new Date().toISOString()
+      };
+      existingActions.push(newAction);
+      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
+      
+      // Update local state
+      setAdminActions(prev => [newAction, ...prev]);
+    } catch (error) {
+      console.error('Error logging admin action:', error);
     }
   };
 
@@ -216,25 +246,54 @@ export default function AdminAuditTrail() {
   };
 
   const exportAuditData = () => {
-    const csvContent = [
-      ['Date', 'Admin', 'Action Type', 'Target User', 'Description', 'IP Address'],
-      ...filteredActions.map(action => [
-        new Date(action.created_at).toLocaleString(),
-        action.admin_profile?.full_name || action.admin_profile?.email || 'Unknown',
-        action.action_type,
-        action.target_user_profile?.full_name || action.target_user_profile?.email || 'N/A',
-        action.description,
-        action.ip_address || 'N/A'
-      ])
-    ].map(row => row.join(',')).join('\n');
+    try {
+      const allActions = [
+        ...adminActions.map(action => ({
+          type: 'admin_action',
+          ...action
+        })),
+        ...userSessions.map(session => ({
+          type: 'user_session',
+          ...session
+        })),
+        ...walletAdjustments.map(adjustment => ({
+          type: 'wallet_adjustment',
+          ...adjustment
+        }))
+      ];
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'audit_trail_export.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const csvContent = [
+        ['Type', 'Admin ID', 'User ID', 'Action', 'Details', 'Timestamp'],
+        ...allActions.map(action => [
+          action.type,
+          action.adminId || 'N/A',
+          action.userId || 'N/A',
+          action.action || action.type,
+          JSON.stringify(action.details || action),
+          action.timestamp
+        ])
+      ].map(row => row.join(',')).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-trail-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: "Audit trail exported to CSV"
+      });
+    } catch (error) {
+      console.error('Error exporting audit data:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export audit data",
+        variant: "destructive"
+      });
+    }
   };
 
   const getActionIcon = (actionType: string) => {

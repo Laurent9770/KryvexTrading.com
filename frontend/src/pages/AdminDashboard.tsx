@@ -150,6 +150,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      
+      // Set up WebSocket listeners for real-time updates
       websocketService.on('profile_updated', handleProfileUpdate);
       websocketService.on('security_updated', handleSecurityUpdate);
       websocketService.on('notification_updated', handleNotificationUpdate);
@@ -157,12 +159,16 @@ export default function AdminDashboard() {
       websocketService.on('kyc_updated', handleKYCUpdate);
       websocketService.on('spot_trade_updated', handleSpotTradeUpdate);
       
-      // Listen for new user registrations and updates
+      // Enhanced real-time event listeners for admin dashboard
       websocketService.on('user_registered', handleNewUserRegistration);
-      websocketService.on('profile_updated', handleProfileUpdate);
       websocketService.on('wallet_updated', handleWalletUpdate);
+      websocketService.on('trade_completed', handleTradeCompleted);
+      websocketService.on('kyc_status_updated', handleKYCStatusUpdate);
+      websocketService.on('kyc_submission_created', handleKYCSubmissionCreated);
     }
+    
     return () => {
+      // Clean up all WebSocket listeners
       websocketService.off('profile_updated', handleProfileUpdate);
       websocketService.off('security_updated', handleSecurityUpdate);
       websocketService.off('notification_updated', handleNotificationUpdate);
@@ -170,8 +176,10 @@ export default function AdminDashboard() {
       websocketService.off('kyc_updated', handleKYCUpdate);
       websocketService.off('spot_trade_updated', handleSpotTradeUpdate);
       websocketService.off('user_registered', handleNewUserRegistration);
-      websocketService.off('profile_updated', handleProfileUpdate);
       websocketService.off('wallet_updated', handleWalletUpdate);
+      websocketService.off('trade_completed', handleTradeCompleted);
+      websocketService.off('kyc_status_updated', handleKYCStatusUpdate);
+      websocketService.off('kyc_submission_created', handleKYCSubmissionCreated);
     };
   }, [user]);
 
@@ -247,7 +255,24 @@ export default function AdminDashboard() {
 
   const handleDepositStatus = async (depositId: string, status: string) => {
     try {
-      // Mock deposit status update
+      // TODO: Implement real API call to update deposit status
+      // const response = await fetch(`/api/deposits/${depositId}/status`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ status })
+      // });
+      // 
+      // if (!response.ok) throw new Error('Failed to update deposit status');
+      // 
+      // const updatedDeposit = await response.json();
+      // 
+      // // Update local state with the response from server
+      // const updatedDeposits = deposits.map(deposit => 
+      //   deposit.id === depositId ? updatedDeposit : deposit
+      // );
+      // setDeposits(updatedDeposits);
+
+      // For now, update local state until real API is implemented
       const updatedDeposits = deposits.map(deposit => 
         deposit.id === depositId 
           ? { ...deposit, status, processed_at: new Date().toISOString() }
@@ -272,7 +297,24 @@ export default function AdminDashboard() {
 
   const handleKycStatus = async (userId: string, status: string) => {
     try {
-      // Mock KYC status update
+      // TODO: Implement real API call to update KYC status
+      // const response = await fetch(`/api/users/${userId}/kyc-status`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ kyc_status: status })
+      // });
+      // 
+      // if (!response.ok) throw new Error('Failed to update KYC status');
+      // 
+      // const updatedUser = await response.json();
+      // 
+      // // Update local state with the response from server
+      // const updatedUsers = users.map(user => 
+      //   user.id === userId ? updatedUser : user
+      // );
+      // setUsers(updatedUsers);
+
+      // For now, update local state until real API is implemented
       const updatedUsers = users.map(user => 
         user.id === userId 
           ? { ...user, kyc_status: status }
@@ -420,11 +462,41 @@ export default function AdminDashboard() {
 
   const handleNewUserRegistration = (data: any) => {
     console.log('AdminDashboard: New user registered:', data);
-    // Refresh user list and stats
-    fetchDashboardData();
+    
+    // Create new user object from registration data
+    const newUser: User = {
+      id: data.user.id,
+      full_name: data.user.full_name || data.user.email.split('@')[0],
+      email: data.user.email,
+      kyc_status: 'pending',
+      account_balance: 0,
+      is_verified: false,
+      created_at: data.timestamp || new Date().toISOString()
+    };
+
+    // Add new user to the beginning of the list
+    setUsers(prevUsers => [newUser, ...prevUsers]);
+    
+    // Update stats
+    setStats(prevStats => ({
+      ...prevStats,
+      totalUsers: prevStats.totalUsers + 1,
+      pendingKyc: prevStats.pendingKyc + 1
+    }));
+
+    // Add to recent activity
+    setRecentActivity(prev => [{
+      id: Date.now(),
+      type: 'user_registered',
+      user: newUser.full_name,
+      action: 'New user registered',
+      timestamp: new Date().toISOString(),
+      details: `Email: ${newUser.email}`
+    }, ...prev.slice(0, 9)]);
+
     toast({
       title: "New User Registered",
-      description: `${data.user.email} has joined the platform`,
+      description: `${newUser.full_name} (${newUser.email}) has joined the platform`,
       duration: 5000,
     });
   };
@@ -433,6 +505,77 @@ export default function AdminDashboard() {
     console.log('Wallet updated:', data);
     // Refresh wallet data
     fetchDashboardData();
+  };
+
+  const handleTradeCompleted = (data: any) => {
+    console.log('Trade completed:', data);
+    // Update local trade data
+    const updatedTrades = trades.map(trade => {
+      if (trade.id === data.tradeId) {
+        return { ...trade, status: data.tradeData.status, result: data.tradeData.result };
+      }
+      return trade;
+    });
+    setTrades(updatedTrades);
+
+    // Add to activity feed
+    setRecentActivity(prev => [{
+      id: Date.now(),
+      type: 'trade_completed',
+      user: 'System',
+      action: 'Trade completed',
+      timestamp: new Date().toISOString(),
+      details: `Trade ID: ${data.tradeId}, Result: ${data.tradeData.result}`
+    }, ...prev.slice(0, 9)]);
+
+    toast({
+      title: "Trade Completed",
+      description: `Trade ${data.tradeId} completed. Result: ${data.tradeData.result}`,
+    });
+  };
+
+  const handleKYCStatusUpdate = (data: any) => {
+    console.log('KYC status updated:', data);
+    const updatedUsers = users.map(user => {
+      if (user.id === data.userId) {
+        return { ...user, kyc_status: data.kycData.level3.status };
+      }
+      return user;
+    });
+    setUsers(updatedUsers);
+
+    // Add to activity feed
+    setRecentActivity(prev => [{
+      id: Date.now(),
+      type: 'kyc_status_updated',
+      user: 'System',
+      action: 'KYC Status Updated',
+      timestamp: new Date().toISOString(),
+      details: `User ID: ${data.userId}, New Status: ${data.kycData.level3.status}`
+    }, ...prev.slice(0, 9)]);
+
+    toast({
+      title: "KYC Status Updated",
+      description: `KYC status for user ${data.userId} updated to ${data.kycData.level3.status}`,
+    });
+  };
+
+  const handleKYCSubmissionCreated = (data: any) => {
+    console.log('KYC submission created:', data);
+    // Add to activity feed
+    setRecentActivity(prev => [{
+      id: Date.now(),
+      type: 'kyc_submission_created',
+      user: 'System',
+      action: 'KYC Submission Created',
+      timestamp: new Date().toISOString(),
+      details: `User ID: ${data.userId}, Submission ID: ${data.submissionId}`
+    }, ...prev.slice(0, 9)]);
+
+    toast({
+      title: "KYC Submission Created",
+      description: `KYC submission created for user ${data.userId} with ID ${data.submissionId}`,
+    });
   };
 
   const filteredUsers = users.filter(user => 

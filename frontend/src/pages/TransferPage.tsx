@@ -109,19 +109,20 @@ const TransferPage = () => {
 
     setIsSearching(true);
     
-    setTimeout(() => {
-      const mockResults = [
-        { id: "user1", username: "john_doe", email: "john@example.com", avatar: "JD" },
-        { id: "user2", username: "jane_smith", email: "jane@example.com", avatar: "JS" },
-        { id: "user3", username: "mike_wilson", email: "mike@example.com", avatar: "MW" }
-      ].filter(user => 
-        user.username.toLowerCase().includes(query.toLowerCase()) ||
-        user.email.toLowerCase().includes(query.toLowerCase())
-      );
+    try {
+      // TODO: Implement real API call to search users
+      // const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+      // const results = await response.json();
+      // setSearchResults(results);
       
-      setSearchResults(mockResults);
+      // For now, set empty results until real API is implemented
+      setSearchResults([]);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+    } finally {
       setIsSearching(false);
-    }, 500);
+    }
   };
 
   const selectRecipient = (user: any) => {

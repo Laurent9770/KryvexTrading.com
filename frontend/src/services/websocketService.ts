@@ -231,6 +231,18 @@ class WebSocketService {
           console.log('WebSocketService: Received kyc_submission_created event:', data);
           this.emit('kyc_submission_created', data);
           break;
+        case 'wallet_updated':
+          console.log('WebSocketService: Received wallet_updated event:', data);
+          this.emit('wallet_updated', data);
+          break;
+        case 'trade_completed':
+          console.log('WebSocketService: Received trade_completed event:', data);
+          this.emit('trade_completed', data);
+          break;
+        case 'kyc_status_updated':
+          console.log('WebSocketService: Received kyc_status_updated event:', data);
+          this.emit('kyc_status_updated', data);
+          break;
           
         case 'profile_updated':
           this.emit('profile_updated', data);

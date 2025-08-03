@@ -66,7 +66,7 @@ export default function AdminTradeManagement() {
   const [isForceOutcomeModalOpen, setIsForceOutcomeModalOpen] = useState(false);
   const [forceOutcome, setForceOutcome] = useState<'win' | 'lose' | 'draw'>('win');
 
-  // Mock analytics data
+  // TODO: Implement real analytics data from API
   const mockTradeData: any[] = []; // Empty array - only real data will be shown
 
   useEffect(() => {

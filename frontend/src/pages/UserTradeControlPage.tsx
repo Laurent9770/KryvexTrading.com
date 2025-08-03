@@ -80,142 +80,42 @@ const UserTradeControlPage: React.FC = () => {
   const loadUserData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - in real app, this would fetch from API
-      const mockUserInfo: UserInfo = {
+      // TODO: Implement real API call to fetch user data
+      // const response = await fetch(`/api/users/${userId}/trades`);
+      // const data = await response.json();
+      // setUserInfo(data.userInfo);
+      // setTrades(data.trades);
+
+      // For now, set empty data until real API is implemented
+      const emptyUserInfo: UserInfo = {
         userId: userId!,
-        username: 'trader1',
-        email: 'trader1@example.com',
+        username: '',
+        email: '',
         lastActivity: new Date().toISOString(),
-        totalTrades: 25,
-        activeTrades: 8
+        totalTrades: 0,
+        activeTrades: 0
       };
 
-             const mockTrades: {
-         spot: Trade[];
-         futures: Trade[];
-         options: Trade[];
-         binary: Trade[];
-         quant: Trade[];
-         bots: Trade[];
-         staking: Trade[];
-       } = {
-         spot: [
-           {
-             id: 'spot-1',
-             symbol: 'BTC/USDT',
-             direction: 'LONG' as const,
-             amount: 500,
-             entryPrice: 45000,
-             status: 'running' as const,
-             startTime: new Date(Date.now() - 300000).toISOString(),
-             duration: 5,
-             remainingTime: 120,
-             type: 'spot' as const
-           },
-           {
-             id: 'spot-2',
-             symbol: 'ETH/USDT',
-             direction: 'SHORT' as const,
-             amount: 300,
-             entryPrice: 3000,
-             status: 'completed' as const,
-             startTime: new Date(Date.now() - 600000).toISOString(),
-             endTime: new Date().toISOString(),
-             duration: 10,
-             pnl: 45.67,
-             result: 'WIN' as const,
-             type: 'spot' as const
-           }
-         ],
-         futures: [
-           {
-             id: 'futures-1',
-             symbol: 'BTC/USDT',
-             direction: 'LONG' as const,
-             amount: 1000,
-             entryPrice: 45000,
-             status: 'running' as const,
-             startTime: new Date(Date.now() - 180000).toISOString(),
-             duration: 15,
-             remainingTime: 720,
-             type: 'futures' as const
-           }
-         ],
-         options: [
-           {
-             id: 'options-1',
-             symbol: 'BTC/USDT',
-             direction: 'LONG' as const,
-             amount: 200,
-             entryPrice: 45000,
-             status: 'pending' as const,
-             startTime: new Date().toISOString(),
-             duration: 30,
-             type: 'options' as const
-           }
-         ],
-         binary: [
-           {
-             id: 'binary-1',
-             symbol: 'BTC/USDT',
-             direction: 'HIGHER' as const,
-             amount: 150,
-             entryPrice: 45000,
-             status: 'running' as const,
-             startTime: new Date(Date.now() - 120000).toISOString(),
-             duration: 5,
-             remainingTime: 180,
-             type: 'binary' as const
-           }
-         ],
-         quant: [
-           {
-             id: 'quant-1',
-             symbol: 'BTC/USDT',
-             direction: 'ARBITRAGE' as const,
-             amount: 800,
-             entryPrice: 44950,
-             status: 'completed' as const,
-             startTime: new Date(Date.now() - 300000).toISOString(),
-             endTime: new Date().toISOString(),
-             duration: 2,
-             pnl: 12.34,
-             result: 'WIN' as const,
-             type: 'quant' as const
-           }
-         ],
-         bots: [
-           {
-             id: 'bots-1',
-             symbol: 'ETH/USDT',
-             direction: 'LONG' as const,
-             amount: 400,
-             entryPrice: 3000,
-             status: 'running' as const,
-             startTime: new Date(Date.now() - 60000).toISOString(),
-             duration: 60,
-             remainingTime: 3240,
-             type: 'bots' as const
-           }
-         ],
-         staking: [
-           {
-             id: 'staking-1',
-             symbol: 'USDT',
-             direction: 'LONG' as const,
-             amount: 1000,
-             entryPrice: 1,
-             status: 'running' as const,
-             startTime: new Date(Date.now() - 86400000).toISOString(),
-             duration: 1440, // 24 hours
-             remainingTime: 828000, // 23 hours
-             type: 'staking' as const
-           }
-         ]
-       };
+      const emptyTrades: {
+        spot: Trade[];
+        futures: Trade[];
+        options: Trade[];
+        binary: Trade[];
+        quant: Trade[];
+        bots: Trade[];
+        staking: Trade[];
+      } = {
+        spot: [],
+        futures: [],
+        options: [],
+        binary: [],
+        quant: [],
+        bots: [],
+        staking: []
+      };
 
-      setUserInfo(mockUserInfo);
-      setTrades(mockTrades);
+      setUserInfo(emptyUserInfo);
+      setTrades(emptyTrades);
     } catch (error) {
       console.error('Error loading user data:', error);
       toast({
@@ -230,7 +130,33 @@ const UserTradeControlPage: React.FC = () => {
 
   const handleTradeOverride = async (tradeId: string, result: 'WIN' | 'LOSE') => {
     try {
-      // Mock API call - in real app, this would call the backend
+      // TODO: Implement real API call to override trade outcome
+      // const response = await fetch(`/api/trades/${tradeId}/override`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ 
+      //     result,
+      //     adminId: user?.id,
+      //     timestamp: new Date().toISOString()
+      //   })
+      // });
+      // 
+      // if (!response.ok) throw new Error('Failed to override trade');
+      // 
+      // const updatedTrade = await response.json();
+      // 
+      // // Update local state with the response from server
+      // const tradeType = activeTab as keyof typeof trades;
+      // const updatedTrades = trades[tradeType].map(trade => 
+      //   trade.id === tradeId ? updatedTrade : trade
+      // );
+      // 
+      // setTrades(prev => ({
+      //   ...prev,
+      //   [tradeType]: updatedTrades
+      // }));
+
+      // For now, simulate API delay and update local state until real API is implemented
       console.log(`Overriding trade ${tradeId} to ${result}`);
       
       // Simulate API delay
@@ -240,7 +166,13 @@ const UserTradeControlPage: React.FC = () => {
       const tradeType = activeTab as keyof typeof trades;
       const updatedTrades = trades[tradeType].map(trade => 
         trade.id === tradeId 
-          ? { ...trade, status: 'completed', result, endTime: new Date().toISOString() }
+          ? { 
+              ...trade, 
+              status: 'completed', 
+              result, 
+              endTime: new Date().toISOString(),
+              pnl: result === 'WIN' ? trade.amount * 0.8 : -trade.amount // Calculate P&L
+            }
           : trade
       );
       
@@ -249,13 +181,49 @@ const UserTradeControlPage: React.FC = () => {
         [tradeType]: updatedTrades
       }));
 
+      // Send WebSocket notification for real-time update
+      // websocketService.send({
+      //   type: 'trade_override',
+      //   tradeId,
+      //   result,
+      //   adminId: user?.id,
+      //   userId: userId,
+      //   timestamp: new Date().toISOString()
+      // });
+
+      // Log admin action for audit trail
+      const adminAction = {
+        id: `action-${Date.now()}`,
+        type: 'trade_override',
+        adminId: user?.id || 'admin-001',
+        userId: userId,
+        tradeId,
+        details: {
+          result,
+          tradeType,
+          originalStatus: 'running',
+          newStatus: 'completed',
+          timestamp: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      // Store admin action for audit trail
+      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      existingActions.push(adminAction);
+      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
+
       toast({
         title: "Trade Override Successful",
-        description: `Successfully forced ${result.toLowerCase()} for ${activeTab} trade`
+        description: `Successfully forced ${result.toLowerCase()} for ${activeTab} trade`,
       });
     } catch (error) {
       console.error('Error overriding trade:', error);
-      throw error;
+      toast({
+        title: "Error",
+        description: "Failed to override trade",
+        variant: "destructive"
+      });
     }
   };
 

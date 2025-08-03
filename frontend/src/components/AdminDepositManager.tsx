@@ -45,11 +45,24 @@ const AdminDepositManager = () => {
   const [selectedRequest, setSelectedRequest] = useState<DepositRequest | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Mock data - in real app, this would come from API
+  // TODO: Implement real API call to fetch deposit requests
   useEffect(() => {
-    const mockRequests: DepositRequest[] = []; // Empty array - only real data will be shown
-    setDepositRequests(mockRequests);
-    setFilteredRequests(mockRequests);
+    const fetchDepositRequests = async () => {
+      try {
+        // const response = await fetch('/api/admin/deposits');
+        // const requests = await response.json();
+        // setDepositRequests(requests);
+        // setFilteredRequests(requests);
+        
+        // For now, set empty array until real API is implemented
+        setDepositRequests([]);
+        setFilteredRequests([]);
+      } catch (error) {
+        console.error('Error fetching deposit requests:', error);
+      }
+    };
+    
+    fetchDepositRequests();
   }, []);
 
   // Filter requests

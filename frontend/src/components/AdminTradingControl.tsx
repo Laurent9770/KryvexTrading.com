@@ -57,59 +57,13 @@ const AdminTradingControl: React.FC = () => {
   const loadUsersWithActiveTrades = async () => {
     setIsLoading(true);
     try {
-      // Mock data - in real app, this would fetch from API
-      const mockUsers: UserTradeSummary[] = [
-        {
-          userId: 'user-1',
-          username: 'trader1',
-          email: 'trader1@example.com',
-          activeTrades: {
-            spot: 3,
-            futures: 2,
-            options: 1,
-            binary: 0,
-            quant: 1,
-            bots: 2,
-            staking: 1
-          },
-          totalActive: 10,
-          lastActivity: new Date().toISOString()
-        },
-        {
-          userId: 'user-2',
-          username: 'trader2',
-          email: 'trader2@example.com',
-          activeTrades: {
-            spot: 1,
-            futures: 0,
-            options: 0,
-            binary: 2,
-            quant: 0,
-            bots: 1,
-            staking: 0
-          },
-          totalActive: 4,
-          lastActivity: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          userId: 'user-3',
-          username: 'trader3',
-          email: 'trader3@example.com',
-          activeTrades: {
-            spot: 0,
-            futures: 3,
-            options: 2,
-            binary: 1,
-            quant: 0,
-            bots: 0,
-            staking: 1
-          },
-          totalActive: 7,
-          lastActivity: new Date(Date.now() - 7200000).toISOString()
-        }
-      ];
+      // TODO: Implement real API call to fetch users with active trades
+      // const response = await fetch('/api/admin/users/active-trades');
+      // const users = await response.json();
+      // setUsers(users);
 
-      setUsers(mockUsers);
+      // For now, set empty array until real API is implemented
+      setUsers([]);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({

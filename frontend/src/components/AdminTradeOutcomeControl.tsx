@@ -117,12 +117,18 @@ export default function AdminTradeOutcomeControl() {
 
       if (error) throw error;
 
-      // Add mock trading stats for demonstration
+      // TODO: Implement real trading stats calculation from API
+      // const usersWithStats = await Promise.all((data || []).map(async user => {
+      //   const stats = await fetchUserTradingStats(user.id);
+      //   return { ...user, ...stats };
+      // }));
+
+      // For now, use empty stats until real API is implemented
       const usersWithStats = (data || []).map(user => ({
         ...user,
-        total_trades: Math.floor(Math.random() * 100) + 10,
-        win_rate: Math.floor(Math.random() * 60) + 20,
-        total_profit: Math.floor(Math.random() * 10000) - 5000
+        total_trades: 0,
+        win_rate: 0,
+        total_profit: 0
       }));
 
       setUsers(usersWithStats);
@@ -221,7 +227,7 @@ export default function AdminTradeOutcomeControl() {
   const updateExistingTrades = async (userId: string, mode: string) => {
     try {
       const result = mode === 'force_win' ? 'win' : 'lose';
-      const profitLoss = mode === 'force_win' ? 100 : -100; // Mock values
+      const profitLoss = mode === 'force_win' ? 100 : -100; // TODO: Calculate real P&L from API
 
       const { error } = await supabase
         .from('trades')

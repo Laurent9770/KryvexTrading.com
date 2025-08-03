@@ -26,6 +26,10 @@ interface AuthContextType {
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;
   updateUserProfile: (profileData: Partial<User>) => void;
   
+  // Admin access control
+  checkAdminAccess: () => boolean;
+  requireAdmin: () => boolean;
+  
   // Global state for real-time updates
   tradingAccount: { [key: string]: { balance: string; usdValue: string; available: string } };
   fundingAccount: { USDT: { balance: string; usdValue: string; available: string } };
@@ -135,16 +139,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     USDT: { price: 1, change: 0, volume: 1000000000, timestamp: new Date().toISOString() }
   });
 
-  // Mock asset prices (in real app, this would come from API)
+  // TODO: Implement real API call to get asset prices
   const getAssetPrice = (asset: string): number => {
-    const prices: { [key: string]: number } = {
-      BTC: 48500,
-      ETH: 3200,
-      USDT: 1,
-      SOL: 485,
-      ADA: 1
-    };
-    return prices[asset] || 0;
+    // TODO: Replace with real API call
+    // const response = await fetch(`/api/prices/${asset}`);
+    // const data = await response.json();
+    // return data.price;
+    
+    // For now, return 0 until real API is implemented
+    return 0;
   };
 
   // Function to update trading account balance
@@ -229,8 +232,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, 0) + parseFloat(fundingAccount.USDT.usdValue.replace('$', '').replace(',', ''));
 
     const totalPnl = Object.values(tradingAccount).reduce((sum, asset) => {
-      // Mock P&L calculation
-      return sum + (parseFloat(asset.usdValue.replace('$', '').replace(',', '')) * 0.15);
+      // TODO: Implement real P&L calculation from API
+      // For now, return 0 until real calculation is implemented
+      return sum + 0;
     }, 0);
 
     setPortfolioStats(prev => ({
@@ -678,6 +682,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   };
 
+  const checkAdminAccess = () => {
+    return isAdmin;
+  };
+
+  const requireAdmin = () => {
+    if (!isAdmin) {
+      console.error('Access denied: Admin privileges required.');
+      return false;
+    }
+    return true;
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated,
@@ -686,6 +702,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     register,
     updateUserProfile,
+    checkAdminAccess,
+    requireAdmin,
     tradingAccount,
     fundingAccount,
     activityFeed,

@@ -110,6 +110,17 @@ export default function AdminUserManagement() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [editProfileData, setEditProfileData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    username: '',
+    country: '',
+    timezone: '',
+    language: 'en'
+  });
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({
     totalUsers: 0,
@@ -379,13 +390,16 @@ export default function AdminUserManagement() {
   const filterUsers = () => {
     let filtered = [...users];
 
-    // Search filter
+    // Enhanced search filter - search by ID, email, username, first name, last name
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(user =>
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.username?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.id.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        user.firstName?.toLowerCase().includes(searchLower) ||
+        user.lastName?.toLowerCase().includes(searchLower) ||
+        user.username?.toLowerCase().includes(searchLower) ||
+        `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase().includes(searchLower)
       );
     }
 
@@ -461,9 +475,12 @@ export default function AdminUserManagement() {
         type: walletAdjustment.type,
         amount: walletAdjustment.amount,
         reason: walletAdjustment.reason,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        adminId: 'admin-001', // TODO: Get from auth context
+        userId: selectedUser.id
       };
 
+      // Update user wallet balance
       setUsers(prevUsers => {
         const updatedUsers = prevUsers.map(user => 
           user.id === selectedUser.id ? { 
@@ -478,14 +495,46 @@ export default function AdminUserManagement() {
         return updatedUsers;
       });
 
+      // Send WebSocket notification for real-time update
+      websocketService.updateWallet(
+        selectedUser.id,
+        'USDT',
+        walletAdjustment.amount,
+        walletAdjustment.type as 'add' | 'subtract'
+      );
+
+      // Log admin action
+      const adminAction = {
+        id: `action-${Date.now()}`,
+        type: 'wallet_adjustment',
+        adminId: 'admin-001',
+        userId: selectedUser.id,
+        details: {
+          type: walletAdjustment.type,
+          amount: walletAdjustment.amount,
+          reason: walletAdjustment.reason,
+          previousBalance: selectedUser.walletBalance,
+          newBalance: walletAdjustment.type === 'add' 
+            ? selectedUser.walletBalance + walletAdjustment.amount
+            : selectedUser.walletBalance - walletAdjustment.amount
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      // Store admin action for audit trail
+      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      existingActions.push(adminAction);
+      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
+
       setIsWalletModalOpen(false);
       setWalletAdjustment({ type: 'add', amount: 0, reason: '' });
 
       toast({
         title: 'Wallet Adjusted',
-        description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} to user wallet`,
+        description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} USDT to ${selectedUser.firstName} ${selectedUser.lastName}'s wallet`,
       });
     } catch (error) {
+      console.error('Error adjusting wallet:', error);
       toast({
         title: 'Error',
         description: 'Failed to adjust wallet',
@@ -1082,6 +1131,6 @@ export default function AdminUserManagement() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+            </div>
   );
 } 

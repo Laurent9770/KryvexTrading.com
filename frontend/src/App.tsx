@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
 import Navigation from "@/components/Navigation";
+import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -92,9 +93,9 @@ const AppContent = () => {
                     <Route path="/profile" element={<UserOnlyRoute><Navigate to="/settings" replace /></UserOnlyRoute>} />
                     <Route path="/settings" element={<UserOnlyRoute><SettingsPage /></UserOnlyRoute>} />
                                           <Route path="/kyc" element={<UserOnlyRoute><KYCPage /></UserOnlyRoute>} />
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/trading-control" element={<AdminDashboard />} />
-                    <Route path="/admin/trading-control/:userId" element={<UserTradeControlPage />} />
+                    <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+                    <Route path="/admin/trading-control" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+                    <Route path="/admin/trading-control/:userId" element={<ProtectedAdminRoute><UserTradeControlPage /></ProtectedAdminRoute>} />
                     <Route path="/trading-history" element={<UserOnlyRoute><TradingHistoryPage /></UserOnlyRoute>} />
                     
                     {/* Legacy trading routes - redirect to main trading page */}

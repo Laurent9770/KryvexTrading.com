@@ -6165,11 +6165,11 @@ const TradingPage = () => {
                         <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
                           <DollarSign className="w-6 h-6 text-green-500" />
                         </div>
-                        <Badge className="bg-green-500/10 text-green-500">+12.5%</Badge>
+                        <Badge className="bg-green-500/10 text-green-500">0.0%</Badge>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Total Bot Profit</p>
-                        <p className="text-2xl font-bold text-foreground">$3,903.95</p>
+                                                  <p className="text-2xl font-bold text-foreground">$0.00</p>
                         <p className="text-xs text-green-500 mt-1">Last 30 days</p>
                       </div>
                     </Card>
@@ -6183,7 +6183,7 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Active Trades</p>
-                        <p className="text-2xl font-bold text-foreground">47</p>
+                                                  <p className="text-2xl font-bold text-foreground">0</p>
                         <p className="text-xs text-muted-foreground mt-1">Across all bots</p>
                       </div>
                     </Card>
@@ -6197,7 +6197,7 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Success Rate</p>
-                        <p className="text-2xl font-bold text-foreground">82.3%</p>
+                                                  <p className="text-2xl font-bold text-foreground">0.0%</p>
                         <p className="text-xs text-muted-foreground mt-1">Win rate average</p>
                       </div>
                     </Card>
@@ -6211,7 +6211,7 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Uptime</p>
-                        <p className="text-2xl font-bold text-foreground">99.8%</p>
+                                                  <p className="text-2xl font-bold text-foreground">0.0%</p>
                         <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
                       </div>
                     </Card>

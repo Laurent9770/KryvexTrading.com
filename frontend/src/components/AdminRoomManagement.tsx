@@ -48,12 +48,13 @@ export const AdminRoomManagement = () => {
   };
 
   const loadUsers = () => {
-    // Mock users for demo
-    setUsers([
-      { id: 'user-1', name: 'John Trader', email: 'trader1@example.com', status: 'online' },
-      { id: 'user-2', name: 'Sarah Johnson', email: 'sarah@example.com', status: 'online' },
-      { id: 'user-3', name: 'Mike Wilson', email: 'mike@example.com', status: 'offline' }
-    ]);
+    // TODO: Implement real API call to fetch users
+    // const response = await fetch('/api/admin/users');
+    // const users = await response.json();
+    // setUsers(users);
+    
+    // For now, set empty array until real API is implemented
+    setUsers([]);
   };
 
   const createRoom = () => {

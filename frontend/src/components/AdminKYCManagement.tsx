@@ -28,7 +28,8 @@ import {
   Phone,
   MapPin,
   CreditCard,
-  Banknote
+  Banknote,
+  Document
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -85,63 +86,13 @@ export default function AdminKYCManagement() {
 
   const fetchKYCApplications = async () => {
     try {
-      // Mock KYC applications data
-      const mockApplications: KYCApplication[] = [
-        {
-          id: '1',
-          user_id: 'user-001',
-          full_name: 'John Trader',
-          email: 'trader1@example.com',
-          phone: '+1234567891',
-          date_of_birth: '1985-05-15',
-          nationality: 'Canadian',
-          address: '123 Trading Street',
-          city: 'Toronto',
-          country: 'Canada',
-          postal_code: 'M5V 3A8',
-          document_type: 'Passport',
-          document_number: 'CA123456789',
-          document_front_url: '/mock-document-front.jpg',
-          document_back_url: '/mock-document-back.jpg',
-          selfie_url: '/mock-selfie.jpg',
-          proof_of_address_url: '/mock-address.jpg',
-          verification_level: 'basic',
-          status: 'pending',
-          submitted_at: '2024-01-15T10:30:00Z',
-          reviewed_at: undefined,
-          reviewed_by: undefined,
-          rejection_reason: undefined,
-          kyc_notes: undefined
-        },
-        {
-          id: '2',
-          user_id: 'user-002',
-          full_name: 'Sarah Investor',
-          email: 'sarah@example.com',
-          phone: '+1234567892',
-          date_of_birth: '1992-08-20',
-          nationality: 'British',
-          address: '456 Investment Lane',
-          city: 'London',
-          country: 'United Kingdom',
-          postal_code: 'SW1A 1AA',
-          document_type: 'Driver License',
-          document_number: 'UK987654321',
-          document_front_url: '/mock-document-front.jpg',
-          document_back_url: '/mock-document-back.jpg',
-          selfie_url: '/mock-selfie.jpg',
-          proof_of_address_url: '/mock-address.jpg',
-          verification_level: 'advanced',
-          status: 'approved',
-          submitted_at: '2024-01-10T14:20:00Z',
-          reviewed_at: '2024-01-12T09:15:00Z',
-          reviewed_by: 'admin-001',
-          rejection_reason: undefined,
-          kyc_notes: 'All documents verified successfully'
-        }
-      ];
-
-      setKycApplications(mockApplications);
+      // TODO: Implement real API call to fetch KYC applications
+      // const response = await fetch('/api/kyc/applications');
+      // const applications = await response.json();
+      // setKycApplications(applications);
+      
+      // For now, set empty array until real API is implemented
+      setKycApplications([]);
     } catch (error) {
       console.error('Error fetching KYC applications:', error);
       toast({
@@ -181,7 +132,24 @@ export default function AdminKYCManagement() {
     if (!selectedApplication) return;
 
     try {
-      // Mock KYC review - in a real app, this would update the database
+      // TODO: Implement real API call to update KYC application
+      // const response = await fetch(`/api/kyc/applications/${selectedApplication.id}/review`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(reviewData)
+      // });
+      // 
+      // if (!response.ok) throw new Error('Failed to update KYC application');
+      // 
+      // const updatedApplication = await response.json();
+      // 
+      // // Update local state with the response from server
+      // const updatedApplications = kycApplications.map(app => 
+      //   app.id === selectedApplication.id ? updatedApplication : app
+      // );
+      // setKycApplications(updatedApplications);
+
+      // For now, update local state until real API is implemented
       const updatedApplications = kycApplications.map(app => {
         if (app.id === selectedApplication.id) {
           return {

@@ -82,12 +82,20 @@ const KYCSubmissionForm: React.FC<KYCSubmissionFormProps> = ({ onSubmissionCompl
     setIsSubmitting(true);
 
     try {
-      // Mock document uploads - in real app, these would be actual file uploads
+      // TODO: Implement real document upload to storage service
+      // const documents = await uploadDocuments({
+      //   idFront: formData.idFront,
+      //   idBack: formData.idBack,
+      //   selfie: formData.selfie,
+      //   proofOfAddress: formData.proofOfAddress
+      // });
+      
+      // For now, use placeholder URLs until real upload is implemented
       const documents = {
-        idFront: '/mock-documents/id-front.jpg',
-        idBack: formData.documentType === 'passport' ? '/mock-documents/id-back.jpg' : undefined,
-        selfie: '/mock-documents/selfie.jpg',
-        proofOfAddress: '/mock-documents/address-proof.pdf'
+        idFront: '/placeholder-documents/id-front.jpg',
+        idBack: formData.documentType === 'passport' ? '/placeholder-documents/id-back.jpg' : undefined,
+        selfie: '/placeholder-documents/selfie.jpg',
+        proofOfAddress: '/placeholder-documents/address-proof.pdf'
       };
 
       const submission = kycService.createKYCSubmission(
