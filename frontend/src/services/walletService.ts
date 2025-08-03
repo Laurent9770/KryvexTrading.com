@@ -21,7 +21,7 @@ export interface WalletTransaction {
   id: string;
   userId: string;
   username: string;
-  action: 'fund' | 'withdraw' | 'deduct';
+  action: 'fund' | 'withdraw' | 'deduct' | 'admin_fund' | 'admin_deduct';
   walletType: 'funding' | 'trading';
   amount: number;
   asset: string;
@@ -29,6 +29,8 @@ export interface WalletTransaction {
   timestamp: string;
   remarks?: string;
   status: 'completed' | 'pending' | 'failed';
+  balance?: number; // Added for admin transactions
+  adminEmail?: string; // Added for admin transactions
 }
 
 export interface UserWallet {
@@ -44,6 +46,7 @@ export class WalletService {
   private withdrawalRequests: Map<string, WithdrawalRequest> = new Map();
   private userWallets: Map<string, UserWallet> = new Map();
   private listeners: Map<string, Function[]> = new Map();
+  private walletTransactions: Map<string, WalletTransaction> = new Map(); // Added for admin transactions
 
   constructor() {
     // Initialize with empty state - no mock data
@@ -203,86 +206,113 @@ export class WalletService {
     return request;
   }
 
-  // Fund user wallet
-  fundUserWallet(
-    userId: string,
-    username: string,
-    walletType: 'funding' | 'trading',
-    amount: number,
-    asset: string,
-    adminId: string,
-    remarks?: string
-  ): boolean {
-    const userWallet = this.userWallets.get(userId);
-    if (!userWallet) {
+  // Admin functions for wallet management
+  fundUserWallet(userId: string, username: string, walletType: 'funding' | 'trading', amount: number, asset: string, adminEmail: string, remarks: string): boolean {
+    try {
+      let userWallet = this.userWallets.get(userId);
+      
+      if (!userWallet) {
+        // Create new wallet for user if it doesn't exist
+        userWallet = {
+          userId,
+          username,
+          email: '', // Will be filled from user data
+          fundingWallet: { USDT: 0 },
+          tradingWallet: { USDT: 0 },
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      
+      // Add funds to the specified wallet
+      if (walletType === 'funding') {
+        userWallet.fundingWallet[asset] = (userWallet.fundingWallet[asset] || 0) + amount;
+      } else {
+        userWallet.tradingWallet[asset] = (userWallet.tradingWallet[asset] || 0) + amount;
+      }
+      
+      userWallet.lastUpdated = new Date().toISOString();
+      this.userWallets.set(userId, userWallet);
+      this.persistData();
+      
+      // Log the transaction
+      const transaction: WalletTransaction = {
+        id: `tx-${Date.now()}`,
+        userId,
+        username,
+        action: 'admin_fund',
+        amount,
+        asset,
+        walletType,
+        balance: walletType === 'funding' ? userWallet.fundingWallet[asset] : userWallet.tradingWallet[asset],
+        timestamp: new Date().toISOString(),
+        adminEmail,
+        remarks,
+        performedBy: adminEmail,
+        status: 'completed'
+      };
+      
+      this.walletTransactions.set(transaction.id, transaction);
+      this.persistData();
+      
+      return true;
+    } catch (error) {
+      console.error('Error funding user wallet:', error);
       return false;
     }
-
-    // Add funds to specified wallet
-    if (walletType === 'funding') {
-      userWallet.fundingWallet[asset] = (userWallet.fundingWallet[asset] || 0) + amount;
-    } else {
-      userWallet.tradingWallet[asset] = (userWallet.tradingWallet[asset] || 0) + amount;
-    }
-
-    userWallet.lastUpdated = new Date().toISOString();
-    this.userWallets.set(userId, userWallet);
-    this.persistData(); // Persist after each action
-
-    // Log transaction
-    this.logWalletTransaction(
-      userId,
-      username,
-      'fund',
-      walletType,
-      amount,
-      asset,
-      adminId,
-      remarks || `Funded ${walletType} wallet`
-    );
-
-    return true;
   }
 
-  // Deduct from user wallet
-  deductFromWallet(
-    userId: string,
-    username: string,
-    walletType: 'funding' | 'trading',
-    amount: number,
-    asset: string,
-    adminId: string,
-    remarks?: string
-  ): boolean {
-    const userWallet = this.userWallets.get(userId);
-    if (!userWallet) {
+  deductFromWallet(userId: string, username: string, walletType: 'funding' | 'trading', amount: number, asset: string, adminEmail: string, remarks: string): boolean {
+    try {
+      const userWallet = this.userWallets.get(userId);
+      
+      if (!userWallet) {
+        return false;
+      }
+      
+      const currentBalance = walletType === 'funding' 
+        ? (userWallet.fundingWallet[asset] || 0)
+        : (userWallet.tradingWallet[asset] || 0);
+      
+      if (currentBalance < amount) {
+        return false; // Insufficient balance
+      }
+      
+      // Deduct funds from the specified wallet
+      if (walletType === 'funding') {
+        userWallet.fundingWallet[asset] = currentBalance - amount;
+      } else {
+        userWallet.tradingWallet[asset] = currentBalance - amount;
+      }
+      
+      userWallet.lastUpdated = new Date().toISOString();
+      this.userWallets.set(userId, userWallet);
+      this.persistData();
+      
+      // Log the transaction
+      const transaction: WalletTransaction = {
+        id: `tx-${Date.now()}`,
+        userId,
+        username,
+        action: 'admin_deduct',
+        amount: -amount,
+        asset,
+        walletType,
+        balance: walletType === 'funding' ? userWallet.fundingWallet[asset] : userWallet.tradingWallet[asset],
+        timestamp: new Date().toISOString(),
+        adminEmail,
+        remarks,
+        performedBy: adminEmail,
+        status: 'completed'
+      };
+      
+      this.walletTransactions.set(transaction.id, transaction);
+      this.persistData();
+      
+      return true;
+    } catch (error) {
+      console.error('Error deducting from user wallet:', error);
       return false;
     }
-
-    const wallet = walletType === 'funding' ? userWallet.fundingWallet : userWallet.tradingWallet;
-    if (wallet[asset] < amount) {
-      return false; // Insufficient balance
-    }
-
-    // Deduct from specified wallet
-    wallet[asset] -= amount;
-    userWallet.lastUpdated = new Date().toISOString();
-    this.userWallets.set(userId, userWallet);
-    this.persistData(); // Persist after each action
-
-    // Log transaction
-    this.logWalletTransaction(
-      userId,
-      username,
-      'deduct',
-      walletType,
-      amount,
-      asset,
-      adminId,
-      remarks || `Deducted from ${walletType} wallet`
-    );
-
-    return true;
   }
 
   // Get user wallet

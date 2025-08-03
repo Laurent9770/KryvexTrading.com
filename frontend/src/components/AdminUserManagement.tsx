@@ -38,7 +38,8 @@ import {
   User,
   Settings,
   Trash2,
-  Archive
+  Archive,
+  RefreshCw
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import websocketService from '@/services/websocketService';
@@ -152,39 +153,74 @@ export default function AdminUserManagement() {
   }, [users, searchTerm, statusFilter, kycFilter, dateFilter]);
 
   const setupWebSocketListeners = () => {
+    // Listen for new user registrations
     websocketService.on('user_registered', handleNewUserRegistration);
-    websocketService.on('user_updated', handleUserUpdate);
+    
+    // Listen for user updates
+    websocketService.on('profile_updated', handleUserUpdate);
+    
+    // Listen for KYC updates
     websocketService.on('kyc_level_updated', handleKYCUpdate);
+    
+    // Listen for wallet updates
     websocketService.on('wallet_updated', handleWalletUpdate);
+    
+    // Cleanup function
+    return () => {
+      websocketService.off('user_registered', handleNewUserRegistration);
+      websocketService.off('profile_updated', handleUserUpdate);
+      websocketService.off('kyc_level_updated', handleKYCUpdate);
+      websocketService.off('wallet_updated', handleWalletUpdate);
+    };
   };
 
   const loadUsers = async () => {
-    setIsLoading(true);
     try {
-      // Load from persistence service (1-year retention)
-      const persistentUsers = userPersistenceService.getAllUsers();
+      // Load from user persistence service (real registered users)
+      const registeredUsers = userPersistenceService.getAllUsers();
       
-      // Also load from AuthContext if available
-      const authUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      // Convert to User format for admin display
+      const adminUsers: User[] = registeredUsers.map((userData: any) => ({
+        id: userData.id,
+        email: userData.email,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        phone: userData.phone || '',
+        username: userData.username || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+        kycLevel: 0, // Start unverified
+        kycStatus: 'pending',
+        accountStatus: 'active',
+        walletBalance: 0, // Start with 0 balance
+        tradingBalance: 0,
+        totalTrades: 0,
+        winRate: 0,
+        totalProfit: 0,
+        lastLogin: '',
+        createdAt: userData.createdAt || new Date().toISOString(),
+        isVerified: false,
+        loginAttempts: 0,
+        profilePicture: '',
+        country: '',
+        timezone: '',
+        language: 'en',
+        twoFactorEnabled: false,
+        emailVerified: false,
+        phoneVerified: false
+      }));
       
-      if (authUsers.length > 0) {
-        const mergedUsers = mergeUsers(persistentUsers, authUsers);
-        setUsers(mergedUsers);
-        userPersistenceService.storeUsers(mergedUsers);
-        calculateStats(mergedUsers);
-      } else {
-        setUsers(persistentUsers);
-        calculateStats(persistentUsers);
-      }
+      setUsers(adminUsers);
+      calculateStats(adminUsers);
+      
+      // Store in persistence for admin access
+      userPersistenceService.storeUsers(adminUsers);
+      
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load users',
-        variant: 'destructive'
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load user data"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -557,22 +593,33 @@ export default function AdminUserManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with Stats */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
+          <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
           <p className="text-muted-foreground">
-            Manage user accounts, wallets, and permissions
+            Manage all registered users, view their activity, and control their accounts.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={exportUserData} className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Export Data
+        <div className="flex gap-2">
+          <Button 
+            onClick={loadUsers} 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
           </Button>
-          <div className="text-xs text-muted-foreground">
-            Data retention: 1 year
-          </div>
+          <Button 
+            onClick={exportUserData} 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
         </div>
       </div>
 
