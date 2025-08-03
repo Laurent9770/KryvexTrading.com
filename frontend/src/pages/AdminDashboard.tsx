@@ -45,6 +45,7 @@ import AdminUserManagement from '@/components/AdminUserManagement';
 import AdminKYCManagement from '@/components/AdminKYCManagement';
 import AdminKYCVerification from '@/components/AdminKYCVerification';
 import AdminAuditTrail from '@/components/AdminAuditTrail';
+import AdminDepositManager from '@/components/AdminDepositManager';
 
 import AdminTradingControl from '@/components/AdminTradingControl';
 import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
@@ -592,7 +593,7 @@ export default function AdminDashboard() {
         {/* Admin Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-1">
-            <TabsList className="w-full bg-transparent grid grid-cols-7">
+            <TabsList className="w-full bg-transparent grid grid-cols-8">
               <TabsTrigger 
                 value="users" 
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-400"
@@ -606,6 +607,13 @@ export default function AdminDashboard() {
               >
                 <UserCheck className="w-4 h-4 mr-2" />
                 KYC
+              </TabsTrigger>
+              <TabsTrigger 
+                value="deposits" 
+                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-slate-400"
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Deposits
               </TabsTrigger>
               <TabsTrigger 
                 value="trading-control" 
@@ -658,81 +666,8 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="deposits">
-            <div className="bg-slate-900/50 border border-slate-700 rounded-xl">
-              <div className="p-6 border-b border-slate-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-white">Deposit Management</h3>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-48 bg-slate-800 border-slate-600 text-white">
-                      <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="p-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-700">
-                      <TableHead className="text-slate-300">User</TableHead>
-                      <TableHead className="text-slate-300">Amount</TableHead>
-                      <TableHead className="text-slate-300">Currency</TableHead>
-                      <TableHead className="text-slate-300">Status</TableHead>
-                      <TableHead className="text-slate-300">Date</TableHead>
-                      <TableHead className="text-slate-300">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDeposits.slice(0, 10).map((deposit) => (
-                      <TableRow key={deposit.id} className="border-slate-700">
-                        <TableCell className="text-slate-300">{deposit.profiles?.full_name || deposit.profiles?.email}</TableCell>
-                        <TableCell className="text-white font-medium">${deposit.amount.toLocaleString()}</TableCell>
-                        <TableCell className="text-slate-300">{deposit.currency}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            deposit.status === 'approved' ? 'default' : 
-                            deposit.status === 'rejected' ? 'destructive' : 'secondary'
-                          } className="bg-slate-700 text-slate-300">
-                            {deposit.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-slate-300">{new Date(deposit.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {deposit.status === 'pending' && (
-                            <div className="flex space-x-2">
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleDepositStatus(deposit.id, 'approved')}
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                              >
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => handleDepositStatus(deposit.id, 'rejected')}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+            <AdminDepositManager />
           </TabsContent>
-
 
 
           <TabsContent value="kyc">
