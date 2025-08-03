@@ -4763,7 +4763,7 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Total Entrusted</p>
-                          <p className="text-2xl font-bold text-foreground">$2,847,362</p>
+                          <p className="text-2xl font-bold text-foreground">$0.00</p>
                           <p className="text-xs text-muted-foreground">≈ 42.18 BTC</p>
                         </div>
                         <DollarSign className="w-8 h-8 text-green-500" />
@@ -4776,8 +4776,8 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Today's Earnings</p>
-                          <p className="text-2xl font-bold text-green-500">+$12,485</p>
-                          <p className="text-xs text-green-500">+2.34% today</p>
+                          <p className="text-2xl font-bold text-green-500">$0.00</p>
+                                                      <p className="text-xs text-green-500">0.00% today</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-blue-500" />
                       </div>
@@ -4789,8 +4789,8 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Total Earnings</p>
-                          <p className="text-2xl font-bold text-foreground">$89,234</p>
-                          <p className="text-xs text-green-500">+45.6% overall</p>
+                          <p className="text-2xl font-bold text-foreground">$0.00</p>
+                                                      <p className="text-xs text-green-500">0.00% overall</p>
                         </div>
                         <BarChart3 className="w-8 h-8 text-purple-500" />
                       </div>
@@ -4802,7 +4802,7 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Active Strategies</p>
-                          <p className="text-2xl font-bold text-foreground">7</p>
+                          <p className="text-2xl font-bold text-foreground">0</p>
                           <p className="text-xs text-muted-foreground">Running smoothly</p>
                         </div>
                         <Activity className="w-8 h-8 text-yellow-500" />
@@ -4983,19 +4983,19 @@ const TradingPage = () => {
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center p-3 rounded-lg bg-muted/30">
-                            <div className="text-2xl font-bold text-green-500">92.3%</div>
+                            <div className="text-2xl font-bold text-green-500">0.0%</div>
                             <div className="text-xs text-muted-foreground">Success Rate</div>
                           </div>
                           <div className="text-center p-3 rounded-lg bg-muted/30">
-                            <div className="text-2xl font-bold text-foreground">2.8x</div>
+                            <div className="text-2xl font-bold text-foreground">0.0x</div>
                             <div className="text-xs text-muted-foreground">Avg Multiplier</div>
                           </div>
                           <div className="text-center p-3 rounded-lg bg-muted/30">
-                            <div className="text-2xl font-bold text-purple-500">156</div>
+                            <div className="text-2xl font-bold text-purple-500">0</div>
                             <div className="text-xs text-muted-foreground">Total Trades</div>
                           </div>
                           <div className="text-center p-3 rounded-lg bg-muted/30">
-                            <div className="text-2xl font-bold text-blue-500">24.7%</div>
+                            <div className="text-2xl font-bold text-blue-500">0.0%</div>
                             <div className="text-xs text-muted-foreground">Monthly ROI</div>
                           </div>
                         </div>

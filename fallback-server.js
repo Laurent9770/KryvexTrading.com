@@ -12,8 +12,14 @@ console.log('Build path:', buildPath);
 
 if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
   console.log('✅ Build found, serving React app...');
+  
+  // Serve static files from the React app
   app.use(express.static(buildPath));
+  
+  // Handle React routing - return all requests to React app
+  // This is crucial for client-side routing to work
   app.get('*', (req, res) => {
+    console.log(`📄 Serving index.html for route: ${req.path}`);
     res.sendFile(indexPath);
   });
 } else {
@@ -69,16 +75,52 @@ if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
     `);
   });
   
-  app.get('/health', (req, res) => {
-    res.json({ 
-      status: 'fallback', 
-      timestamp: new Date().toISOString(),
-      buildPath: buildPath,
-      buildExists: fs.existsSync(buildPath),
-      message: 'Serving fallback page - build not found'
-    });
+  // Handle all other routes in fallback mode
+  app.get('*', (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Kryvex Trading - Route Not Found</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              background: #0f0f23; 
+              color: white; 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              height: 100vh; 
+              margin: 0; 
+            }
+            .container { 
+              text-align: center; 
+              padding: 2rem; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Route Not Found</h1>
+            <p>Requested route: ${req.path}</p>
+            <p>Build is not available. Please check deployment logs.</p>
+          </div>
+        </body>
+      </html>
+    `);
   });
 }
+
+// Add a health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: fs.existsSync(buildPath) ? 'ok' : 'fallback', 
+    timestamp: new Date().toISOString(),
+    buildPath: buildPath,
+    buildExists: fs.existsSync(buildPath),
+    message: fs.existsSync(buildPath) ? 'React app serving' : 'Serving fallback page'
+  });
+});
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

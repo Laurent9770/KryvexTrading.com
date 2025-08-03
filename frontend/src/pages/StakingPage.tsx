@@ -172,11 +172,11 @@ const StakingPage = () => {
 
   // Staking Overview Stats
   const stakingStats = {
-    totalStaked: 19125.13,
-    totalRewards: 456.78,
-    avgApy: 5.85,
-    activeStakes: 3,
-    totalValue: 31513.13
+    totalStaked: 0,
+    totalRewards: 0,
+    avgApy: 0,
+    activeStakes: 0,
+    totalValue: 0
   };
 
   // Handlers
