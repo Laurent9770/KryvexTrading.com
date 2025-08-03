@@ -100,33 +100,32 @@ const DepositPage = () => {
     { 
       label: "USDT", 
       symbol: "USDT", 
-      network: "TRC-20", 
+      network: "Multi-Network", 
       address: "TXgmyWRAyuLfoJipSijEwjWJtApuMa4tYU",
       minDeposit: "10 USDT",
       confirmations: "20 confirmations"
-    },
-    { 
-      label: "USDT", 
-      symbol: "USDT", 
-      network: "ERC-20", 
-      address: "0xa32e2d5aa997affac06db8b17562577e25640970",
-      minDeposit: "10 USDT",
-      confirmations: "12 confirmations"
-    },
-    { 
-      label: "USDT", 
-      symbol: "USDT", 
-      network: "Solana", 
-      address: "ChMBgsSsRhnFk2JxBDrtaCLiU33ipburpEDneyrWEM11",
-      minDeposit: "10 USDT",
-      confirmations: "1 confirmation"
     }
+  ];
+
+  // Create unique cryptocurrencies for selection (no duplicates)
+  const uniqueCryptocurrencies = [
+    { symbol: "BTC", label: "Bitcoin" },
+    { symbol: "ETH", label: "Ethereum" },
+    { symbol: "USDT", label: "USDT" }
   ];
 
   const getSelectedAddress = () => {
     if (selectedCrypto === "USDT") {
       return usdtNetworks.find(network => network.name === selectedNetwork) || usdtNetworks[0];
     }
+    return depositAddresses.find(addr => addr.symbol === selectedCrypto) || depositAddresses[0];
+  };
+
+  const getSelectedUSDTAddress = () => {
+    return usdtNetworks.find(network => network.name === selectedNetwork) || usdtNetworks[0];
+  };
+
+  const getSelectedCryptoAddress = () => {
     return depositAddresses.find(addr => addr.symbol === selectedCrypto) || depositAddresses[0];
   };
 
@@ -294,7 +293,7 @@ const DepositPage = () => {
             <Card className="bg-slate-800/50 border-slate-700 p-6">
               <h2 className="text-xl font-bold mb-4 text-white">Select Cryptocurrency</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {depositAddresses.map((crypto, index) => (
+                {uniqueCryptocurrencies.map((crypto, index) => (
                   <Button
                     key={index}
                     variant={selectedCrypto === crypto.symbol ? "default" : "outline"}
@@ -336,15 +335,15 @@ const DepositPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
                       <p className="text-sm text-slate-400">Network Fee</p>
-                      <p className="font-semibold text-white">{getSelectedAddress().fee}</p>
+                      <p className="font-semibold text-white">{getSelectedUSDTAddress().fee}</p>
                     </div>
                     <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
                       <p className="text-sm text-slate-400">Min Deposit</p>
-                      <p className="font-semibold text-white">{getSelectedAddress().minDeposit}</p>
+                      <p className="font-semibold text-white">{getSelectedUSDTAddress().minDeposit}</p>
                     </div>
                     <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
                       <p className="text-sm text-slate-400">Confirmations</p>
-                      <p className="font-semibold text-white">{getSelectedAddress().confirmations}</p>
+                      <p className="font-semibold text-white">{getSelectedUSDTAddress().confirmations}</p>
                     </div>
                   </div>
                 </div>
@@ -373,20 +372,28 @@ const DepositPage = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-slate-400">
                       {selectedCrypto === "USDT" 
-                        ? `${getSelectedAddress().label} (${getSelectedAddress().name})`
-                        : `${getSelectedAddress().label} (${getSelectedAddress().network})`
+                        ? `${getSelectedUSDTAddress().label} (${getSelectedUSDTAddress().name})`
+                        : `${getSelectedCryptoAddress().label} (${getSelectedCryptoAddress().network})`
                       }
                     </span>
                     <Badge className="bg-green-500/10 text-green-400 border-green-500/20">Active</Badge>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-mono text-white break-all">
-                      {getSelectedAddress().address}
+                      {selectedCrypto === "USDT" 
+                        ? getSelectedUSDTAddress().address 
+                        : getSelectedCryptoAddress().address
+                      }
                     </span>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => copyToClipboard(getSelectedAddress().address, selectedCrypto)}
+                      onClick={() => copyToClipboard(
+                        selectedCrypto === "USDT" 
+                          ? getSelectedUSDTAddress().address 
+                          : getSelectedCryptoAddress().address, 
+                        selectedCrypto
+                      )}
                       className="text-slate-400 hover:text-white hover:bg-slate-700"
                     >
                       {copiedAddress === selectedCrypto ? (
@@ -401,7 +408,11 @@ const DepositPage = () => {
                 {showQR && (
                   <div className="flex justify-center p-6 bg-white rounded-lg">
                     <img 
-                      src={generateQRCode(getSelectedAddress().address)} 
+                      src={generateQRCode(
+                        selectedCrypto === "USDT" 
+                          ? getSelectedUSDTAddress().address 
+                          : getSelectedCryptoAddress().address
+                      )} 
                       alt="QR Code" 
                       className="w-48 h-48"
                     />
@@ -461,6 +472,8 @@ const DepositPage = () => {
                       accept=".jpg,.jpeg,.png,.pdf"
                       onChange={handleFileUpload}
                       className="hidden"
+                      aria-label="Upload proof file"
+                      title="Upload proof file"
                     />
                     
                     {depositRequest.proofFile && (
@@ -538,11 +551,15 @@ const DepositPage = () => {
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <p>Deposits will be credited after {getSelectedAddress().confirmations}.</p>
+                  <p>Deposits will be credited after {selectedCrypto === "USDT" 
+                    ? getSelectedUSDTAddress().confirmations 
+                    : getSelectedCryptoAddress().confirmations}.</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <p>Minimum deposit amount: {getSelectedAddress().minDeposit}</p>
+                  <p>Minimum deposit amount: {selectedCrypto === "USDT" 
+                    ? getSelectedUSDTAddress().minDeposit 
+                    : getSelectedCryptoAddress().minDeposit}</p>
                 </div>
                 {selectedCrypto === "USDT" && (
                   <div className="flex items-start gap-2">
