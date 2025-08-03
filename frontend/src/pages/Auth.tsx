@@ -4,22 +4,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KryvexLogo from '@/components/KryvexLogo';
 import WhatsAppButton from '@/components/WhatsAppButton';
-import { Shield, Mail, ArrowLeft } from 'lucide-react';
+import PasswordInput from '@/components/PasswordInput';
+import { validatePassword } from '@/utils/passwordValidation';
+import { Shield, Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [signInForm, setSignInForm] = useState({ email: '', password: '' });
+  const [signInForm, setSignInForm] = useState({ 
+    email: '', 
+    password: '',
+    rememberMe: false
+  });
   const [signUpForm, setSignUpForm] = useState({ 
     email: '', 
     password: '', 
     confirmPassword: '', 
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
+    agreeToTerms: false
   });
   
   const { login, register } = useAuth();
@@ -33,7 +41,7 @@ const Auth = () => {
     console.log('Attempting to sign in with:', signInForm.email);
 
     try {
-      await login(signInForm.email, signInForm.password);
+      await login(signInForm.email, signInForm.password, signInForm.rememberMe);
       
       toast({
         title: "Welcome back!",
@@ -55,11 +63,31 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate password strength
+    const passwordValidation = validatePassword(signUpForm.password);
+    if (!passwordValidation.isValid) {
+      toast({
+        variant: "destructive",
+        title: "Weak Password",
+        description: "Please ensure your password meets all security requirements."
+      });
+      return;
+    }
+    
     if (signUpForm.password !== signUpForm.confirmPassword) {
       toast({
         variant: "destructive",
         title: "Password Mismatch",
         description: "Passwords do not match."
+      });
+      return;
+    }
+
+    if (!signUpForm.agreeToTerms) {
+      toast({
+        variant: "destructive",
+        title: "Terms Agreement Required",
+        description: "You must agree to the Terms and Conditions to create an account."
       });
       return;
     }
@@ -139,16 +167,29 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Password</label>
-                  <Input
-                    type="password"
-                    placeholder="Enter your password"
-                    className="kucoin-input"
-                    value={signInForm.password}
-                    onChange={(e) => setSignInForm({...signInForm, password: e.target.value})}
-                    required
+                
+                <PasswordInput
+                  value={signInForm.password}
+                  onChange={(value) => setSignInForm({...signInForm, password: value})}
+                  placeholder="Enter your password"
+                  label="Password"
+                  required
+                />
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={signInForm.rememberMe}
+                    onCheckedChange={(checked) => 
+                      setSignInForm({...signInForm, rememberMe: checked as boolean})
+                    }
                   />
+                  <label
+                    htmlFor="rememberMe"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Remember me
+                  </label>
                 </div>
                 
                 <Button
@@ -208,33 +249,80 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Password</label>
-                  <Input
-                    type="password"
-                    placeholder="Create a password"
-                    className="kucoin-input"
-                    value={signUpForm.password}
-                    onChange={(e) => setSignUpForm({...signUpForm, password: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Confirm Password</label>
-                  <Input
-                    type="password"
-                    placeholder="Confirm your password"
-                    className="kucoin-input"
-                    value={signUpForm.confirmPassword}
-                    onChange={(e) => setSignUpForm({...signUpForm, confirmPassword: e.target.value})}
-                    required
-                  />
+                
+                <PasswordInput
+                  value={signUpForm.password}
+                  onChange={(value) => setSignUpForm({...signUpForm, password: value})}
+                  placeholder="Create a strong password"
+                  label="Password"
+                  required
+                  showStrength
+                />
+                
+                <PasswordInput
+                  value={signUpForm.confirmPassword}
+                  onChange={(value) => setSignUpForm({...signUpForm, confirmPassword: value})}
+                  placeholder="Confirm your password"
+                  label="Confirm Password"
+                  required
+                />
+                
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="agreeToTerms"
+                      checked={signUpForm.agreeToTerms}
+                      onCheckedChange={(checked) => 
+                        setSignUpForm({...signUpForm, agreeToTerms: checked as boolean})
+                      }
+                      className="mt-1"
+                    />
+                    <label
+                      htmlFor="agreeToTerms"
+                      className="text-sm leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I agree to the{' '}
+                      <a 
+                        href="/terms" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-kucoin-green hover:underline"
+                      >
+                        Terms and Conditions
+                      </a>
+                      {' '}and{' '}
+                      <a 
+                        href="/privacy" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-kucoin-green hover:underline"
+                      >
+                        Privacy Policy
+                      </a>
+                    </label>
+                  </div>
+                  
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <div className="flex items-start space-x-2">
+                      <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-blue-700 dark:text-blue-300">
+                        <p className="font-medium mb-1">Password Requirements:</p>
+                        <ul className="space-y-1">
+                          <li>• At least 8 characters</li>
+                          <li>• At least one uppercase letter</li>
+                          <li>• At least one lowercase letter</li>
+                          <li>• At least one number</li>
+                          <li>• At least one special character</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
                 <Button
                   type="submit" 
                   className="kucoin-btn-primary w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || !signUpForm.agreeToTerms}
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   {isLoading ? 'Creating Account...' : 'Create Account'}

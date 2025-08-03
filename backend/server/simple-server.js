@@ -547,6 +547,141 @@ wss.on('connection', (ws) => {
   });
 });
 
+// Password validation function
+const validatePassword = (password) => {
+  const errors = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// Registration endpoint
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const { email, password, firstName, lastName, phone } = req.body;
+    
+    // Validate required fields
+    if (!email || !password || !firstName || !lastName || !phone) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'All fields are required'
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: 'Invalid email format',
+        message: 'Please enter a valid email address'
+      });
+    }
+    
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        error: 'Weak password',
+        message: 'Password does not meet security requirements',
+        details: passwordValidation.errors
+      });
+    }
+    
+    // Check if user already exists (in a real app, this would check the database)
+    // For now, we'll just return success since the frontend handles user storage
+    res.status(201).json({
+      success: true,
+      message: 'User registration successful',
+      user: {
+        email,
+        firstName,
+        lastName,
+        phone
+      }
+    });
+    
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      error: 'Registration failed',
+      message: 'An unexpected error occurred during registration'
+    });
+  }
+});
+
+// Login endpoint with password validation
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Missing credentials',
+        message: 'Email and password are required'
+      });
+    }
+    
+    // Check for admin credentials
+    if (email === 'admin@kryvex.com' && password === 'Kryvex.@123') {
+      return res.status(200).json({
+        success: true,
+        message: 'Admin login successful',
+        user: {
+          id: 'admin-001',
+          email: 'admin@kryvex.com',
+          username: 'admin',
+          firstName: 'Admin',
+          lastName: 'Kryvex',
+          isAdmin: true
+        },
+        token: 'admin-jwt-token-' + Date.now()
+      });
+    }
+    
+    // For regular users, the frontend handles authentication
+    // This endpoint would typically validate against a database
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      user: {
+        email,
+        isAdmin: false
+      },
+      token: 'user-jwt-token-' + Date.now()
+    });
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      error: 'Login failed',
+      message: 'An unexpected error occurred during login'
+    });
+  }
+});
+
 // REST API endpoints
 app.get('/api/users', (req, res) => {
   res.json([

@@ -21,7 +21,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;
   updateUserProfile: (profileData: Partial<User>) => void;
@@ -75,37 +75,65 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    // Initialize user from localStorage on app load
+    // Initialize user from localStorage or sessionStorage on app load
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
+        // Check localStorage first (persistent login)
         const savedUser = localStorage.getItem('authUser');
-        return savedUser ? JSON.parse(savedUser) : null;
+        if (savedUser) {
+          return JSON.parse(savedUser);
+        }
+        
+        // Check sessionStorage (session login)
+        const sessionUser = sessionStorage.getItem('authUser');
+        if (sessionUser) {
+          return JSON.parse(sessionUser);
+        }
       }
     } catch (error) {
-      console.warn('Error accessing localStorage:', error);
+      console.warn('Error accessing storage:', error);
     }
     return null;
   });
+  
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Initialize authentication state from localStorage
+    // Initialize authentication state from localStorage or sessionStorage
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem('authToken') !== null;
+        // Check localStorage first (persistent login)
+        if (localStorage.getItem('authToken')) {
+          return true;
+        }
+        
+        // Check sessionStorage (session login)
+        if (sessionStorage.getItem('authToken')) {
+          return true;
+        }
       }
     } catch (error) {
-      console.warn('Error accessing localStorage:', error);
+      console.warn('Error accessing storage:', error);
     }
     return false;
   });
+  
   const [isAdmin, setIsAdmin] = useState(() => {
-    // Initialize admin state from localStorage
+    // Initialize admin state from localStorage or sessionStorage
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const savedAdmin = localStorage.getItem('authIsAdmin');
-        return savedAdmin === 'true';
+        // Check localStorage first (persistent login)
+        const localStorageAdmin = localStorage.getItem('authIsAdmin');
+        if (localStorageAdmin) {
+          return localStorageAdmin === 'true';
+        }
+        
+        // Check sessionStorage (session login)
+        const sessionStorageAdmin = sessionStorage.getItem('authIsAdmin');
+        if (sessionStorageAdmin) {
+          return sessionStorageAdmin === 'true';
+        }
       }
     } catch (error) {
-      console.warn('Error accessing localStorage:', error);
+      console.warn('Error accessing storage:', error);
     }
     return false;
   });
@@ -488,7 +516,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
       // Check for admin credentials
       if (email === 'admin@kryvex.com' && password === 'Kryvex.@123') {
@@ -504,6 +532,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         try {
           if (typeof window !== 'undefined' && window.localStorage) {
+            // Use localStorage for admin (always persistent)
             localStorage.setItem('authToken', mockToken);
             localStorage.setItem('authUser', JSON.stringify(adminUser));
             localStorage.setItem('authIsAdmin', 'true');
@@ -548,9 +577,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           const mockToken = 'user-jwt-token-' + Date.now();
           
-          localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('authUser', JSON.stringify(sessionUser));
-          localStorage.setItem('authIsAdmin', 'false');
+          // Use appropriate storage based on rememberMe preference
+          if (rememberMe) {
+            localStorage.setItem('authToken', mockToken);
+            localStorage.setItem('authUser', JSON.stringify(sessionUser));
+            localStorage.setItem('authIsAdmin', 'false');
+            console.log('User login successful (persistent):', sessionUser.email);
+          } else {
+            sessionStorage.setItem('authToken', mockToken);
+            sessionStorage.setItem('authUser', JSON.stringify(sessionUser));
+            sessionStorage.setItem('authIsAdmin', 'false');
+            console.log('User login successful (session):', sessionUser.email);
+          }
           
           setUser(sessionUser);
           setIsAuthenticated(true);
@@ -558,7 +596,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           websocketService.authenticate(email, password);
           
-          console.log('User login successful:', sessionUser.email);
           return;
         }
       } catch (localStorageError) {
@@ -637,16 +674,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    // Clear only session data from localStorage, keep registered users
+    // Clear session data from both localStorage and sessionStorage, keep registered users
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
+        // Clear localStorage session data
         localStorage.removeItem('authToken');
         localStorage.removeItem('authUser');
         localStorage.removeItem('authIsAdmin');
+        
+        // Clear sessionStorage session data
+        sessionStorage.removeItem('authToken');
+        sessionStorage.removeItem('authUser');
+        sessionStorage.removeItem('authIsAdmin');
+        
         // Note: We keep 'registeredUsers' so users can login again
       }
     } catch (localStorageError) {
-      console.warn('Error clearing localStorage:', localStorageError);
+      console.warn('Error clearing storage:', localStorageError);
     }
     
     setUser(null);
