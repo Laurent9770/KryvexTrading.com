@@ -4763,8 +4763,9 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Total Entrusted</p>
+                          {/* TODO: Replace with real API call to get user's total entrusted funds */}
                           <p className="text-2xl font-bold text-foreground">$0.00</p>
-                          <p className="text-xs text-muted-foreground">≈ 42.18 BTC</p>
+                          <p className="text-xs text-muted-foreground">≈ 0.00 BTC</p>
                         </div>
                         <DollarSign className="w-8 h-8 text-green-500" />
                       </div>
@@ -4776,8 +4777,9 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Today's Earnings</p>
+                          {/* TODO: Replace with real API call to get today's earnings */}
                           <p className="text-2xl font-bold text-green-500">$0.00</p>
-                                                      <p className="text-xs text-green-500">0.00% today</p>
+                          <p className="text-xs text-green-500">0.00% today</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-blue-500" />
                       </div>
@@ -4789,8 +4791,9 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Total Earnings</p>
+                          {/* TODO: Replace with real API call to get total earnings */}
                           <p className="text-2xl font-bold text-foreground">$0.00</p>
-                                                      <p className="text-xs text-green-500">0.00% overall</p>
+                          <p className="text-xs text-green-500">0.00% overall</p>
                         </div>
                         <BarChart3 className="w-8 h-8 text-purple-500" />
                       </div>
@@ -4802,6 +4805,7 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Active Strategies</p>
+                          {/* TODO: Replace with real API call to get active strategies count */}
                           <p className="text-2xl font-bold text-foreground">0</p>
                           <p className="text-xs text-muted-foreground">Running smoothly</p>
                         </div>
@@ -4813,14 +4817,17 @@ const TradingPage = () => {
 
                 {/* Action Buttons */}
                 <div className="flex justify-center gap-4 mb-8">
+                  {/* TODO: Implement real settlement functionality */}
                   <Button className="bg-green-600 hover:bg-green-700">
                     <Shield className="w-4 h-4 mr-2" />
                     Daily Settlement
                   </Button>
+                  {/* TODO: Implement real returns functionality */}
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <Target className="w-4 h-4 mr-2" />
                     Stable Returns
                   </Button>
+                  {/* TODO: Implement real withdrawal functionality */}
                   <Button variant="outline">
                     <Zap className="w-4 h-4 mr-2" />
                     Fast Withdrawal
@@ -6169,7 +6176,8 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Total Bot Profit</p>
-                                                  <p className="text-2xl font-bold text-foreground">$0.00</p>
+                        {/* TODO: Replace with real API call to get total bot profit */}
+                        <p className="text-2xl font-bold text-foreground">$0.00</p>
                         <p className="text-xs text-green-500 mt-1">Last 30 days</p>
                       </div>
                     </Card>
@@ -6183,7 +6191,8 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Active Trades</p>
-                                                  <p className="text-2xl font-bold text-foreground">0</p>
+                        {/* TODO: Replace with real API call to get active trades count */}
+                        <p className="text-2xl font-bold text-foreground">0</p>
                         <p className="text-xs text-muted-foreground mt-1">Across all bots</p>
                       </div>
                     </Card>
@@ -6197,7 +6206,8 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Success Rate</p>
-                                                  <p className="text-2xl font-bold text-foreground">0.0%</p>
+                        {/* TODO: Replace with real API call to get success rate */}
+                        <p className="text-2xl font-bold text-foreground">0.0%</p>
                         <p className="text-xs text-muted-foreground mt-1">Win rate average</p>
                       </div>
                     </Card>
@@ -6211,7 +6221,8 @@ const TradingPage = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Uptime</p>
-                                                  <p className="text-2xl font-bold text-foreground">0.0%</p>
+                        {/* TODO: Replace with real API call to get uptime percentage */}
+                        <p className="text-2xl font-bold text-foreground">0.0%</p>
                         <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
                       </div>
                     </Card>
@@ -6220,6 +6231,7 @@ const TradingPage = () => {
                   {/* Performance Chart Placeholder */}
                   <Card className="border-0 p-6">
                     <h3 className="text-xl font-bold text-foreground mb-6">Bot Performance Overview</h3>
+                    {/* TODO: Replace with real performance charts from API */}
                     <div className="h-64 flex items-center justify-center bg-muted/20 rounded-lg">
                       <div className="text-center">
                         <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

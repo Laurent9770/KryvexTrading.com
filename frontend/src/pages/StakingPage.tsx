@@ -435,6 +435,7 @@ const StakingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Staked</p>
+                  {/* TODO: Replace with real API call to get user's total staked amount */}
                   <p className="text-xl font-bold text-foreground">{formatCurrency(stakingStats.totalStaked)}</p>
                 </div>
               </div>
@@ -449,6 +450,7 @@ const StakingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Rewards</p>
+                  {/* TODO: Replace with real API call to get user's total rewards */}
                   <p className="text-xl font-bold text-foreground">{formatCurrency(stakingStats.totalRewards)}</p>
                 </div>
               </div>
@@ -463,6 +465,7 @@ const StakingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Avg APY</p>
+                  {/* TODO: Replace with real API call to get average APY */}
                   <p className="text-xl font-bold text-foreground">{stakingStats.avgApy}%</p>
                 </div>
               </div>
@@ -477,6 +480,7 @@ const StakingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Stakes</p>
+                  {/* TODO: Replace with real API call to get active stakes count */}
                   <p className="text-xl font-bold text-foreground">{stakingStats.activeStakes}</p>
                 </div>
               </div>
