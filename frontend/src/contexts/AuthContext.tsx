@@ -30,6 +30,9 @@ interface AuthContextType {
   checkAdminAccess: () => boolean;
   requireAdmin: () => boolean;
   
+  // Helper functions
+  isUserRegistered: (email: string) => boolean;
+  
   // Global state for real-time updates
   tradingAccount: { [key: string]: { balance: string; usdValue: string; available: string } };
   fundingAccount: { USDT: { balance: string; usdValue: string; available: string } };
@@ -519,7 +522,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
       
-      // Check if user exists in localStorage (real registration)
+      // Check if user exists in registeredUsers (real registration)
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
@@ -529,19 +532,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             throw new Error('Invalid credentials. Please register first.');
           }
           
+          // Create clean user object without password for session
+          const sessionUser = {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            username: user.username,
+            country: user.country || '',
+            bio: user.bio || '',
+            avatar: user.avatar || '',
+            kycStatus: user.kycStatus || 'unverified'
+          };
+          
           const mockToken = 'user-jwt-token-' + Date.now();
           
           localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('authUser', JSON.stringify(user));
+          localStorage.setItem('authUser', JSON.stringify(sessionUser));
           localStorage.setItem('authIsAdmin', 'false');
           
-          setUser(user);
+          setUser(sessionUser);
           setIsAuthenticated(true);
           setIsAdmin(false);
           
           websocketService.authenticate(email, password);
           
-          console.log('User login successful');
+          console.log('User login successful:', sessionUser.email);
           return;
         }
       } catch (localStorageError) {
@@ -580,49 +597,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Clean initial state - no mock data
             country: '',
             bio: '',
-            avatar: ''
+            avatar: '',
+            kycStatus: 'unverified'
           };
           
-          // Store user in registered users list
-          registeredUsers.push({ ...newUser, password });
+          // Store user in registered users list (with password for login)
+          const userWithPassword = { ...newUser, password };
+          registeredUsers.push(userWithPassword);
           localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
           
-          // Generate a token
+          // Generate a token for immediate login
           const mockToken = 'user-jwt-token-' + Date.now();
           
           localStorage.setItem('authToken', mockToken);
           localStorage.setItem('authUser', JSON.stringify(newUser));
           localStorage.setItem('authIsAdmin', 'false');
+          
+          console.log('User registered successfully:', newUser.email);
         }
       } catch (localStorageError) {
         console.warn('Error persisting to localStorage:', localStorageError);
         throw new Error('Failed to create account. Please try again.');
       }
-      
-      if (!newUser) {
-        throw new Error('Failed to create user account.');
-      }
-      
-      // Reset all user data to clean state for new users
-      setTradingAccount({
-        USDT: { balance: "0.00", usdValue: "$0.00", available: "0.00" }
-      });
-      
-      setFundingAccount({
-        USDT: { balance: "0.00", usdValue: "$0.00", available: "0.00" }
-      });
-      
-      setActivityFeed([]);
-      setTradingHistory([]);
-      
-      setPortfolioStats({
-        totalBalance: "$0.00",
-        totalPnl: "$0.00",
-        pnlPercentage: "0.0%",
-        totalTrades: 0,
-        winRate: "0.0%",
-        activePositions: 0
-      });
       
       setUser(newUser);
       setIsAuthenticated(true);
@@ -641,12 +637,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    // Clear authentication data from localStorage with safety checks
+    // Clear only session data from localStorage, keep registered users
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('authUser');
         localStorage.removeItem('authIsAdmin');
+        // Note: We keep 'registeredUsers' so users can login again
       }
     } catch (localStorageError) {
       console.warn('Error clearing localStorage:', localStorageError);
@@ -657,7 +654,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAdmin(false);
     websocketService.disconnect();
     
-    console.log('Logout successful, authentication data cleared');
+    console.log('Logout successful, session data cleared (registered users preserved)');
   };
 
   const updateUserProfile = (profileData: Partial<User>) => {
@@ -694,6 +691,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return true;
   };
 
+  // Helper function to check if user is already registered
+  const isUserRegistered = (email: string): boolean => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        return registeredUsers.some((u: any) => u.email === email);
+      }
+    } catch (error) {
+      console.warn('Error checking user registration:', error);
+    }
+    return false;
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated,
@@ -704,6 +714,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUserProfile,
     checkAdminAccess,
     requireAdmin,
+    isUserRegistered,
     tradingAccount,
     fundingAccount,
     activityFeed,
