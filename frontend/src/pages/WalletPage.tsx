@@ -557,11 +557,11 @@ const WalletPage = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
-            <TabsTrigger value="trading">{t('tradingAccount')}</TabsTrigger>
-            <TabsTrigger value="funding">{t('fundingAccount')}</TabsTrigger>
-            <TabsTrigger value="history">{t('history')}</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap">{t('overview')}</TabsTrigger>
+            <TabsTrigger value="trading" className="text-xs sm:text-sm whitespace-nowrap">{t('tradingAccount')}</TabsTrigger>
+            <TabsTrigger value="funding" className="text-xs sm:text-sm whitespace-nowrap">{t('fundingAccount')}</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm whitespace-nowrap">{t('history')}</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}

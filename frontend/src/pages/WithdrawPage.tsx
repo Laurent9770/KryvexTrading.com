@@ -18,10 +18,12 @@ import {
   Shield
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const WithdrawPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedCrypto, setSelectedCrypto] = useState("USDT");
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
@@ -29,8 +31,17 @@ const WithdrawPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  // Get real wallet balances from auth context
+  const { fundingAccount } = useAuth();
+  
   const walletBalances = [
-    { symbol: "USDT", name: "Tether", balance: "15,420.50", usdValue: "$15,420.50", available: "15,320.50" }
+    { 
+      symbol: "USDT", 
+      name: "Tether", 
+      balance: fundingAccount.USDT.balance, 
+      usdValue: fundingAccount.USDT.usdValue, 
+      available: fundingAccount.USDT.available 
+    }
   ];
 
   const withdrawalFees = {
