@@ -800,13 +800,13 @@ const SettingsPage = () => {
         </div>
 
         <Tabs defaultValue="account" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="account">{t('profile')}</TabsTrigger>
-            <TabsTrigger value="security">{t('securitySettings')}</TabsTrigger>
-            <TabsTrigger value="api">API Keys</TabsTrigger>
-            <TabsTrigger value="notifications">{t('notificationPreferences')}</TabsTrigger>
-            <TabsTrigger value="preferences">{t('displayPreferences')}</TabsTrigger>
-            <TabsTrigger value="kyc" onClick={() => window.location.href = '/kyc'}>{t('kycVerification')}</TabsTrigger>
+          <TabsList className="flex w-full gap-1 bg-muted/20 p-1 rounded-lg overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="account" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">{t('profile')}</TabsTrigger>
+            <TabsTrigger value="security" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">{t('securitySettings')}</TabsTrigger>
+            <TabsTrigger value="api" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">API Keys</TabsTrigger>
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">{t('notificationPreferences')}</TabsTrigger>
+            <TabsTrigger value="preferences" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">{t('displayPreferences')}</TabsTrigger>
+            <TabsTrigger value="kyc" onClick={() => window.location.href = '/kyc'} className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">{t('kycVerification')}</TabsTrigger>
           </TabsList>
 
           {/* Account Tab */}
