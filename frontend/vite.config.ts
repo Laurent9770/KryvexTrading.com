@@ -20,9 +20,12 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    minify: 'terser',
-    rollupOptions: {
-      external: [],
+    minify: 'esbuild',
+    target: 'esnext',
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
     },
   },
 }));
