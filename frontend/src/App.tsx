@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -128,13 +128,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+        <HashRouter>
+          <TooltipProvider>
             <AppContent />
-          </BrowserRouter>
-        </TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <LiveChatWidget />
+            <WhatsAppButton />
+          </TooltipProvider>
+        </HashRouter>
       </AuthProvider>
     </LanguageProvider>
   </QueryClientProvider>

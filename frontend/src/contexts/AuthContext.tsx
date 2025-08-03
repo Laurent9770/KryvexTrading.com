@@ -481,7 +481,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Mock authentication for now - in real app, this would call the API
+      // Check for admin credentials
+      if (email === 'admin@kryvex.com' && password === 'Kryvex.@123') {
+        const adminUser = {
+          id: 'admin-001',
+          email: 'admin@kryvex.com',
+          username: 'admin',
+          firstName: 'Admin',
+          lastName: 'Kryvex'
+        };
+        
+        const mockToken = 'admin-jwt-token-' + Date.now();
+        
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            localStorage.setItem('authToken', mockToken);
+            localStorage.setItem('authUser', JSON.stringify(adminUser));
+            localStorage.setItem('authIsAdmin', 'true');
+          }
+        } catch (localStorageError) {
+          console.warn('Error persisting to localStorage:', localStorageError);
+        }
+        
+        setUser(adminUser);
+        setIsAuthenticated(true);
+        setIsAdmin(true);
+        
+        websocketService.authenticate(email, password);
+        
+        console.log('Admin login successful');
+        return;
+      }
+      
+      // Regular user authentication
       const mockUser = {
         id: 'user-' + Date.now(),
         email,
