@@ -257,11 +257,7 @@ const DepositPage = () => {
     }
   };
 
-  const recentDeposits = [
-    { symbol: "BTC", amount: "0.05", status: "Completed", time: "2 hours ago" },
-    { symbol: "ETH", amount: "1.2", status: "Pending", time: "5 hours ago" },
-    { symbol: "USDT", amount: "500", status: "Completed", time: "1 day ago" }
-  ];
+  const recentDeposits: any[] = []; // Empty array - only real data will be shown
 
   return (
     <div className="min-h-screen bg-background pt-20">

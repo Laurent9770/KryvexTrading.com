@@ -45,12 +45,12 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activityFilter, setActivityFilter] = useState<ActivityItem['type'] | 'all'>('all');
   const [livePortfolioStats, setLivePortfolioStats] = useState({
-    totalBalance: "$84,567.89",
-    totalPnl: "+$12,450.67",
-    pnlPercentage: "+17.2%",
-    totalTrades: 156,
-    winRate: "68.5%",
-    activePositions: 8
+    totalBalance: "$0.00",
+    totalPnl: "$0.00",
+    pnlPercentage: "0.0%",
+    totalTrades: 0,
+    winRate: "0.0%",
+    activePositions: 0
   });
   const [unifiedTradeHistory, setUnifiedTradeHistory] = useState<any[]>([]);
   const [tradeStatistics, setTradeStatistics] = useState({

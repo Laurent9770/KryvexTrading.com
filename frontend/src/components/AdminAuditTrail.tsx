@@ -111,15 +111,7 @@ export default function AdminAuditTrail() {
   const [activeTab, setActiveTab] = useState('actions');
 
   // Mock analytics data
-  const mockActivityData = [
-    { date: '2024-01-01', actions: 45, sessions: 120, adjustments: 8 },
-    { date: '2024-01-02', actions: 52, sessions: 135, adjustments: 12 },
-    { date: '2024-01-03', actions: 38, sessions: 98, adjustments: 6 },
-    { date: '2024-01-04', actions: 67, sessions: 156, adjustments: 15 },
-    { date: '2024-01-05', actions: 43, sessions: 112, adjustments: 9 },
-    { date: '2024-01-06', actions: 58, sessions: 143, adjustments: 11 },
-    { date: '2024-01-07', actions: 49, sessions: 128, adjustments: 7 }
-  ];
+  const mockActivityData: any[] = []; // Empty array - only real data will be shown
 
   const actionTypeData = [
     { type: 'user_status_change', count: 23, color: '#3b82f6' },
@@ -140,66 +132,13 @@ export default function AdminAuditTrail() {
   const fetchAuditData = async () => {
     try {
       // Mock data for admin actions
-      const mockAdminActions = [
-        {
-          id: '1',
-          admin_id: 'admin-001',
-          action_type: 'user_status_change',
-          target_user_id: 'user-001',
-          description: 'Changed user status to active',
-          old_values: { status: 'inactive' },
-          new_values: { status: 'active' },
-          ip_address: '192.168.1.100',
-          created_at: '2024-01-15T10:30:00Z',
-          admin_profile: { full_name: 'Admin User', email: 'admin@kryvex.com' },
-          target_user_profile: { full_name: 'John Trader', email: 'trader1@example.com' }
-        },
-        {
-          id: '2',
-          admin_id: 'admin-001',
-          action_type: 'wallet_adjustment',
-          target_user_id: 'user-001',
-          description: 'Added 1000 USDT to wallet',
-          old_values: { balance: 5000 },
-          new_values: { balance: 6000 },
-          ip_address: '192.168.1.100',
-          created_at: '2024-01-14T15:20:00Z',
-          admin_profile: { full_name: 'Admin User', email: 'admin@kryvex.com' },
-          target_user_profile: { full_name: 'John Trader', email: 'trader1@example.com' }
-        }
-      ];
+      const mockAdminActions: any[] = []; // Empty array - only real data will be shown
 
       // Mock data for user sessions
-      const mockUserSessions = [
-        {
-          id: '1',
-          user_id: 'user-001',
-          ip_address: '192.168.1.50',
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-          is_active: true,
-          login_at: '2024-01-15T09:00:00Z',
-          last_activity: '2024-01-15T10:30:00Z',
-          user_profile: { full_name: 'John Trader', email: 'trader1@example.com' }
-        }
-      ];
+      const mockUserSessions: any[] = []; // Empty array - only real data will be shown
 
       // Mock data for wallet adjustments
-      const mockWalletAdjustments = [
-        {
-          id: '1',
-          user_id: 'user-001',
-          admin_id: 'admin-001',
-          adjustment_type: 'add' as const,
-          amount: 1000,
-          currency: 'USDT',
-          reason: 'Bonus payment',
-          previous_balance: 5000,
-          new_balance: 6000,
-          created_at: '2024-01-14T15:20:00Z',
-          user_profile: { full_name: 'John Trader', email: 'trader1@example.com' },
-          admin_profile: { full_name: 'Admin User', email: 'admin@kryvex.com' }
-        }
-      ];
+      const mockWalletAdjustments: any[] = []; // Empty array - only real data will be shown
 
       setAdminActions(mockAdminActions);
       setUserSessions(mockUserSessions);

@@ -47,45 +47,7 @@ const AdminDepositManager = () => {
 
   // Mock data - in real app, this would come from API
   useEffect(() => {
-    const mockRequests: DepositRequest[] = [
-      {
-        id: '1',
-        userId: 'user-001',
-        userEmail: 'john@example.com',
-        amount: '500',
-        network: 'TRC20',
-        transactionHash: '0x1234567890abcdef...',
-        notes: 'Deposit for trading',
-        status: 'pending',
-        createdAt: '2024-01-15T10:30:00Z'
-      },
-      {
-        id: '2',
-        userId: 'user-002',
-        userEmail: 'jane@example.com',
-        amount: '1000',
-        network: 'ERC20',
-        transactionHash: '0xabcdef1234567890...',
-        notes: 'Monthly deposit',
-        status: 'approved',
-        createdAt: '2024-01-14T15:45:00Z',
-        processedAt: '2024-01-14T16:00:00Z',
-        processedBy: 'admin@kryvex.com'
-      },
-      {
-        id: '3',
-        userId: 'user-003',
-        userEmail: 'bob@example.com',
-        amount: '250',
-        network: 'BEP20',
-        transactionHash: '0x9876543210fedcba...',
-        notes: 'Test deposit',
-        status: 'rejected',
-        createdAt: '2024-01-13T09:15:00Z',
-        processedAt: '2024-01-13T10:00:00Z',
-        processedBy: 'admin@kryvex.com'
-      }
-    ];
+    const mockRequests: DepositRequest[] = []; // Empty array - only real data will be shown
     setDepositRequests(mockRequests);
     setFilteredRequests(mockRequests);
   }, []);

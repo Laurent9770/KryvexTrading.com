@@ -254,33 +254,12 @@ const WalletPage = () => {
 
   // Get real transaction data from trading engine
   const getTransactionHistory = () => {
-    const tradeHistory = tradingEngine.getTradeHistory();
-    return tradeHistory.slice(0, 10).map(trade => ({
-      id: trade.id,
-      type: trade.type,
-      action: trade.action,
-      asset: trade.symbol,
-      amount: trade.amount.toString(),
-      status: trade.status,
-      time: new Date(trade.timestamp).toLocaleString()
-    }));
+    return []; // Empty array - only real transaction data will be shown
   };
 
-  // Get real deposit data (simplified for now)
+  // Get real deposit data - empty for now, will be populated with real data
   const getDepositHistory = () => {
-    // In a real app, this would come from a separate deposit API
-    // For now, we'll show recent transfers to funding account
-    const tradeHistory = tradingEngine.getTradeHistory();
-    return tradeHistory
-      .filter(trade => trade.type === 'spot' && trade.action === 'sell')
-      .slice(0, 5)
-      .map(trade => ({
-        id: trade.id,
-        asset: trade.symbol,
-        amount: trade.amount.toString(),
-        status: 'completed',
-        time: new Date(trade.timestamp).toLocaleString()
-      }));
+    return []; // Empty array - only real deposit data will be shown
   };
 
   return (

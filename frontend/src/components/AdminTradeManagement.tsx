@@ -67,15 +67,7 @@ export default function AdminTradeManagement() {
   const [forceOutcome, setForceOutcome] = useState<'win' | 'lose' | 'draw'>('win');
 
   // Mock analytics data
-  const mockTradeData = [
-    { date: '2024-01-01', total: 156, wins: 89, losses: 67, volume: 45000 },
-    { date: '2024-01-02', total: 189, wins: 112, losses: 77, volume: 52000 },
-    { date: '2024-01-03', total: 134, wins: 78, losses: 56, volume: 38000 },
-    { date: '2024-01-04', total: 201, wins: 123, losses: 78, volume: 61000 },
-    { date: '2024-01-05', total: 167, wins: 95, losses: 72, volume: 48000 },
-    { date: '2024-01-06', total: 223, wins: 134, losses: 89, volume: 67000 },
-    { date: '2024-01-07', total: 178, wins: 102, losses: 76, volume: 52000 }
-  ];
+  const mockTradeData: any[] = []; // Empty array - only real data will be shown
 
   useEffect(() => {
     fetchTrades();
