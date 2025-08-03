@@ -26,9 +26,5 @@
     "nodejs"
   ],
   "author": "Kryvex Team",
-  "license": "MIT",
-  "workspaces": [
-    "frontend",
-    "backend"
-  ]
+  "license": "MIT"
 } 
