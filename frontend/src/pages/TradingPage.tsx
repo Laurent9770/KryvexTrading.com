@@ -1720,48 +1720,7 @@ const TradingPage = () => {
 
   // My Stakes Data
   const [myStakes, setMyStakes] = useState([
-    {
-      id: 'stake-1',
-      poolId: 'eth-pool',
-      token: "ETH",
-      amount: 2.5,
-      value: 9725.63,
-      rewards: 0.045,
-      apy: 4.5,
-      status: "Active",
-      startDate: "2024-01-15",
-      lockPeriod: "Flexible",
-      canClaim: true,
-      canUnstake: true
-    },
-    {
-      id: 'stake-2',
-      poolId: 'sol-pool',
-      token: "SOL",
-      amount: 50,
-      value: 9287.50,
-      rewards: 1.2,
-      apy: 7.2,
-      status: "Active",
-      startDate: "2024-02-01",
-      lockPeriod: "Epoch",
-      canClaim: true,
-      canUnstake: false
-    },
-    {
-      id: 'stake-3',
-      poolId: 'dot-pool',
-      token: "DOT",
-      amount: 100,
-      value: 12500.00,
-      rewards: 8.5,
-      apy: 12.8,
-      status: "Pending Unstake",
-      startDate: "2024-01-20",
-      lockPeriod: "28 days",
-      canClaim: false,
-      canUnstake: false
-    }
+    // TODO: Replace with real API call to load user's staking data
   ]);
 
   // Staking Overview Stats
