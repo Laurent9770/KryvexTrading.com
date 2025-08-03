@@ -63,7 +63,7 @@ const AppContent = () => {
   const { user } = useAuth();
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
@@ -73,11 +73,11 @@ const AppContent = () => {
         <Route path="*" element={
           user ? (
             // Protected Layout with Sidebar - Mobile Responsive
-            <div className="flex min-h-screen flex-col lg:flex-row">
+            <div className="flex min-h-screen flex-col lg:flex-row overflow-hidden">
               <Sidebar />
               <MobileNav />
-              <main className="flex-1 lg:ml-16 xl:ml-72 transition-all duration-300">
-                <div className="p-3 sm:p-4 md:p-6">
+              <main className="flex-1 lg:ml-16 xl:ml-72 transition-all duration-300 overflow-x-hidden">
+                <div className="p-2 sm:p-3 md:p-4 lg:p-6 w-full max-w-full">
                   <Routes>
                     <Route path="/dashboard" element={<UserOnlyRoute><Dashboard /></UserOnlyRoute>} />
                     <Route path="/market" element={<UserOnlyRoute><MarketPage /></UserOnlyRoute>} />

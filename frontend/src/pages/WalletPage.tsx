@@ -287,38 +287,63 @@ const WalletPage = () => {
     <div className="min-h-screen bg-background">
       <div className="kucoin-container py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">Wallet</h1>
-            <p className="text-sm sm:text-base text-slate-400">Manage your digital assets and earn passive income</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="w-full sm:w-auto">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('wallet')}</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              {t('walletDescription')}
+            </p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button 
-              onClick={handleDeposit}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border-0 text-xs sm:text-sm"
-            >
-              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              {t('deposit')}
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={handleWithdraw}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 bg-slate-800/30 text-xs sm:text-sm"
-            >
-              <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              {t('withdraw')}
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={handleRefresh}
+              onClick={handleRefresh} 
               disabled={isRefreshing}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 bg-slate-800/30 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+              variant="outline" 
+              size="sm"
+              className="flex-1 sm:flex-none"
             >
-              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               {t('refresh')}
             </Button>
           </div>
         </div>
+
+        {/* Portfolio Overview */}
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <h2 className="text-lg sm:text-xl font-semibold">{t('portfolioOverview')}</h2>
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('totalValue')}</p>
+                  <p className="text-2xl sm:text-3xl font-bold">${portfolioValue.totalValue.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('totalPnl')}</p>
+                  <p className={`text-xl sm:text-2xl font-bold ${portfolioValue.totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {portfolioValue.totalPnl >= 0 ? '+' : ''}${portfolioValue.totalPnl.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('pnlPercentage')}</p>
+                  <p className={`text-xl sm:text-2xl font-bold ${portfolioValue.pnlPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {portfolioValue.pnlPercentage >= 0 ? '+' : ''}{portfolioValue.pnlPercentage.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button onClick={handleDeposit} className="flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('deposit')}
+              </Button>
+              <Button onClick={handleWithdraw} variant="outline" className="flex-1 sm:flex-none">
+                <ArrowUpRight className="h-4 w-4 mr-2" />
+                {t('withdraw')}
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {/* Account Overview Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
