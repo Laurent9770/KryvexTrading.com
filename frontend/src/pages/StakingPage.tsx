@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import stakingService, { StakingPool, StakingPosition, StakingStats } from "@/services/stakingService";
 
 const StakingPage = () => {
   const navigate = useNavigate();
@@ -22,10 +23,10 @@ const StakingPage = () => {
   // State Management
   const [activeTab, setActiveTab] = useState("pools");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [selectedPool, setSelectedPool] = useState(null);
+  const [selectedPool, setSelectedPool] = useState<StakingPool | null>(null);
   const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
   const [isUnstakeModalOpen, setIsUnstakeModalOpen] = useState(false);
-  const [selectedStake, setSelectedStake] = useState(null);
+  const [selectedStake, setSelectedStake] = useState<StakingPosition | null>(null);
   
   // Calculator State
   const [calculatorAmount, setCalculatorAmount] = useState("");
@@ -36,164 +37,104 @@ const StakingPage = () => {
   // Stake Modal State
   const [stakeAmount, setStakeAmount] = useState("");
 
-  // Staking Pools Data
-  const stakingPools = [
-    {
-      id: 'eth-pool',
-      token: "ETH",
-      name: "Ethereum 2.0 Staking",
-      apy: 4.5,
-      minStake: 0.1,
-      totalStaked: 2500000000,
-      rewardType: "ETH",
-      duration: "Flexible",
-      status: "Active",
-      description: "Stake ETH and earn rewards while supporting the Ethereum network",
-      icon: "🔵",
-      color: "from-blue-500/20 to-indigo-500/20"
-    },
-    {
-      id: 'sol-pool',
-      token: "SOL",
-      name: "Solana Staking",
-      apy: 7.2,
-      minStake: 1,
-      totalStaked: 890000000,
-      rewardType: "SOL",
-      duration: "Epoch (~2 days)",
-      status: "Active",
-      description: "High-performance staking with fast reward distribution",
-      icon: "🟣",
-      color: "from-purple-500/20 to-pink-500/20"
-    },
-    {
-      id: 'ada-pool',
-      token: "ADA",
-      name: "Cardano Staking",
-      apy: 5.1,
-      minStake: 10,
-      totalStaked: 12300000000,
-      rewardType: "ADA",
-      duration: "Epoch (~5 days)",
-      status: "Active",
-      description: "Sustainable staking with proof-of-stake consensus",
-      icon: "🟢",
-      color: "from-green-500/20 to-emerald-500/20"
-    },
-    {
-      id: 'dot-pool',
-      token: "DOT",
-      name: "Polkadot Staking",
-      apy: 12.8,
-      minStake: 1,
-      totalStaked: 5800000000,
-      rewardType: "DOT",
-      duration: "28 days",
-      status: "Limited",
-      description: "Cross-chain staking with high APY returns",
-      icon: "🟡",
-      color: "from-yellow-500/20 to-orange-500/20"
-    },
-    {
-      id: 'avax-pool',
-      token: "AVAX",
-      name: "Avalanche Staking",
-      apy: 9.3,
-      minStake: 25,
-      totalStaked: 3200000000,
-      rewardType: "AVAX",
-      duration: "Flexible",
-      status: "Active",
-      description: "Fast and secure staking on the Avalanche network",
-      icon: "🔴",
-      color: "from-red-500/20 to-pink-500/20"
-    },
-    {
-      id: 'matic-pool',
-      token: "MATIC",
-      name: "Polygon Staking",
-      apy: 6.7,
-      minStake: 100,
-      totalStaked: 1800000000,
-      rewardType: "MATIC",
-      duration: "7 days",
-      status: "Active",
-      description: "Layer 2 scaling solution staking with competitive returns",
-      icon: "🟣",
-      color: "from-purple-500/20 to-violet-500/20"
-    }
-  ];
-
-  // My Stakes Data
-  const [myStakes, setMyStakes] = useState([
-    // Mock data removed - will be loaded from real API
-  ]);
-
-  // Staking Overview Stats
-  const stakingStats = {
+  // Staking Data
+  const [stakingPools, setStakingPools] = useState<StakingPool[]>([]);
+  const [myStakes, setMyStakes] = useState<StakingPosition[]>([]);
+  const [stakingStats, setStakingStats] = useState<StakingStats>({
     totalStaked: 0,
     totalRewards: 0,
     avgApy: 0,
     activeStakes: 0,
     totalValue: 0
+  });
+
+  // Load staking data on component mount
+  useEffect(() => {
+    loadStakingData();
+    // Start reward calculation
+    stakingService.startRewardCalculation();
+  }, []);
+
+  const loadStakingData = () => {
+    const pools = stakingService.getStakingPools();
+    const positions = stakingService.getStakingPositions();
+    const stats = stakingService.getStakingStats();
+    
+    setStakingPools(pools);
+    setMyStakes(positions);
+    setStakingStats(stats);
   };
 
+  // Refresh data periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadStakingData();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Handlers
-  const handleStakeClick = (pool) => {
+  const handleStakeClick = (pool: StakingPool) => {
     console.log('Stake button clicked for pool:', pool);
     setSelectedPool(pool);
     setIsStakeModalOpen(true);
     setStakeAmount(""); // Reset stake amount when opening modal
   };
 
-  const handleUnstakeClick = (stake) => {
+  const handleUnstakeClick = (stake: StakingPosition) => {
     console.log('Unstake button clicked for stake:', stake);
     setSelectedStake(stake);
     setIsUnstakeModalOpen(true);
   };
 
-  const handleClaim = async (stake) => {
+  const handleClaim = async (stake: StakingPosition) => {
     console.log('Claim button clicked for stake:', stake);
     setIsExecuting(true);
     try {
-              // For claiming rewards, we don't need to use trading engine
-        // Just add the reward value to trading account
-        const rewardValue = stake.rewards * getTokenPrice(stake.token);
+      const result = await stakingService.claimRewards(stake.id);
+      
+      if (result.success) {
+        // Update trading balance with claimed rewards
+        const rewardValue = result.rewards! * getTokenPrice(stake.token);
         updateTradingBalance('USDT', rewardValue, 'add');
 
         // Log activity
         const tradeActivity = {
-          type: "trade",
+          type: "staking" as const,
           action: "REWARDS CLAIMED",
           symbol: `${stake.token} Staking`,
-          amount: `${stake.rewards} ${stake.token}`,
+          amount: `${result.rewards} ${stake.token}`,
           price: `Claimed`,
           pnl: `+$${rewardValue.toFixed(2)}`,
-          status: "completed",
-          time: "Just now",
+          status: "completed" as const,
+          description: `Claimed ${result.rewards} ${stake.token} in staking rewards`,
           icon: "💰"
         };
         addActivity(tradeActivity);
         addTrade({
           pair: `${stake.token} Staking`,
           type: 'claim',
-          amount: stake.rewards.toString(),
+          amount: result.rewards!.toString(),
           price: "Claimed",
           pnl: `+$${rewardValue.toFixed(2)}`,
           status: "completed"
         });
 
-        // Update stake rewards to 0
-        setMyStakes(prev => prev.map(s => 
-          s.id === stake.id ? { ...s, rewards: 0, canClaim: false } : s
-        ));
+        // Reload staking data
+        loadStakingData();
 
         toast({
           title: "Rewards Claimed Successfully!",
-          description: `Claimed ${stake.rewards} ${stake.token} worth $${rewardValue.toFixed(2)}`,
+          description: `Claimed ${result.rewards} ${stake.token} worth $${rewardValue.toFixed(2)}`,
         });
-
-        
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Claim Failed",
+          description: result.message
+        });
+      }
     } catch (error) {
       console.error("Error claiming rewards:", error);
       toast({
@@ -206,34 +147,26 @@ const StakingPage = () => {
     }
   };
 
-  const handleUnstake = async (stake) => {
+  const handleUnstake = async (stake: StakingPosition) => {
     setIsExecuting(true);
     try {
-      const tradeRequest: TradeRequest = {
-        type: 'staking',
-        action: 'unstake',
-        symbol: stake.token,
-        amount: stake.value, // Use USD value for trading account
-        price: 0,
-      };
-
-      const result = await tradingEngine.executeTrade(tradeRequest);
-
+      const result = await stakingService.unstakeTokens(stake.id);
+      
       if (result.success) {
         // Update trading balance with unstaked amount
         updateTradingBalance('USDT', stake.value, 'add');
 
         // Log activity
         const tradeActivity = {
-          type: "trade",
+          type: "staking" as const,
           action: "UNSTAKE INITIATED",
           symbol: `${stake.token} Staking`,
           amount: `${stake.amount} ${stake.token}`,
           price: `Unstaking`,
           pnl: `+$${stake.value.toFixed(2)}`,
-          status: "pending",
-          time: "Just now",
-          icon: "📤"
+          status: "completed" as const,
+          description: `Initiated unstaking of ${stake.amount} ${stake.token}`,
+          icon: "🔓"
         };
         addActivity(tradeActivity);
         addTrade({
@@ -242,25 +175,21 @@ const StakingPage = () => {
           amount: stake.amount.toString(),
           price: "Unstaking",
           pnl: `+$${stake.value.toFixed(2)}`,
-          status: "pending"
+          status: "completed"
         });
 
-        // Update stake status
-        setMyStakes(prev => prev.map(s => 
-          s.id === stake.id ? { ...s, status: "Pending Unstake", canUnstake: false } : s
-        ));
+        // Reload staking data
+        loadStakingData();
 
         toast({
-          title: "Unstaking Initiated Successfully",
-          description: "Your unstaking request has been submitted. It will be processed within 24 hours.",
+          title: "Unstaking Initiated",
+          description: `Unstaking ${stake.amount} ${stake.token} worth $${stake.value.toFixed(2)}`,
         });
-
-        setIsUnstakeModalOpen(false);
       } else {
         toast({
           variant: "destructive",
           title: "Unstake Failed",
-          description: result.message || "Unknown error occurred."
+          description: result.message
         });
       }
     } catch (error) {
@@ -268,96 +197,68 @@ const StakingPage = () => {
       toast({
         variant: "destructive",
         title: "Unstake Failed",
-        description: "Failed to initiate unstaking due to an unexpected error."
+        description: "Failed to unstake due to an unexpected error."
       });
     } finally {
       setIsExecuting(false);
     }
   };
 
-  const handleStake = async (amount, pool) => {
+  const handleStake = async (amount: number, pool: StakingPool) => {
     setIsExecuting(true);
     try {
-      // Validate minimum stake
-      if (amount < pool.minStake) {
-        toast({
-          variant: "destructive",
-          title: "Invalid Stake Amount",
-          description: `Minimum stake for ${pool.token} is ${pool.minStake} ${pool.token}`,
-        });
-        return;
-      }
-
-      // Calculate stake value in USD
-      const stakeValue = amount * getTokenPrice(pool.token);
+      const result = await stakingService.stakeTokens(pool.id, amount, pool.token);
       
-      // Check if user has sufficient balance
-      const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
-      if (stakeValue > tradingBalance) {
+      if (result.success) {
+        // Update trading balance (deduct staked amount)
+        const stakeValue = amount * getTokenPrice(pool.token);
+        updateTradingBalance('USDT', stakeValue, 'subtract');
+
+        // Log activity
+        const tradeActivity = {
+          type: "staking" as const,
+          action: "STAKE INITIATED",
+          symbol: `${pool.token} Staking`,
+          amount: `${amount} ${pool.token}`,
+          price: `Staked`,
+          pnl: `-$${stakeValue.toFixed(2)}`,
+          status: "completed" as const,
+          description: `Staked ${amount} ${pool.token} in ${pool.name}`,
+          icon: "🔒"
+        };
+        addActivity(tradeActivity);
+        addTrade({
+          pair: `${pool.token} Staking`,
+          type: 'stake',
+          amount: amount.toString(),
+          price: "Staked",
+          pnl: `-$${stakeValue.toFixed(2)}`,
+          status: "completed"
+        });
+
+        // Reload staking data
+        loadStakingData();
+
+        toast({
+          title: "Staking Successful!",
+          description: `Staked ${amount} ${pool.token} worth $${stakeValue.toFixed(2)}`,
+        });
+
+        setIsStakeModalOpen(false);
+        setStakeAmount("");
+      } else {
         toast({
           variant: "destructive",
-          title: "Insufficient Balance",
-          description: "Insufficient Trading Account Balance. Please transfer from Funding Account.",
+          title: "Staking Failed",
+          description: result.message
         });
-        return;
       }
-
-      // Deduct from trading account
-      updateTradingBalance('USDT', stakeValue, 'subtract');
-
-      // Create new stake
-      const newStake = {
-        id: `stake-${Date.now()}`,
-        poolId: pool.id,
-        token: pool.token,
-        amount: amount,
-        value: stakeValue,
-        rewards: 0,
-        apy: pool.apy,
-        status: "Active",
-        startDate: new Date().toISOString().split('T')[0],
-        lockPeriod: pool.duration,
-        canClaim: false,
-        canUnstake: true
-      };
-
-      setMyStakes(prev => [newStake, ...prev]);
-
-      // Log activity
-      const tradeActivity = {
-        type: "trade",
-        action: "STAKE INITIATED",
-        symbol: `${pool.token} Staking`,
-        amount: `${amount} ${pool.token}`,
-        price: `Staked`,
-        pnl: `-$${stakeValue.toFixed(2)}`,
-        status: "completed",
-        time: "Just now",
-        icon: "🔒"
-      };
-      addActivity(tradeActivity);
-      addTrade({
-        pair: `${pool.token} Staking`,
-        type: 'stake',
-        amount: amount.toString(),
-        price: "Staked",
-        pnl: `-$${stakeValue.toFixed(2)}`,
-        status: "completed"
-      });
-
-      toast({
-        title: "Stake Initiated Successfully!",
-        description: `Staked ${amount} ${pool.token} worth $${stakeValue.toFixed(2)}`,
-      });
-
-      setIsStakeModalOpen(false);
-      setSelectedPool(null);
     } catch (error) {
       console.error("Error staking:", error);
       toast({
         variant: "destructive",
-        title: "Stake Failed",
-        description: "Failed to initiate stake due to an unexpected error."
+        title: "Staking Failed",
+        description: "Failed to stake due to an unexpected error."
       });
     } finally {
       setIsExecuting(false);
