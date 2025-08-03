@@ -1766,11 +1766,11 @@ const TradingPage = () => {
 
   // Staking Overview Stats
   const stakingStats = {
-    totalStaked: 19125.13,
-    totalRewards: 456.78,
-    avgApy: 5.85,
-    activeStakes: 3,
-    totalValue: 31513.13
+    totalStaked: 0, // TODO: Replace with real API call to get user's total staked amount
+    totalRewards: 0, // TODO: Replace with real API call to get user's total rewards
+    avgApy: 0, // TODO: Replace with real API call to get average APY
+    activeStakes: 0, // TODO: Replace with real API call to get active stakes count
+    totalValue: 0 // TODO: Replace with real API call to get total staking value
   };
 
   // Trading Bots Data
