@@ -140,7 +140,16 @@ export default function AdminDashboard() {
     pendingKyc: 0,
     totalVolume: 0,
     activeUsers: 0,
-    pendingDeposits: 0
+    pendingDeposits: 0,
+    totalBalance: 0,
+    avgWinRate: 0,
+    withdrawalStats: {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      totalAmount: 0,
+      totalRequests: 0
+    }
   });
 
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -150,6 +159,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      
+      // Set up periodic refresh every 30 seconds
+      const refreshInterval = setInterval(() => {
+        fetchDashboardData();
+      }, 30000);
       
       // Set up WebSocket listeners for real-time updates
       websocketService.on('profile_updated', handleProfileUpdate);
@@ -165,31 +179,81 @@ export default function AdminDashboard() {
       websocketService.on('trade_completed', handleTradeCompleted);
       websocketService.on('kyc_status_updated', handleKYCStatusUpdate);
       websocketService.on('kyc_submission_created', handleKYCSubmissionCreated);
+      
+      return () => {
+        clearInterval(refreshInterval);
+        // Clean up all WebSocket listeners
+        websocketService.off('profile_updated', handleProfileUpdate);
+        websocketService.off('security_updated', handleSecurityUpdate);
+        websocketService.off('notification_updated', handleNotificationUpdate);
+        websocketService.off('display_updated', handleDisplayUpdate);
+        websocketService.off('kyc_updated', handleKYCUpdate);
+        websocketService.off('spot_trade_updated', handleSpotTradeUpdate);
+        websocketService.off('user_registered', handleNewUserRegistration);
+        websocketService.off('wallet_updated', handleWalletUpdate);
+        websocketService.off('trade_completed', handleTradeCompleted);
+        websocketService.off('kyc_status_updated', handleKYCStatusUpdate);
+        websocketService.off('kyc_submission_created', handleKYCSubmissionCreated);
+      };
     }
-    
-    return () => {
-      // Clean up all WebSocket listeners
-      websocketService.off('profile_updated', handleProfileUpdate);
-      websocketService.off('security_updated', handleSecurityUpdate);
-      websocketService.off('notification_updated', handleNotificationUpdate);
-      websocketService.off('display_updated', handleDisplayUpdate);
-      websocketService.off('kyc_updated', handleKYCUpdate);
-      websocketService.off('spot_trade_updated', handleSpotTradeUpdate);
-      websocketService.off('user_registered', handleNewUserRegistration);
-      websocketService.off('wallet_updated', handleWalletUpdate);
-      websocketService.off('trade_completed', handleTradeCompleted);
-      websocketService.off('kyc_status_updated', handleKYCStatusUpdate);
-      websocketService.off('kyc_submission_created', handleKYCSubmissionCreated);
-    };
   }, [user]);
 
   const fetchDashboardData = async () => {
     try {
-      // Get real data from trading engine
+      // Get real user data from user persistence service
+      const userPersistenceService = await import('@/services/userPersistenceService');
+      const allUsers = userPersistenceService.default.getAllUsers();
+      
+      // Get registered users from localStorage
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      
+      // Combine all users and remove duplicates
+      const allUserData = [...allUsers, ...registeredUsers];
+      const uniqueUsers = allUserData.filter((user, index, self) => 
+        index === self.findIndex(u => u.id === user.id)
+      );
+
+      // Get real trade data from trading engine
       const tradeHistory = tradingEngine.getTradeHistory();
       const tradeStats = tradingEngine.getTradeStatistics();
       const spotTrades = tradingEngine.getSpotTrades();
       
+      // Get real wallet data
+      const walletService = await import('@/services/walletService');
+      const allUserWallets = walletService.default.getAllUserWallets();
+      const withdrawalStats = walletService.default.getWithdrawalStats();
+      
+      // Get real deposit data (from wallet transactions)
+      const walletTransactions = walletService.default.getWalletTransactions();
+      const depositTransactions = walletTransactions.filter(tx => 
+        tx.action === 'admin_fund' || tx.action === 'fund'
+      );
+
+      // Convert users to the expected format
+      const realUsers = uniqueUsers.map(user => ({
+        id: user.id,
+        full_name: user.username || user.firstName + ' ' + user.lastName || user.email,
+        email: user.email,
+        kyc_status: user.kycLevel2?.status || user.kycStatus || 'unverified',
+        account_balance: allUserWallets.find(w => w.userId === user.id)?.fundingWallet?.USDT || 0,
+        is_verified: user.kycLevel1?.status === 'verified' || user.kycStatus === 'verified',
+        created_at: user.createdAt || new Date().toISOString()
+      }));
+
+      // Convert deposit transactions to the expected format
+      const realDeposits = depositTransactions.map(tx => ({
+        id: tx.id,
+        amount: tx.amount,
+        currency: tx.asset,
+        status: tx.status,
+        created_at: tx.timestamp,
+        user_id: tx.userId,
+        profiles: { 
+          full_name: tx.username, 
+          email: allUserWallets.find(w => w.userId === tx.userId)?.email || 'unknown@example.com' 
+        }
+      }));
+
       // Convert trade history to the expected format
       const realTrades = tradeHistory.slice(0, 10).map(trade => ({
         id: trade.id,
@@ -203,31 +267,21 @@ export default function AdminDashboard() {
         profiles: { full_name: 'Current User', email: 'user@example.com' }
       }));
 
-      // For now, we'll use simplified user and deposit data
-      // In a real app, this would come from separate APIs
-      const realUsers = [
-        {
-          id: 'current-user',
-          full_name: 'Current User',
-          email: 'user@example.com',
-          kyc_status: 'approved',
-          account_balance: 1000,
-          is_verified: true,
-          created_at: new Date().toISOString()
-        }
-      ];
+      // Calculate real statistics
+      const verifiedUsers = realUsers.filter(u => u.is_verified).length;
+      const pendingKyc = realUsers.filter(u => 
+        u.kyc_status === 'pending' || u.kyc_status === 'unverified'
+      ).length;
+      const totalBalance = realUsers.reduce((sum, u) => sum + u.account_balance, 0);
+      const totalDeposits = realDeposits.reduce((sum, d) => sum + Number(d.amount), 0);
+      const pendingDeposits = realDeposits.filter(d => d.status === 'pending').length;
+      const totalVolume = tradeHistory.reduce((sum, t) => sum + Number(t.amount), 0);
 
-      const realDeposits = [
-        {
-          id: 'deposit-1',
-          amount: 1000,
-          currency: 'USDT',
-          status: 'completed',
-          created_at: new Date().toISOString(),
-          user_id: 'current-user',
-          profiles: { full_name: 'Current User', email: 'user@example.com' }
-        }
-      ];
+      // Calculate average win rate from trades
+      const completedTrades = tradeHistory.filter(t => t.status === 'won' || t.status === 'lost');
+      const avgWinRate = completedTrades.length > 0 
+        ? (completedTrades.filter(t => t.status === 'won').length / completedTrades.length) * 100
+        : 0;
 
       setUsers(realUsers);
       setDeposits(realDeposits);
@@ -236,12 +290,15 @@ export default function AdminDashboard() {
       
       setStats({
         totalUsers: realUsers.length,
-        pendingKyc: realUsers.filter(u => u.kyc_status === 'pending').length,
-        activeUsers: realUsers.filter(u => u.is_verified).length,
-        totalDeposits: realDeposits.reduce((sum, d) => sum + Number(d.amount), 0),
-        pendingDeposits: realDeposits.filter(d => d.status === 'pending').length,
+        pendingKyc: pendingKyc,
+        activeUsers: verifiedUsers,
+        totalDeposits: totalDeposits,
+        pendingDeposits: pendingDeposits,
         totalTrades: tradeStats.totalTrades,
-        totalVolume: tradeHistory.reduce((sum, t) => sum + Number(t.amount), 0)
+        totalVolume: totalVolume,
+        totalBalance: totalBalance,
+        avgWinRate: avgWinRate,
+        withdrawalStats: withdrawalStats
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
