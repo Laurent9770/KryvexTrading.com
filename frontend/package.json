@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "chmod +x build.sh && ./build.sh",
     "build:dev": "vite build --mode development",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "deploy:vercel": "vercel --prod",
-    "deploy:netlify": "netlify deploy --prod --dir=dist",
-    "postinstall": "npm install @rollup/rollup-linux-x64-gnu@4.9.5 @rollup/rollup-linux-x64-musl@4.9.5"
+    "deploy:netlify": "netlify deploy --prod --dir=dist"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -43,8 +42,6 @@
     "@radix-ui/react-toggle": "^1.1.0",
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.4",
-    "@rollup/rollup-linux-x64-gnu": "4.9.5",
-    "@rollup/rollup-linux-x64-musl": "4.9.5",
     "@supabase/supabase-js": "^2.53.0",
     "@tanstack/react-query": "^5.56.2",
     "class-variance-authority": "^0.7.1",
@@ -78,6 +75,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.20",
+    "esbuild": "0.25.0",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
