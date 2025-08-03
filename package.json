@@ -1,0 +1,34 @@
+{
+  "name": "kryvex-trading-platform",
+  "version": "1.0.0",
+  "description": "Kryvex Trading Platform - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run preview",
+    "clean": "rm -rf frontend/node_modules backend/node_modules node_modules",
+    "clean:install": "npm run clean && npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "trading",
+    "crypto",
+    "websocket",
+    "react",
+    "nodejs"
+  ],
+  "author": "Kryvex Team",
+  "license": "MIT",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
+} 

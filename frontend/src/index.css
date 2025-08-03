@@ -1,0 +1,422 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Kryvex Crypto Trading Platform Design System */
+
+@layer base {
+  :root {
+    /* KuCoin-inspired Dark Theme */
+    --background: 220 13% 6%;               /* Deep dark like KuCoin */
+    --foreground: 220 13% 94%;              /* Light text */
+
+    --card: 220 15% 10%;                    /* Card background */
+    --card-foreground: 220 13% 94%;         /* Card text */
+
+    --popover: 220 15% 10%;                 /* Popover background */
+    --popover-foreground: 220 13% 94%;      /* Popover text */
+
+    /* KuCoin Brand Colors */
+    --primary: 169 100% 40%;                /* KuCoin Green #00D4AA */
+    --primary-foreground: 220 13% 94%;      /* Primary text */
+    --primary-glow: 169 100% 45%;           /* Lighter green */
+
+    --secondary: 220 15% 12%;               /* Secondary background */
+    --secondary-foreground: 220 13% 94%;    /* Secondary text */
+
+    --muted: 220 15% 14%;                   /* Muted background */
+    --muted-foreground: 220 13% 60%;        /* Muted text */
+
+    --accent: 48 100% 50%;                  /* KuCoin Yellow #FFC107 */
+    --accent-foreground: 220 13% 6%;        /* Accent text */
+
+    --destructive: 0 100% 60%;              /* Red for losses */
+    --destructive-foreground: 220 13% 94%;  /* Destructive text */
+
+    --border: 220 15% 18%;                  /* Border color */
+    --input: 220 15% 12%;                   /* Input background */
+    --ring: 169 100% 40%;                   /* Focus ring */
+
+    --radius: 0.5rem;                       /* Border radius */
+
+    /* KuCoin Custom Colors */
+    --kucoin-green: 169 100% 40%;           /* #00D4AA */
+    --kucoin-green-dark: 169 100% 30%;      /* Darker green */
+    --kucoin-green-light: 169 100% 50%;     /* Lighter green */
+    --kucoin-yellow: 48 100% 50%;           /* #FFC107 */
+    --kucoin-red: 0 100% 60%;               /* #FF3B30 */
+    --kucoin-blue: 220 100% 60%;            /* #007AFF */
+    --kucoin-gray: 220 8% 25%;              /* Neutral gray */
+    --kucoin-dark: 220 13% 4%;              /* Darker background */
+    
+    /* Gradients */
+    --gradient-kucoin: linear-gradient(135deg, hsl(var(--kucoin-green)), hsl(var(--kucoin-yellow)));
+    --gradient-dark: linear-gradient(180deg, hsl(var(--background)), hsl(var(--kucoin-dark)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--kucoin-dark)));
+    
+    /* Effects */
+    --shadow-kucoin: 0 8px 32px hsla(var(--kucoin-green), 0.15);
+    --glow-kucoin: 0 0 20px hsla(var(--kucoin-green), 0.3);
+    --shadow-elegant: 0 10px 40px -10px rgba(0, 0, 0, 0.3);
+
+    /* Professional Design System */
+    --shadow-professional: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+    --shadow-professional-lg: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+    --border-professional: rgba(255, 255, 255, 0.08);
+    --border-professional-hover: rgba(255, 255, 255, 0.12);
+    --bg-professional-card: rgba(34, 39, 46, 0.6);
+    --bg-professional-nav: rgba(34, 39, 46, 0.95);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Crypto-specific colors */
+    --crypto-green: 169 100% 40%;
+    --crypto-red: 0 100% 60%;
+    --crypto-gold: 48 100% 50%;
+    --crypto-blue: 220 100% 60%;
+    --crypto-purple: 280 100% 70%;
+
+    /* Glass morphism */
+    --glass-bg: 220 15% 12% / 0.8;
+    --glass-border: 220 15% 30% / 0.2;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--kucoin-green)), hsl(var(--kucoin-green-light)));
+    --gradient-crypto: linear-gradient(135deg, hsl(var(--kucoin-yellow)), hsl(var(--kucoin-green)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--background)), hsl(var(--kucoin-dark)));
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    --gradient-elegant: linear-gradient(135deg, hsl(var(--background)), hsl(var(--kucoin-dark)));
+
+    /* 3D Effects */
+    --shadow-3d: 0 4px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-glow-green: 0 0 30px hsl(var(--crypto-green) / 0.3);
+    --shadow-glow-gold: 0 0 30px hsl(var(--crypto-gold) / 0.3);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+/* Custom 3D Components */
+@layer components {
+  .nav-3d {
+    @apply backdrop-blur-xl border-border/50;
+    background: var(--glass-bg);
+    box-shadow: var(--shadow-3d);
+  }
+
+  .hero-title-3d {
+    background: var(--gradient-crypto);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+
+  .btn-3d-primary {
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-3d);
+    transition: var(--transition-spring);
+  }
+
+  .btn-3d-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow-green);
+  }
+
+  .btn-3d-accent {
+    background: var(--gradient-crypto);
+    box-shadow: var(--shadow-3d);
+    transition: var(--transition-spring);
+  }
+
+  .btn-3d-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow-gold);
+  }
+
+  .card-3d-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-3d);
+    transition: var(--transition-smooth);
+  }
+
+  .card-3d-glass:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .input-3d-modern {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    transition: var(--transition-smooth);
+  }
+
+  .input-3d-modern:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  .crypto-green {
+    color: hsl(var(--crypto-green));
+  }
+
+  .crypto-red {
+    color: hsl(var(--crypto-red));
+  }
+
+  .crypto-gold {
+    color: hsl(var(--crypto-gold));
+  }
+
+  .text-gradient-crypto {
+    background: var(--gradient-crypto);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stats-card {
+    @apply card-3d-glass p-6 text-center;
+  }
+
+  .pulse-glow-green {
+    animation: pulse-green 2s infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--crypto-green) / 0.3); }
+    50% { box-shadow: 0 0 40px hsl(var(--crypto-green) / 0.6); }
+  }
+
+  .pulse-glow-gold {
+    animation: pulse-gold 2s infinite;
+  }
+
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--crypto-gold) / 0.3); }
+    50% { box-shadow: 0 0 40px hsl(var(--crypto-gold) / 0.6); }
+  }
+
+  .floating-animation {
+    animation: floating 3s ease-in-out infinite;
+  }
+
+  @keyframes floating {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .animate-scroll {
+    animation: scroll 30s linear infinite;
+  }
+
+  @keyframes scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+
+  /* Utility classes */
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* KuCoin-specific styles */
+  .kucoin-nav {
+    @apply nav-3d;
+  }
+
+  .kucoin-container {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .kucoin-btn-primary {
+    @apply btn-3d-primary text-background font-medium px-6 py-2.5 rounded-lg transition-all;
+  }
+
+  .kucoin-btn-secondary {
+    @apply btn-professional-secondary;
+  }
+
+  .kucoin-card {
+    @apply card-3d-glass;
+  }
+
+  /* Enhanced hover effects */
+  .hover-lift {
+    transition: transform 0.2s ease-out;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-glow {
+    transition: box-shadow 0.3s ease-out;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+}
+
+  /* Professional Components */
+  .nav-professional {
+    @apply backdrop-blur-xl border-b;
+    background: var(--bg-professional-nav);
+    border-color: var(--border-professional);
+    box-shadow: var(--shadow-professional);
+  }
+
+  .card-professional {
+    @apply rounded-lg border;
+    background: var(--bg-professional-card);
+    border-color: var(--border-professional);
+    box-shadow: var(--shadow-professional);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .card-professional:hover {
+    border-color: var(--border-professional-hover);
+    box-shadow: var(--shadow-professional-lg);
+    transform: translateY(-1px);
+  }
+
+  .btn-professional {
+    @apply px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-200;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .btn-professional-primary {
+    @apply btn-professional;
+    background: hsl(var(--crypto-green));
+    color: hsl(var(--background));
+    box-shadow: var(--shadow-professional);
+  }
+
+  .btn-professional-primary:hover {
+    background: hsl(var(--crypto-green) / 0.9);
+    box-shadow: var(--shadow-professional-lg);
+    transform: translateY(-1px);
+  }
+
+  .btn-professional-secondary {
+    @apply btn-professional border;
+    background: var(--bg-professional-card);
+    border-color: var(--border-professional);
+    color: hsl(var(--foreground));
+  }
+
+  .btn-professional-secondary:hover {
+    background: rgba(34, 39, 46, 0.8);
+    border-color: var(--border-professional-hover);
+    transform: translateY(-1px);
+  }
+
+  .input-professional {
+    @apply px-4 py-2.5 rounded-lg border text-sm transition-all duration-200;
+    background: var(--bg-professional-card);
+    border-color: var(--border-professional);
+    color: hsl(var(--foreground));
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .input-professional:focus {
+    outline: none;
+    border-color: hsl(var(--crypto-green));
+    box-shadow: 0 0 0 2px hsl(var(--crypto-green) / 0.1);
+    background: rgba(34, 39, 46, 0.8);
+  }
+
+  .table-professional {
+    @apply w-full text-sm;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .table-professional th {
+    @apply px-4 py-3 text-left font-medium border-b;
+    color: hsl(var(--muted-foreground));
+    border-color: var(--border-professional);
+    font-size: 0.875rem;
+  }
+
+  .table-professional td {
+    @apply px-4 py-3 border-b;
+    border-color: var(--border-professional);
+  }
+
+  .table-professional tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .stats-professional {
+    @apply card-professional p-6 text-center;
+  }
+
+  .text-professional {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .heading-professional {
+    @apply font-bold tracking-tight text-professional;
+  }
+
+  .section-professional {
+    @apply py-16 px-6;
+  }
+
+  .container-professional {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .text-gain {
+    color: hsl(var(--crypto-green));
+  }
+
+  .text-loss {
+    color: hsl(var(--crypto-red));
+  }
+
+  .text-accent {
+    color: hsl(var(--crypto-gold));
+  }
+
+  .bg-gain {
+    background-color: hsl(var(--crypto-green) / 0.1);
+  }
+
+  .bg-loss {
+    background-color: hsl(var(--crypto-red) / 0.1);
+  }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

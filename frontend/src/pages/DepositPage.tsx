@@ -1,0 +1,318 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Download, 
+  Copy, 
+  QrCode, 
+  CheckCircle, 
+  AlertCircle, 
+  ArrowLeft,
+  ExternalLink,
+  RefreshCw,
+  Eye,
+  EyeOff
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const DepositPage = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [selectedCrypto, setSelectedCrypto] = useState("BTC");
+  const [showQR, setShowQR] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  const depositAddresses = [
+    { 
+      label: "Bitcoin", 
+      symbol: "BTC", 
+      network: "Bitcoin", 
+      address: "1AWD2apeV7mZ9roEyUqyWzQkeQPaUdbzJX",
+      minDeposit: "0.001 BTC",
+      confirmations: "2 confirmations"
+    },
+    { 
+      label: "Ethereum", 
+      symbol: "ETH", 
+      network: "ERC-20", 
+      address: "0xa32e2d5aa997affac06db8b17562577e25640970",
+      minDeposit: "0.01 ETH",
+      confirmations: "12 confirmations"
+    },
+    { 
+      label: "USDT", 
+      symbol: "USDT", 
+      network: "TRC-20", 
+      address: "TXgmyWRAyuLfoJipSijEwjWJtApuMa4tYU",
+      minDeposit: "10 USDT",
+      confirmations: "20 confirmations"
+    },
+    { 
+      label: "USDT", 
+      symbol: "USDT", 
+      network: "ERC-20", 
+      address: "0xa32e2d5aa997affac06db8b17562577e25640970",
+      minDeposit: "10 USDT",
+      confirmations: "12 confirmations"
+    },
+    { 
+      label: "USDT", 
+      symbol: "USDT", 
+      network: "Solana", 
+      address: "ChMBgsSsRhnFk2JxBDrtaCLiU33ipburpEDneyrWEM11",
+      minDeposit: "10 USDT",
+      confirmations: "1 confirmation"
+    }
+  ];
+
+  const getSelectedAddress = () => {
+    return depositAddresses.find(addr => addr.symbol === selectedCrypto) || depositAddresses[0];
+  };
+
+  const copyToClipboard = (address: string, symbol: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(symbol);
+    toast({
+      title: "Address copied!",
+      description: `${symbol} address copied to clipboard`,
+    });
+    setTimeout(() => setCopiedAddress(null), 2000);
+  };
+
+  const handleBack = () => {
+    navigate('/wallet');
+  };
+
+  const generateQRCode = (address: string) => {
+    // In a real app, you'd use a QR code library
+    // For now, we'll simulate it
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(address)}`;
+  };
+
+  const recentDeposits = [
+    { symbol: "BTC", amount: "0.05", status: "Completed", time: "2 hours ago" },
+    { symbol: "ETH", amount: "1.2", status: "Pending", time: "5 hours ago" },
+    { symbol: "USDT", amount: "500", status: "Completed", time: "1 day ago" }
+  ];
+
+  return (
+    <div className="min-h-screen bg-background pt-20">
+      <div className="kucoin-container py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              onClick={handleBack}
+              className="text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Wallet
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Deposit</h1>
+              <p className="text-slate-400">Add funds to your wallet</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Deposit Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Crypto Selection */}
+            <Card className="bg-slate-800/50 border-slate-700 p-6">
+              <h2 className="text-xl font-bold mb-4 text-white">Select Cryptocurrency</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {depositAddresses.map((crypto, index) => (
+                  <Button
+                    key={index}
+                    variant={selectedCrypto === crypto.symbol ? "default" : "outline"}
+                    className={`h-16 flex-col ${
+                      selectedCrypto === crypto.symbol 
+                        ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                        : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                    }`}
+                    onClick={() => setSelectedCrypto(crypto.symbol)}
+                  >
+                    <span className="font-bold text-lg">{crypto.symbol}</span>
+                    <span className="text-xs opacity-80">{crypto.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </Card>
+
+            {/* Deposit Address */}
+            <Card className="bg-slate-800/50 border-slate-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white">Deposit Address</h2>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowQR(!showQR)}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                  >
+                    {showQR ? <EyeOff className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
+                    {showQR ? "Hide QR" : "Show QR"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-400">{getSelectedAddress().label} ({getSelectedAddress().network})</span>
+                    <Badge className="bg-green-500/10 text-green-400">Active</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono text-white break-all">
+                      {getSelectedAddress().address}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(getSelectedAddress().address, getSelectedAddress().symbol)}
+                      className="text-slate-400 hover:text-white hover:bg-slate-700"
+                    >
+                      {copiedAddress === getSelectedAddress().symbol ? (
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {showQR && (
+                  <div className="flex justify-center p-6 bg-white rounded-lg">
+                    <img 
+                      src={generateQRCode(getSelectedAddress().address)} 
+                      alt="QR Code" 
+                      className="w-48 h-48"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
+                    <p className="text-sm text-slate-400">Minimum Deposit</p>
+                    <p className="font-semibold text-white">{getSelectedAddress().minDeposit}</p>
+                  </div>
+                  <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
+                    <p className="text-sm text-slate-400">Confirmations</p>
+                    <p className="font-semibold text-white">{getSelectedAddress().confirmations}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Important Notes */}
+            <Card className="bg-slate-800/50 border-slate-700 p-6">
+              <h3 className="text-lg font-semibold mb-4 text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-400" />
+                Important Notes
+              </h3>
+              <div className="space-y-3 text-sm text-slate-300">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <p>Only send {getSelectedAddress().symbol} to this address. Sending other cryptocurrencies may result in permanent loss.</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <p>Deposits will be credited after {getSelectedAddress().confirmations}.</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <p>Minimum deposit amount: {getSelectedAddress().minDeposit}</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <p>Double-check the address before sending your funds.</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <Card className="bg-slate-800/50 border-slate-700 p-6">
+              <h3 className="text-lg font-semibold mb-4 text-white">Deposit Stats</h3>
+              <div className="space-y-4">
+                <div className="p-3 bg-green-500/10 rounded border border-green-500/20">
+                  <p className="text-sm text-slate-400">Total Deposits (24h)</p>
+                  <p className="text-xl font-bold text-green-400">$12,450.67</p>
+                </div>
+                <div className="p-3 bg-blue-500/10 rounded border border-blue-500/20">
+                  <p className="text-sm text-slate-400">Pending Deposits</p>
+                  <p className="text-xl font-bold text-blue-400">$2,340.00</p>
+                </div>
+                <div className="p-3 bg-yellow-500/10 rounded border border-yellow-500/20">
+                  <p className="text-sm text-slate-400">Average Time</p>
+                  <p className="text-xl font-bold text-yellow-400">~15 minutes</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Recent Deposits */}
+            <Card className="bg-slate-800/50 border-slate-700 p-6">
+              <h3 className="text-lg font-semibold mb-4 text-white">Recent Deposits</h3>
+              <div className="space-y-3">
+                {recentDeposits.map((deposit, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border border-slate-700 rounded hover:bg-slate-700/50 transition-colors">
+                    <div>
+                      <p className="font-medium text-white">{deposit.amount} {deposit.symbol}</p>
+                      <p className="text-sm text-slate-400">{deposit.time}</p>
+                    </div>
+                    <Badge className={
+                      deposit.status === 'Completed' 
+                        ? 'bg-green-500/10 text-green-400' 
+                        : 'bg-yellow-500/10 text-yellow-400'
+                    }>
+                      {deposit.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Support */}
+            <Card className="bg-slate-800/50 border-slate-700 p-6">
+              <h3 className="text-lg font-semibold mb-4 text-white">Need Help?</h3>
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Deposit Guide
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Contact Support
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DepositPage; 
