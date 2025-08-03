@@ -2,10 +2,17 @@ services:
   - type: web
     name: kryvex-trading-platform
     env: node
-    buildCommand: npm run build
+    plan: free
+    buildCommand: |
+      npm install
+      cd frontend && npm install
+      npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
     healthCheckPath: /
-    autoDeploy: true 
+    autoDeploy: true
+    branch: main 

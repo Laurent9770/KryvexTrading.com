@@ -2,13 +2,17 @@
   "name": "kryvex-trading-platform",
   "version": "1.0.0",
   "description": "Kryvex Trading Platform - Full Stack Trading Application",
-  "main": "server.js",
+  "main": "fallback-server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node fallback-server.js",
+    "start:server": "node server.js",
+    "start:static": "node static-server.js",
     "build": "cd frontend && npm install && npm run build",
+    "build:check": "cd frontend && npm run build && echo 'Build completed successfully'",
     "dev": "cd frontend && npm run dev",
     "install-deps": "cd frontend && npm install",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build",
+    "health": "curl http://localhost:$PORT/health"
   },
   "dependencies": {
     "express": "^4.18.2"
