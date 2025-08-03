@@ -1,419 +1,286 @@
 import websocketService from './websocketService';
 
-export interface KYCLevel {
-  level: 0 | 1 | 2 | 3;
-  status: 'pending' | 'verified' | 'rejected' | 'not_started';
-  completed: boolean;
-  submittedAt?: string;
-  verifiedAt?: string;
-  rejectedAt?: string;
-  rejectionReason?: string;
-}
-
-export interface KYCSubmission {
-  id: string;
-  userId: string;
-  level: 1 | 2 | 3;
-  status: 'pending' | 'approved' | 'rejected';
-  documents: {
-    idDocument?: File;
-    addressProof?: File;
-    selfie?: File;
-  };
-  personalInfo?: {
-    fullName: string;
-    dateOfBirth: string;
-    nationalId: string;
-    address: string;
-    city: string;
-    postalCode: string;
-    country: string;
-  };
-  submittedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-  rejectionReason?: string;
-}
-
-export interface KYCUser {
-  id: string;
+export interface KYCLevel1Data {
   email: string;
-  kycLevel: KYCLevel;
-  submissions: KYCSubmission[];
-  restrictions: {
-    canTrade: boolean;
-    canDeposit: boolean;
-    canWithdraw: boolean;
-    canAccessFullPlatform: boolean;
-    tradeLimit: number;
+  verificationCode?: string;
+}
+
+export interface KYCLevel2Data {
+  fullName: string;
+  dateOfBirth: string;
+  country: string;
+  idType: 'passport' | 'national_id' | 'drivers_license';
+  idNumber: string;
+  frontFile?: File;
+  backFile?: File;
+  selfieFile?: File;
+}
+
+export interface KYCStatus {
+  level1: {
+    status: 'unverified' | 'verified';
+    verifiedAt?: string;
+  };
+  level2: {
+    status: 'not_started' | 'pending' | 'approved' | 'rejected';
+    submittedAt?: string;
+    reviewedAt?: string;
+    rejectionReason?: string;
+    documents?: {
+      fullName: string;
+      dateOfBirth: string;
+      country: string;
+      idType: string;
+      idNumber: string;
+      frontUrl?: string;
+      backUrl?: string;
+      selfieUrl?: string;
+    };
   };
 }
 
-export class KYCService {
-  private users: Map<string, KYCUser> = new Map();
-  private submissions: Map<string, KYCSubmission> = new Map();
-  private listeners: Map<string, Function[]> = new Map();
+class KYCService {
+  private static instance: KYCService;
 
-  constructor() {
-    // Initialize with empty state - no mock data
-    this.loadPersistedData();
-  }
+  private constructor() {}
 
-  private loadPersistedData() {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const savedUsers = localStorage.getItem('kycUsers');
-        const savedSubmissions = localStorage.getItem('kycSubmissions');
-        
-        if (savedUsers) {
-          const users = JSON.parse(savedUsers);
-          this.users = new Map(Object.entries(users));
-        }
-        
-        if (savedSubmissions) {
-          const submissions = JSON.parse(savedSubmissions);
-          this.submissions = new Map(Object.entries(submissions));
-        }
-      }
-    } catch (error) {
-      console.warn('Error loading persisted KYC data:', error);
+  static getInstance(): KYCService {
+    if (!KYCService.instance) {
+      KYCService.instance = new KYCService();
     }
-  }
-
-  private persistData() {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const usersObj = Object.fromEntries(this.users);
-        const submissionsObj = Object.fromEntries(this.submissions);
-        
-        localStorage.setItem('kycUsers', JSON.stringify(usersObj));
-        localStorage.setItem('kycSubmissions', JSON.stringify(submissionsObj));
-      }
-    } catch (error) {
-      console.warn('Error persisting KYC data:', error);
-    }
-  }
-
-  private setupWebSocketListeners() {
-    websocketService.on('kyc_level_updated', (data: any) => {
-      this.updateUserKYCLevel(data.userId, data.level, data.status);
-    });
-
-    websocketService.on('kyc_submission_reviewed', (data: any) => {
-      this.handleSubmissionReview(data.submissionId, data.status, data.reason);
-    });
-  }
-
-  // User KYC Management
-  createUser(userId: string, email: string): KYCUser {
-    const user: KYCUser = {
-      id: userId,
-      email,
-      kycLevel: {
-        level: 0,
-        status: 'not_started',
-        completed: false
-      },
-      submissions: [],
-      restrictions: {
-        canTrade: false,
-        canDeposit: false,
-        canWithdraw: false,
-        canAccessFullPlatform: false,
-        tradeLimit: 0
-      }
-    };
-
-    this.users.set(userId, user);
-    this.persistData();
-    this.emit('user_created', user);
-    return user;
-  }
-
-  getUser(userId: string): KYCUser | null {
-    return this.users.get(userId) || null;
-  }
-
-  getAllUsers(): KYCUser[] {
-    return Array.from(this.users.values());
-  }
-
-  getSubmissionsByStatus(status: 'pending' | 'approved' | 'rejected'): KYCSubmission[] {
-    return Array.from(this.submissions.values()).filter(sub => sub.status === status);
+    return KYCService.instance;
   }
 
   // Level 1: Email Verification
-  async verifyEmail(userId: string): Promise<boolean> {
-    const user = this.users.get(userId);
-    if (!user) return false;
-
+  async sendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      // Simulate email verification process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      user.kycLevel = {
-        level: 1,
-        status: 'verified',
-        completed: true,
-        verifiedAt: new Date().toISOString()
+      // TODO: Implement real API call to send verification email
+      console.log('Sending verification email to:', email);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Store verification code in localStorage for demo
+      const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      localStorage.setItem(`verification_${email}`, verificationCode);
+      
+      return {
+        success: true,
+        message: 'Verification email sent successfully'
       };
-
-      this.updateUserRestrictions(user);
-      this.users.set(userId, user);
-      this.persistData();
-
-      // Notify admin
-      websocketService.updateKYCStatus(userId, {
-        level: 1,
-        status: 'verified',
-        timestamp: new Date().toISOString()
-      });
-
-      this.emit('level_verified', { userId, level: 1 });
-      return true;
     } catch (error) {
-      console.error('Email verification failed:', error);
-      return false;
+      console.error('Error sending verification email:', error);
+      return {
+        success: false,
+        message: 'Failed to send verification email'
+      };
+    }
+  }
+
+  async verifyEmail(email: string, code: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // TODO: Implement real API call to verify email
+      console.log('Verifying email:', email, 'with code:', code);
+      
+      // Check stored verification code
+      const storedCode = localStorage.getItem(`verification_${email}`);
+      if (storedCode === code) {
+        // Mark email as verified
+        const userData = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const updatedUsers = userData.map((user: any) => 
+          user.email === email 
+            ? { 
+                ...user, 
+                kycLevel1: { 
+                  status: 'verified', 
+                  verifiedAt: new Date().toISOString() 
+                } 
+              }
+            : user
+        );
+        localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
+        
+        // Emit real-time update
+        websocketService.updateKYCStatus(email, {
+          level: 1,
+          status: 'verified',
+          verifiedAt: new Date().toISOString()
+        });
+        
+        return {
+          success: true,
+          message: 'Email verified successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Invalid verification code'
+        };
+      }
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      return {
+        success: false,
+        message: 'Failed to verify email'
+      };
     }
   }
 
   // Level 2: Identity Verification
-  async submitIdentityVerification(userId: string, data: {
-    fullName: string;
-    dateOfBirth: string;
-    nationalId: string;
-    idDocument: File;
-    selfie?: File;
-  }): Promise<string> {
-    const user = this.users.get(userId);
-    if (!user || user.kycLevel.level < 1) {
-      throw new Error('User must complete Level 1 first');
-    }
-
-    const submissionId = `sub-${Date.now()}`;
-    const submission: KYCSubmission = {
-      id: submissionId,
-      userId,
-      level: 2,
-      status: 'pending',
-      documents: {
-        idDocument: data.idDocument,
-        selfie: data.selfie
-      },
-      personalInfo: {
-        fullName: data.fullName,
-        dateOfBirth: data.dateOfBirth,
-        nationalId: data.nationalId,
-        address: '',
-        city: '',
-        postalCode: '',
-        country: ''
-      },
-      submittedAt: new Date().toISOString()
-    };
-
-    this.submissions.set(submissionId, submission);
-    user.submissions.push(submission);
-    this.persistData();
-
-    // Notify admin
-    websocketService.updateKYCStatus(userId, {
-      level: 2,
-      status: 'pending',
-      submissionId,
-      timestamp: new Date().toISOString()
-    });
-
-    this.emit('submission_created', submission);
-    return submissionId;
-  }
-
-  // Level 3: Address Verification
-  async submitAddressVerification(userId: string, data: {
-    address: string;
-    city: string;
-    postalCode: string;
-    country: string;
-    addressProof: File;
-  }): Promise<string> {
-    const user = this.users.get(userId);
-    if (!user || user.kycLevel.level < 2) {
-      throw new Error('User must complete Level 2 first');
-    }
-
-    const submissionId = `sub-${Date.now()}`;
-    const submission: KYCSubmission = {
-      id: submissionId,
-      userId,
-      level: 3,
-      status: 'pending',
-      documents: {
-        addressProof: data.addressProof
-      },
-      personalInfo: {
-        fullName: user.submissions.find(s => s.level === 2)?.personalInfo?.fullName || '',
-        dateOfBirth: user.submissions.find(s => s.level === 2)?.personalInfo?.dateOfBirth || '',
-        nationalId: user.submissions.find(s => s.level === 2)?.personalInfo?.nationalId || '',
-        address: data.address,
-        city: data.city,
-        postalCode: data.postalCode,
-        country: data.country
-      },
-      submittedAt: new Date().toISOString()
-    };
-
-    this.submissions.set(submissionId, submission);
-    user.submissions.push(submission);
-    this.persistData();
-
-    // Notify admin
-    websocketService.updateKYCStatus(userId, {
-      level: 3,
-      status: 'pending',
-      submissionId,
-      timestamp: new Date().toISOString()
-    });
-
-    this.emit('submission_created', submission);
-    return submissionId;
-  }
-
-  // Admin Functions
-  async reviewSubmission(submissionId: string, status: 'approved' | 'rejected', reason?: string): Promise<boolean> {
-    const submission = this.submissions.get(submissionId);
-    if (!submission) return false;
-
-    const user = this.users.get(submission.userId);
-    if (!user) return false;
-
-    submission.status = status;
-    submission.reviewedAt = new Date().toISOString();
-    submission.reviewedBy = 'admin';
-    if (status === 'rejected' && reason) {
-      submission.rejectionReason = reason;
-    }
-
-    if (status === 'approved') {
-      // Update user KYC level
-      const newLevel = submission.level as 1 | 2 | 3;
-      user.kycLevel = {
-        level: newLevel,
-        status: 'verified',
-        completed: true,
-        verifiedAt: new Date().toISOString()
+  async submitIdentityVerification(data: KYCLevel2Data): Promise<{ success: boolean; message: string }> {
+    try {
+      // TODO: Implement real API call to submit identity verification
+      console.log('Submitting identity verification:', data);
+      
+      // Simulate file upload
+      const frontUrl = data.frontFile ? await this.uploadFile(data.frontFile) : '';
+      const backUrl = data.backFile ? await this.uploadFile(data.backFile) : '';
+      const selfieUrl = data.selfieFile ? await this.uploadFile(data.selfieFile) : '';
+      
+      // Store KYC data
+      const kycData = {
+        userId: data.fullName, // Using fullName as userId for demo
+        level2: {
+          status: 'pending',
+          submittedAt: new Date().toISOString(),
+          documents: {
+            fullName: data.fullName,
+            dateOfBirth: data.dateOfBirth,
+            country: data.country,
+            idType: data.idType,
+            idNumber: data.idNumber,
+            frontUrl,
+            backUrl,
+            selfieUrl
+          }
+        }
       };
-
-      this.updateUserRestrictions(user);
-    }
-
-    this.submissions.set(submissionId, submission);
-    this.users.set(submission.userId, user);
-    this.persistData();
-
-    // Notify user
-    websocketService.updateKYCStatus(submission.userId, {
-      level: submission.level,
-      status: status === 'approved' ? 'verified' : 'rejected',
-      reason,
-      timestamp: new Date().toISOString()
-    });
-
-    this.emit('submission_reviewed', { submission, user });
-    return true;
-  }
-
-  private updateUserRestrictions(user: KYCUser) {
-    const level = user.kycLevel.level;
-    
-    user.restrictions = {
-      canTrade: level >= 1,
-      canDeposit: level >= 2,
-      canWithdraw: level >= 2,
-      canAccessFullPlatform: level >= 3,
-      tradeLimit: level >= 2 ? 10000 : level >= 1 ? 1000 : 0
-    };
-  }
-
-  private updateUserKYCLevel(userId: string, level: number, status: string) {
-    const user = this.users.get(userId);
-    if (!user) return;
-
-    user.kycLevel = {
-      level: level as 0 | 1 | 2 | 3,
-      status: status as 'pending' | 'verified' | 'rejected' | 'not_started',
-      completed: status === 'verified',
-      verifiedAt: status === 'verified' ? new Date().toISOString() : undefined
-    };
-
-    this.updateUserRestrictions(user);
-    this.users.set(userId, user);
-    this.persistData();
-    this.emit('user_updated', user);
-  }
-
-  private handleSubmissionReview(submissionId: string, status: string, reason?: string) {
-    this.reviewSubmission(submissionId, status as 'approved' | 'rejected', reason);
-  }
-
-  // Event listeners
-  on(event: string, callback: Function) {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, []);
-    }
-    this.listeners.get(event)!.push(callback);
-  }
-
-  off(event: string, callback: Function) {
-    const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      const index = callbacks.indexOf(callback);
-      if (index > -1) {
-        callbacks.splice(index, 1);
-      }
+      
+      // Store in localStorage for demo
+      const existingKYC = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      existingKYC.push(kycData);
+      localStorage.setItem('kyc_submissions', JSON.stringify(existingKYC));
+      
+      // Emit real-time update
+      websocketService.notifyKYCSubmission(Date.now().toString(), {
+        userId: data.fullName,
+        level: 2,
+        status: 'pending',
+        submittedAt: new Date().toISOString()
+      });
+      
+      return {
+        success: true,
+        message: 'Identity verification submitted successfully'
+      };
+    } catch (error) {
+      console.error('Error submitting identity verification:', error);
+      return {
+        success: false,
+        message: 'Failed to submit identity verification'
+      };
     }
   }
 
-  private emit(event: string, data?: any) {
-    const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      callbacks.forEach(callback => callback(data));
+  async getKYCStatus(userId: string): Promise<KYCStatus> {
+    try {
+      // TODO: Implement real API call to get KYC status
+      console.log('Getting KYC status for user:', userId);
+      
+      // Get from localStorage for demo
+      const userData = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const user = userData.find((u: any) => u.email === userId);
+      
+      const kycSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      const userSubmission = kycSubmissions.find((s: any) => s.userId === userId);
+      
+      return {
+        level1: user?.kycLevel1 || { status: 'unverified' },
+        level2: userSubmission?.level2 || { status: 'not_started' }
+      };
+    } catch (error) {
+      console.error('Error getting KYC status:', error);
+      return {
+        level1: { status: 'unverified' },
+        level2: { status: 'not_started' }
+      };
     }
   }
 
-  // Utility functions
-  canUserTrade(userId: string): boolean {
-    const user = this.users.get(userId);
-    return user?.restrictions.canTrade || false;
-  }
-
-  canUserDeposit(userId: string): boolean {
-    const user = this.users.get(userId);
-    return user?.restrictions.canDeposit || false;
-  }
-
-  canUserWithdraw(userId: string): boolean {
-    const user = this.users.get(userId);
-    return user?.restrictions.canWithdraw || false;
-  }
-
-  getUserTradeLimit(userId: string): number {
-    const user = this.users.get(userId);
-    return user?.restrictions.tradeLimit || 0;
-  }
-
-  getKYCProgress(userId: string): { level: number; status: string; progress: number } {
-    const user = this.users.get(userId);
-    if (!user) {
-      return { level: 0, status: 'not_started', progress: 0 };
+  // Admin functions
+  async getKYCSubmissions(): Promise<any[]> {
+    try {
+      // TODO: Implement real API call to get KYC submissions
+      console.log('Getting KYC submissions for admin');
+      
+      // Get from localStorage for demo
+      const submissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      return submissions.filter((s: any) => s.level2.status === 'pending');
+    } catch (error) {
+      console.error('Error getting KYC submissions:', error);
+      return [];
     }
+  }
 
-    const level = user.kycLevel.level;
-    const status = user.kycLevel.status;
-    const progress = (level / 3) * 100;
+  async reviewKYCSubmission(submissionId: string, status: 'approved' | 'rejected', reason?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // TODO: Implement real API call to review KYC submission
+      console.log('Reviewing KYC submission:', submissionId, status, reason);
+      
+      // Update submission status
+      const submissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      const updatedSubmissions = submissions.map((s: any) => 
+        s.userId === submissionId 
+          ? { 
+              ...s, 
+              level2: { 
+                ...s.level2, 
+                status, 
+                reviewedAt: new Date().toISOString(),
+                rejectionReason: reason 
+              } 
+            }
+          : s
+      );
+      localStorage.setItem('kyc_submissions', JSON.stringify(updatedSubmissions));
+      
+      // Emit real-time update
+      websocketService.updateKYCStatus(submissionId, {
+        level: 2,
+        status,
+        reviewedAt: new Date().toISOString(),
+        rejectionReason: reason
+      });
+      
+      return {
+        success: true,
+        message: `KYC submission ${status} successfully`
+      };
+    } catch (error) {
+      console.error('Error reviewing KYC submission:', error);
+      return {
+        success: false,
+        message: 'Failed to review KYC submission'
+      };
+    }
+  }
 
-    return { level, status, progress };
+  // Helper function to simulate file upload
+  private async uploadFile(file: File): Promise<string> {
+    // TODO: Implement real file upload
+    return `https://example.com/uploads/${file.name}`;
+  }
+
+  // Check if user can access trading features
+  canAccessTrading(kycStatus: KYCStatus): boolean {
+    return kycStatus.level1.status === 'verified';
+  }
+
+  // Check if user can withdraw
+  canWithdraw(kycStatus: KYCStatus): boolean {
+    return kycStatus.level1.status === 'verified' && kycStatus.level2.status === 'approved';
   }
 }
 
-const kycService = new KYCService();
+const kycService = KYCService.getInstance();
 export default kycService; 

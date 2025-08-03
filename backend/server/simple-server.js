@@ -3,6 +3,10 @@ import http from 'http';
 import express from 'express';
 import cors from 'cors';
 
+// Global variables for demo purposes
+let verificationCodes = {};
+let kycSubmissions = {};
+
 // Create Express app
 const app = express();
 
@@ -1179,6 +1183,197 @@ app.get('/api/kyc-actions', (req, res) => {
       remarks: 'Document quality issues'
     }
   ]);
+});
+
+// KYC Management Endpoints
+app.post('/api/kyc/send-verification-email', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  // TODO: Implement real email sending service
+  console.log('Sending verification email to:', email);
+  
+  // Generate verification code
+  const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  
+  // Store verification code (in production, use Redis or database)
+  if (!verificationCodes) verificationCodes = {};
+  verificationCodes[email] = {
+    code: verificationCode,
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+  };
+  
+  res.json({ 
+    success: true, 
+    message: 'Verification email sent successfully',
+    // In production, don't return the code
+    code: verificationCode // Only for demo
+  });
+});
+
+app.post('/api/kyc/verify-email', (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email and verification code are required' });
+  }
+  
+  const storedVerification = verificationCodes?.[email];
+  if (!storedVerification || storedVerification.code !== code) {
+    return res.status(400).json({ error: 'Invalid verification code' });
+  }
+  
+  if (new Date() > storedVerification.expiresAt) {
+    return res.status(400).json({ error: 'Verification code has expired' });
+  }
+  
+  // Mark email as verified
+  // TODO: Update user in database
+  console.log('Email verified for:', email);
+  
+  // Clean up verification code
+  delete verificationCodes[email];
+  
+  // Broadcast KYC status update
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify({
+        type: 'kyc_status_updated',
+        userId: email,
+        level: 1,
+        status: 'verified',
+        verifiedAt: new Date().toISOString()
+      }));
+    }
+  });
+  
+  res.json({ 
+    success: true, 
+    message: 'Email verified successfully' 
+  });
+});
+
+app.post('/api/kyc/submit-identity', (req, res) => {
+  const { fullName, dateOfBirth, country, idType, idNumber, frontFile, backFile, selfieFile } = req.body;
+  
+  if (!fullName || !dateOfBirth || !country || !idType || !idNumber || !frontFile || !selfieFile) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  // TODO: Implement file upload and storage
+  console.log('Identity verification submitted:', { fullName, dateOfBirth, country, idType, idNumber });
+  
+  // Store KYC submission
+  const submissionId = `kyc-${Date.now()}`;
+  if (!kycSubmissions) kycSubmissions = {};
+  kycSubmissions[submissionId] = {
+    userId: fullName, // Using fullName as userId for demo
+    level2: {
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+      documents: {
+        fullName,
+        dateOfBirth,
+        country,
+        idType,
+        idNumber,
+        frontUrl: frontFile ? `https://example.com/uploads/${frontFile.name}` : '',
+        backUrl: backFile ? `https://example.com/uploads/${backFile.name}` : '',
+        selfieUrl: selfieFile ? `https://example.com/uploads/${selfieFile.name}` : ''
+      }
+    }
+  };
+  
+  // Broadcast KYC submission created
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify({
+        type: 'kyc_submission_created',
+        userId: fullName,
+        submissionId,
+        level: 2,
+        status: 'pending',
+        submittedAt: new Date().toISOString()
+      }));
+    }
+  });
+  
+  res.json({ 
+    success: true, 
+    message: 'Identity verification submitted successfully',
+    submissionId 
+  });
+});
+
+app.get('/api/kyc/status/:userId', (req, res) => {
+  const { userId } = req.params;
+  
+  // TODO: Get KYC status from database
+  console.log('Getting KYC status for user:', userId);
+  
+  // Mock response
+  const status = {
+    level1: { status: 'unverified' },
+    level2: { status: 'not_started' }
+  };
+  
+  res.json(status);
+});
+
+app.get('/api/kyc/submissions', (req, res) => {
+  // TODO: Get KYC submissions from database
+  console.log('Getting KYC submissions for admin');
+  
+  const submissions = Object.values(kycSubmissions || {}).filter(sub => sub.level2.status === 'pending');
+  res.json(submissions);
+});
+
+app.post('/api/kyc/review/:submissionId', (req, res) => {
+  const { submissionId } = req.params;
+  const { status, reason } = req.body;
+  
+  if (!status || !['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+  
+  if (status === 'rejected' && !reason) {
+    return res.status(400).json({ error: 'Rejection reason is required' });
+  }
+  
+  // TODO: Update KYC submission in database
+  console.log('Reviewing KYC submission:', submissionId, status, reason);
+  
+  const submission = kycSubmissions?.[submissionId];
+  if (!submission) {
+    return res.status(404).json({ error: 'KYC submission not found' });
+  }
+  
+  // Update submission status
+  submission.level2.status = status;
+  submission.level2.reviewedAt = new Date().toISOString();
+  if (status === 'rejected') {
+    submission.level2.rejectionReason = reason;
+  }
+  
+  // Broadcast KYC status update
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify({
+        type: 'kyc_status_updated',
+        userId: submissionId,
+        level: 2,
+        status,
+        reviewedAt: new Date().toISOString(),
+        rejectionReason: reason
+      }));
+    }
+  });
+  
+  res.json({ 
+    success: true, 
+    message: `KYC submission ${status} successfully` 
+  });
 });
 
 // Start server

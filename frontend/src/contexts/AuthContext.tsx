@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import websocketService from '../services/websocketService';
 import tradingEngine from '../services/tradingEngine';
 import activityService, { ActivityItem } from '../services/activityService';
+import kycService from '../services/kycService'; // Added import for kycService
+import { toast } from '../components/ui/use-toast'; // Added import for toast
 
 interface User {
   id: string;
@@ -13,6 +15,30 @@ interface User {
   country?: string;
   bio?: string;
   avatar?: string;
+  
+  // New 2-level KYC system
+  kycLevel1?: {
+    status: 'unverified' | 'verified';
+    verifiedAt?: string;
+  };
+  kycLevel2?: {
+    status: 'not_started' | 'pending' | 'approved' | 'rejected';
+    submittedAt?: string;
+    reviewedAt?: string;
+    rejectionReason?: string;
+    documents?: {
+      fullName: string;
+      dateOfBirth: string;
+      country: string;
+      idType: string;
+      idNumber: string;
+      frontUrl?: string;
+      backUrl?: string;
+      selfieUrl?: string;
+    };
+  };
+  
+  // Legacy KYC status for backward compatibility
   kycStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
   kycSubmittedAt?: string;
 }
@@ -611,64 +637,75 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, firstName: string, lastName: string, phone: string) => {
     try {
-      // Check if user already exists
-      let newUser: any = null;
+      // TODO: Implement real API call for registration
+      console.log('Registering user:', { email, firstName, lastName, phone });
       
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-          const existingUser = registeredUsers.find((u: any) => u.email === email);
-          
-          if (existingUser) {
-            throw new Error('User already exists. Please login instead.');
-          }
-          
-          // Create clean user object with only provided data
-          newUser = {
-            id: 'user-' + Date.now(),
-            email,
-            firstName,
-            lastName,
-            phone,
-            username: `${firstName} ${lastName}`,
-            // Clean initial state - no mock data
-            country: '',
-            bio: '',
-            avatar: '',
-            kycStatus: 'unverified'
-          };
-          
-          // Store user in registered users list (with password for login)
-          const userWithPassword = { ...newUser, password };
-          registeredUsers.push(userWithPassword);
-          localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-          
-          // Generate a token for immediate login
-          const mockToken = 'user-jwt-token-' + Date.now();
-          
-          localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('authUser', JSON.stringify(newUser));
-          localStorage.setItem('authIsAdmin', 'false');
-          
-          console.log('User registered successfully:', newUser.email);
-        }
-      } catch (localStorageError) {
-        console.warn('Error persisting to localStorage:', localStorageError);
-        throw new Error('Failed to create account. Please try again.');
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create user object
+      const newUser = {
+        id: `user-${Date.now()}`,
+        email,
+        firstName,
+        lastName,
+        phone,
+        username: `${firstName} ${lastName}`,
+        country: '',
+        bio: '',
+        avatar: '',
+        // Initialize new KYC system
+        kycLevel1: {
+          status: 'unverified' as const
+        },
+        kycLevel2: {
+          status: 'not_started' as const
+        },
+        // Legacy KYC for backward compatibility
+        kycStatus: 'unverified' as const,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Store in localStorage for demo
+      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      existingUsers.push({ ...newUser, password }); // Include password for login
+      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+      
+      // Set session without password
+      const sessionUser = { ...newUser };
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        sessionStorage.setItem('authToken', 'user-jwt-token-' + Date.now());
+        sessionStorage.setItem('authUser', JSON.stringify(sessionUser));
+        sessionStorage.setItem('authIsAdmin', 'false');
       }
       
-      setUser(newUser);
+      setUser(sessionUser);
       setIsAuthenticated(true);
       setIsAdmin(false);
       
-      // Notify admin panel about new user registration
-      setTimeout(() => {
-        websocketService.notifyUserRegistration(newUser);
-      }, 1000);
+      // Send verification email automatically
+      try {
+        await kycService.sendVerificationEmail(email);
+        console.log('Verification email sent to:', email);
+      } catch (error) {
+        console.warn('Failed to send verification email:', error);
+      }
       
-      console.log('Registration successful, clean user data created');
+      // Emit real-time update to admin
+      websocketService.notifyUserRegistration(newUser);
+      
+      toast({
+        title: "Registration Successful",
+        description: "Account created successfully. Please check your email for verification.",
+      });
+      
     } catch (error) {
       console.error('Registration error:', error);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Failed to create account. Please try again."
+      });
       throw error;
     }
   };

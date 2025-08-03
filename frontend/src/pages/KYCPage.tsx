@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   Upload, 
@@ -22,39 +22,15 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  Save
+  Save,
+  Mail,
+  Lock,
+  Unlock,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-
-interface KYCData {
-  fullName: string;
-  dateOfBirth: string;
-  nationality: string;
-  idType: string;
-  idNumber: string;
-  address: string;
-  city: string;
-  country: string;
-  postalCode: string;
-  phone: string;
-}
-
-interface KYCFiles {
-  idDocument: File | null;
-  addressProof: File | null;
-  selfie: File | null;
-}
-
-interface KYCStatus {
-  isCompleted: boolean;
-  isVerified: boolean;
-  isPending: boolean;
-  isRejected: boolean;
-  rejectionReason?: string;
-  submittedAt?: string;
-  verifiedAt?: string;
-}
+import kycService, { KYCLevel1Data, KYCLevel2Data, KYCStatus } from '@/services/kycService';
 
 const KYCPage = () => {
   const navigate = useNavigate();
@@ -68,781 +44,651 @@ const KYCPage = () => {
   const withdrawalAmount = searchParams.get('amount');
   const withdrawalAddress = searchParams.get('address');
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('level1');
   const [isLoading, setIsLoading] = useState(false);
+  const [kycStatus, setKycStatus] = useState<KYCStatus>({
+    level1: { status: 'unverified' },
+    level2: { status: 'not_started' }
+  });
   
-  const [kycData, setKycData] = useState<KYCData>({
+  // Level 1: Email Verification
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  
+  // Level 2: Identity Verification
+  const [identityData, setIdentityData] = useState<KYCLevel2Data>({
     fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '',
     dateOfBirth: '',
-    nationality: '',
-    idType: '',
-    idNumber: '',
-    address: '',
-    city: '',
     country: user?.country || '',
-    postalCode: '',
-    phone: user?.phone || ''
-  });
-
-  const [kycFiles, setKycFiles] = useState<KYCFiles>({
-    idDocument: null,
-    addressProof: null,
-    selfie: null
+    idType: 'passport',
+    idNumber: '',
+    frontFile: undefined,
+    backFile: undefined,
+    selfieFile: undefined
   });
 
   const [filePreviews, setFilePreviews] = useState<{
-    idDocument?: string;
-    addressProof?: string;
+    front?: string;
+    back?: string;
     selfie?: string;
   }>({});
 
-  const [kycStatus, setKycStatus] = useState<KYCStatus>({
-    isCompleted: false,
-    isVerified: false,
-    isPending: false,
-    isRejected: false
-  });
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [password, setPassword] = useState('');
-
-  // Load existing KYC data if available
+  // Load KYC status on component mount
   useEffect(() => {
-    loadKYCData();
-  }, []);
+    if (user?.email) {
+      loadKYCStatus();
+    }
+  }, [user?.email]);
 
-  const loadKYCData = async () => {
-    setIsLoading(true);
+  const loadKYCStatus = async () => {
+    if (!user?.email) return;
+    
     try {
-      // Load KYC data from localStorage or API
-      const savedKYC = localStorage.getItem(`kyc_${user?.id}`);
-      if (savedKYC) {
-        const parsed = JSON.parse(savedKYC);
-        setKycData(parsed.data || kycData);
-        setKycStatus(parsed.status || kycStatus);
+      const status = await kycService.getKYCStatus(user.email);
+      setKycStatus(status);
+    } catch (error) {
+      console.error('Error loading KYC status:', error);
+    }
+  };
+
+  // Level 1: Send verification email
+  const handleSendVerificationEmail = async () => {
+    if (!user?.email) return;
+    
+    setIsSendingCode(true);
+    try {
+      const result = await kycService.sendVerificationEmail(user.email);
+      
+      if (result.success) {
+        toast({
+          title: "Verification Email Sent",
+          description: "Please check your email for the verification code.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error('Error loading KYC data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send verification email.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // Level 1: Verify email code
+  const handleVerifyEmailCode = async () => {
+    if (!user?.email || !emailVerificationCode) return;
+    
+    setIsVerifyingCode(true);
+    try {
+      const result = await kycService.verifyEmail(user.email, emailVerificationCode);
+      
+      if (result.success) {
+        toast({
+          title: "Email Verified Successfully",
+          description: "Your email has been verified. You can now access trading features.",
+        });
+        
+        // Update user profile
+        updateUserProfile({
+          kycLevel1: {
+            status: 'verified',
+            verifiedAt: new Date().toISOString()
+          }
+        });
+        
+        // Reload KYC status
+        await loadKYCStatus();
+        
+        // Switch to Level 2 tab
+        setActiveTab('level2');
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to verify email code.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+
+  // Level 2: Handle file upload
+  const handleFileUpload = (field: 'frontFile' | 'backFile' | 'selfieFile', file: File) => {
+    setIdentityData(prev => ({ ...prev, [field]: file }));
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFilePreviews(prev => ({
+        ...prev,
+        [field.replace('File', '')]: e.target?.result as string
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Level 2: Remove file
+  const removeFile = (field: 'frontFile' | 'backFile' | 'selfieFile') => {
+    setIdentityData(prev => ({ ...prev, [field]: undefined }));
+    setFilePreviews(prev => {
+      const newPreviews = { ...prev };
+      delete newPreviews[field.replace('File', '') as keyof typeof newPreviews];
+      return newPreviews;
+    });
+  };
+
+  // Level 2: Submit identity verification
+  const handleSubmitIdentityVerification = async () => {
+    if (!identityData.fullName || !identityData.dateOfBirth || !identityData.country || 
+        !identityData.idNumber || !identityData.frontFile || !identityData.selfieFile) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields and upload required documents.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const result = await kycService.submitIdentityVerification(identityData);
+      
+      if (result.success) {
+        toast({
+          title: "Identity Verification Submitted",
+          description: "Your identity verification has been submitted for review. You will be notified of the status.",
+        });
+        
+        // Reload KYC status
+        await loadKYCStatus();
+      } else {
+        toast({
+          title: "Submission Failed",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit identity verification.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const saveKYCData = async () => {
-    if (!user?.id) return;
-    
-    const kycDataToSave = {
-      data: kycData,
-      status: kycStatus,
-      files: kycFiles,
-      submittedAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem(`kyc_${user.id}`, JSON.stringify(kycDataToSave));
-  };
-
-  const handleFileUpload = (field: keyof KYCFiles, file: File) => {
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      toast({
-        title: "File Too Large",
-        description: "Please select a file smaller than 10MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please upload JPEG, PNG, or PDF files only",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setKycFiles(prev => ({ ...prev, [field]: file }));
-
-    // Create preview for images
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFilePreviews(prev => ({ ...prev, [field]: e.target?.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeFile = (field: keyof KYCFiles) => {
-    setKycFiles(prev => ({ ...prev, [field]: null }));
-    setFilePreviews(prev => ({ ...prev, [field]: undefined }));
-  };
-
-  const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 1:
-        return !!(kycData.fullName && kycData.dateOfBirth && kycData.nationality);
-      case 2:
-        return !!(kycData.idType && kycData.idNumber && kycFiles.idDocument);
-      case 3:
-        return !!(kycData.address && kycData.city && kycData.country && kycData.postalCode && kycFiles.addressProof);
-      case 4:
-        return !!(kycFiles.selfie && password);
-      default:
-        return false;
-    }
-  };
-
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
-    } else {
-      toast({
-        title: "Incomplete Information",
-        description: "Please fill in all required fields before proceeding",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleBack = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
-  const handleSubmit = async () => {
-    if (!validateStep(4)) {
-      toast({
-        title: "Incomplete Information",
-        description: "Please fill in all required fields before submitting",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Simulate API call for KYC submission
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update KYC status
-      const newStatus: KYCStatus = {
-        isCompleted: true,
-        isVerified: false,
-        isPending: true,
-        isRejected: false,
-        submittedAt: new Date().toISOString()
-      };
-      
-      setKycStatus(newStatus);
-      await saveKYCData();
-
-      // Update user profile
-      updateUserProfile({
-        kycStatus: 'pending',
-        kycSubmittedAt: new Date().toISOString()
-      });
-
-      toast({
-        title: "KYC Submitted Successfully",
-        description: "Your verification documents have been submitted and are under review",
-      });
-
-      // If coming from withdrawal, redirect back
-      if (fromWithdrawal) {
-        navigate(`/withdraw?amount=${withdrawalAmount}&address=${withdrawalAddress}&kyc=submitted`);
-      } else {
-        setCurrentStep(5); // Show success step
-      }
-    } catch (error) {
-      toast({
-        title: "Submission Failed",
-        description: "Please try again or contact support",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleBackToWithdrawal = () => {
-    navigate(`/withdraw?amount=${withdrawalAmount}&address=${withdrawalAddress}&kyc=completed`);
+    if (fromWithdrawal && withdrawalAmount && withdrawalAddress) {
+      navigate(`/withdraw?amount=${withdrawalAmount}&address=${withdrawalAddress}`);
+    } else {
+      navigate('/withdraw');
+    }
   };
 
   const handleBackToSettings = () => {
     navigate('/settings');
   };
 
-  const getStepIcon = (step: number) => {
-    if (currentStep > step) return <CheckCircle className="w-5 h-5 text-green-500" />;
-    if (currentStep === step) return <AlertCircle className="w-5 h-5 text-blue-500" />;
-    return <div className="w-5 h-5 rounded-full border-2 border-gray-300" />;
-  };
-
-  const getStepStatus = (step: number) => {
-    if (currentStep > step) return 'completed';
-    if (currentStep === step) return 'current';
-    return 'pending';
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background pt-20">
-        <div className="kucoin-container py-8">
-          <div className="flex items-center justify-center">
-            <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
-          </div>
-        </div>
-      </div>
+  const getLevel1StatusIcon = () => {
+    return kycStatus.level1.status === 'verified' ? (
+      <CheckCircle className="w-8 h-8 text-green-500" />
+    ) : (
+      <AlertCircle className="w-8 h-8 text-yellow-500" />
     );
-  }
+  };
+
+  const getLevel2StatusIcon = () => {
+    switch (kycStatus.level2.status) {
+      case 'approved':
+        return <CheckCircle className="w-8 h-8 text-green-500" />;
+      case 'rejected':
+        return <X className="w-8 h-8 text-red-500" />;
+      case 'pending':
+        return <AlertTriangle className="w-8 h-8 text-yellow-500" />;
+      default:
+        return <Lock className="w-8 h-8 text-gray-500" />;
+    }
+  };
+
+  const getLevel1StatusBadge = () => {
+    return kycStatus.level1.status === 'verified' ? (
+      <Badge className="bg-green-500/10 text-green-400">Verified</Badge>
+    ) : (
+      <Badge className="bg-yellow-500/10 text-yellow-400">Unverified</Badge>
+    );
+  };
+
+  const getLevel2StatusBadge = () => {
+    switch (kycStatus.level2.status) {
+      case 'approved':
+        return <Badge className="bg-green-500/10 text-green-400">Approved</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500/10 text-red-400">Rejected</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500/10 text-yellow-400">Pending Review</Badge>;
+      default:
+        return <Badge className="bg-gray-500/10 text-gray-400">Not Started</Badge>;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pt-20">
       <div className="kucoin-container py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={fromWithdrawal ? handleBackToWithdrawal : handleBackToSettings}
-              className="text-slate-400 hover:text-white"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              {fromWithdrawal ? 'Back to Withdrawal' : 'Back to Settings'}
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">KYC Verification</h1>
-              <p className="text-slate-400">
-                {fromWithdrawal 
-                  ? 'Complete verification to continue with your withdrawal'
-                  : 'Verify your identity to unlock all platform features'
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {getStepIcon(1)}
-              <span className={`text-sm ${getStepStatus(1) === 'completed' ? 'text-green-500' : getStepStatus(1) === 'current' ? 'text-blue-500' : 'text-gray-400'}`}>
-                Personal Information
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              {getStepIcon(2)}
-              <span className={`text-sm ${getStepStatus(2) === 'completed' ? 'text-green-500' : getStepStatus(2) === 'current' ? 'text-blue-500' : 'text-gray-400'}`}>
-                ID Verification
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              {getStepIcon(3)}
-              <span className={`text-sm ${getStepStatus(3) === 'completed' ? 'text-green-500' : getStepStatus(3) === 'current' ? 'text-blue-500' : 'text-gray-400'}`}>
-                Address Verification
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              {getStepIcon(4)}
-              <span className={`text-sm ${getStepStatus(4) === 'completed' ? 'text-green-500' : getStepStatus(4) === 'current' ? 'text-blue-500' : 'text-gray-400'}`}>
-                Final Review
-              </span>
-            </div>
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fromWithdrawal ? handleBackToWithdrawal : handleBackToSettings}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <h1 className="text-3xl font-bold text-foreground">KYC Verification</h1>
           </div>
-          <Progress value={(currentStep / 4) * 100} className="h-2" />
+          <p className="text-muted-foreground">
+            Complete your Know Your Customer verification to unlock full platform access.
+          </p>
         </div>
 
-        {/* KYC Status Check */}
-        {kycStatus.isCompleted && (
-          <Card className="mb-6 p-6 bg-slate-800/50 border-slate-700">
-            <div className="flex items-center gap-4">
-              {kycStatus.isVerified ? (
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              ) : kycStatus.isPending ? (
-                <RefreshCw className="w-8 h-8 text-yellow-500 animate-spin" />
-              ) : (
-                <AlertCircle className="w-8 h-8 text-red-500" />
-              )}
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  {kycStatus.isVerified ? 'KYC Verified' : kycStatus.isPending ? 'KYC Under Review' : 'KYC Rejected'}
-                </h3>
-                <p className="text-slate-400">
-                  {kycStatus.isVerified 
-                    ? 'Your identity has been verified successfully'
-                    : kycStatus.isPending 
-                    ? 'Your documents are being reviewed. This usually takes 1-3 business days.'
-                    : kycStatus.rejectionReason || 'Your KYC was rejected. Please review and resubmit.'
-                  }
+        {/* KYC Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="border-0">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                {getLevel1StatusIcon()}
+                <div>
+                  <h3 className="font-semibold">Level 1: Email Verification</h3>
+                  <p className="text-sm text-muted-foreground">Verify your email address</p>
+                </div>
+              </div>
+              {getLevel1StatusBadge()}
+              {kycStatus.level1.status === 'unverified' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Required to access trading features
                 </p>
-              </div>
-            </div>
+              )}
+            </CardContent>
           </Card>
-        )}
 
-        {/* Step Content */}
-        <Card className="bg-slate-800/50 border-slate-700 p-6">
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-bold mb-4 text-white">Personal Information</h2>
-                <p className="text-slate-400 mb-6">Please provide your basic personal information</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="border-0">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                {getLevel2StatusIcon()}
                 <div>
-                  <Label htmlFor="fullName" className="text-white">Full Legal Name *</Label>
-                  <Input
-                    id="fullName"
-                    value={kycData.fullName}
-                    onChange={(e) => setKycData({...kycData, fullName: e.target.value})}
-                    placeholder="Enter your full legal name"
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="dateOfBirth" className="text-white">Date of Birth *</Label>
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={kycData.dateOfBirth}
-                    onChange={(e) => setKycData({...kycData, dateOfBirth: e.target.value})}
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="nationality" className="text-white">Nationality *</Label>
-                  <Select value={kycData.nationality} onValueChange={(value) => setKycData({...kycData, nationality: value})}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                      <SelectValue placeholder="Select your nationality" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="CA">Canada</SelectItem>
-                      <SelectItem value="UK">United Kingdom</SelectItem>
-                      <SelectItem value="DE">Germany</SelectItem>
-                      <SelectItem value="FR">France</SelectItem>
-                      <SelectItem value="JP">Japan</SelectItem>
-                      <SelectItem value="AU">Australia</SelectItem>
-                      <SelectItem value="SG">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="phone" className="text-white">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    value={kycData.phone}
-                    onChange={(e) => setKycData({...kycData, phone: e.target.value})}
-                    placeholder="Enter your phone number"
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
+                  <h3 className="font-semibold">Level 2: Identity Verification</h3>
+                  <p className="text-sm text-muted-foreground">Verify your identity</p>
                 </div>
               </div>
-            </div>
-          )}
+              {getLevel2StatusBadge()}
+              {kycStatus.level2.status === 'not_started' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Required for withdrawals
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-bold mb-4 text-white">ID Verification</h2>
-                <p className="text-slate-400 mb-6">Please upload a government-issued ID document</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="idType" className="text-white">ID Type *</Label>
-                  <Select value={kycData.idType} onValueChange={(value) => setKycData({...kycData, idType: value})}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                      <SelectValue placeholder="Select ID type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="passport">Passport</SelectItem>
-                      <SelectItem value="drivers_license">Driver's License</SelectItem>
-                      <SelectItem value="national_id">National ID Card</SelectItem>
-                      <SelectItem value="residence_permit">Residence Permit</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="idNumber" className="text-white">ID Number *</Label>
-                  <Input
-                    id="idNumber"
-                    value={kycData.idNumber}
-                    onChange={(e) => setKycData({...kycData, idNumber: e.target.value})}
-                    placeholder="Enter your ID number"
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-white">ID Document Upload *</Label>
-                <div className="mt-2">
-                  {kycFiles.idDocument ? (
-                    <div className="border border-slate-600 rounded-lg p-4 bg-slate-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-blue-500" />
-                          <div>
-                            <p className="text-white font-medium">{kycFiles.idDocument.name}</p>
-                            <p className="text-slate-400 text-sm">
-                              {(kycFiles.idDocument.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile('idDocument')}
-                          className="text-red-500 hover:text-red-400"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      {filePreviews.idDocument && (
-                        <img 
-                          src={filePreviews.idDocument} 
-                          alt="ID Document Preview" 
-                          className="mt-3 max-w-xs rounded border"
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-slate-500 transition-colors">
-                      <input
-                        type="file"
-                        id="idDocument"
-                        accept="image/*,.pdf"
-                        onChange={(e) => e.target.files?.[0] && handleFileUpload('idDocument', e.target.files[0])}
-                        className="hidden"
-                      />
-                      <label htmlFor="idDocument" className="cursor-pointer">
-                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-                        <p className="text-white font-medium">Upload ID Document</p>
-                        <p className="text-slate-400 text-sm">JPEG, PNG, or PDF (max 10MB)</p>
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+        {/* KYC Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="level1">Email Verification</TabsTrigger>
+            <TabsTrigger value="level2" disabled={kycStatus.level1.status !== 'verified'}>
+              Identity Verification
+            </TabsTrigger>
+          </TabsList>
 
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-bold mb-4 text-white">Address Verification</h2>
-                <p className="text-slate-400 mb-6">Please provide your current residential address</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <Label htmlFor="address" className="text-white">Street Address *</Label>
-                  <Input
-                    id="address"
-                    value={kycData.address}
-                    onChange={(e) => setKycData({...kycData, address: e.target.value})}
-                    placeholder="Enter your street address"
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="city" className="text-white">City *</Label>
-                  <Input
-                    id="city"
-                    value={kycData.city}
-                    onChange={(e) => setKycData({...kycData, city: e.target.value})}
-                    placeholder="Enter your city"
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="country" className="text-white">Country *</Label>
-                  <Select value={kycData.country} onValueChange={(value) => setKycData({...kycData, country: value})}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                      <SelectValue placeholder="Select your country" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="CA">Canada</SelectItem>
-                      <SelectItem value="UK">United Kingdom</SelectItem>
-                      <SelectItem value="DE">Germany</SelectItem>
-                      <SelectItem value="FR">France</SelectItem>
-                      <SelectItem value="JP">Japan</SelectItem>
-                      <SelectItem value="AU">Australia</SelectItem>
-                      <SelectItem value="SG">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="postalCode" className="text-white">Postal Code *</Label>
-                  <Input
-                    id="postalCode"
-                    value={kycData.postalCode}
-                    onChange={(e) => setKycData({...kycData, postalCode: e.target.value})}
-                    placeholder="Enter your postal code"
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-white">Proof of Address *</Label>
-                <div className="mt-2">
-                  {kycFiles.addressProof ? (
-                    <div className="border border-slate-600 rounded-lg p-4 bg-slate-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Home className="w-5 h-5 text-green-500" />
-                          <div>
-                            <p className="text-white font-medium">{kycFiles.addressProof.name}</p>
-                            <p className="text-slate-400 text-sm">
-                              {(kycFiles.addressProof.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile('addressProof')}
-                          className="text-red-500 hover:text-red-400"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      {filePreviews.addressProof && (
-                        <img 
-                          src={filePreviews.addressProof} 
-                          alt="Address Proof Preview" 
-                          className="mt-3 max-w-xs rounded border"
-                        />
-                      )}
+          {/* Level 1: Email Verification */}
+          <TabsContent value="level1" className="space-y-6">
+            <Card className="border-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Email Verification
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {kycStatus.level1.status === 'unverified' ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-blue-500/10 rounded-lg">
+                      <p className="text-sm text-blue-600">
+                        Please verify your email address to unlock trading features.
+                      </p>
                     </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-slate-500 transition-colors">
-                      <input
-                        type="file"
-                        id="addressProof"
-                        accept="image/*,.pdf"
-                        onChange={(e) => e.target.files?.[0] && handleFileUpload('addressProof', e.target.files[0])}
-                        className="hidden"
-                      />
-                      <label htmlFor="addressProof" className="cursor-pointer">
-                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-                        <p className="text-white font-medium">Upload Proof of Address</p>
-                        <p className="text-slate-400 text-sm">Utility bill, bank statement, or lease agreement</p>
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-bold mb-4 text-white">Final Review</h2>
-                <p className="text-slate-400 mb-6">Please review your information and upload a selfie for verification</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label className="text-white">Selfie with ID *</Label>
-                  <div className="mt-2">
-                    {kycFiles.selfie ? (
-                      <div className="border border-slate-600 rounded-lg p-4 bg-slate-700">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <User className="w-5 h-5 text-purple-500" />
-                            <div>
-                              <p className="text-white font-medium">{kycFiles.selfie.name}</p>
-                              <p className="text-slate-400 text-sm">
-                                {(kycFiles.selfie.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile('selfie')}
-                            className="text-red-500 hover:text-red-400"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        {filePreviews.selfie && (
-                          <img 
-                            src={filePreviews.selfie} 
-                            alt="Selfie Preview" 
-                            className="mt-3 max-w-xs rounded border"
-                          />
+                    
+                    <div className="space-y-4">
+                      <Button 
+                        onClick={handleSendVerificationEmail}
+                        disabled={isSendingCode}
+                        className="w-full"
+                      >
+                        {isSendingCode ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Sending Code...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-4 h-4 mr-2" />
+                            Send Verification Code
+                          </>
                         )}
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-slate-500 transition-colors">
-                        <input
-                          type="file"
-                          id="selfie"
-                          accept="image/*"
-                          onChange={(e) => e.target.files?.[0] && handleFileUpload('selfie', e.target.files[0])}
-                          className="hidden"
+                      </Button>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="verificationCode">Verification Code</Label>
+                        <Input
+                          id="verificationCode"
+                          placeholder="Enter 6-digit code"
+                          value={emailVerificationCode}
+                          onChange={(e) => setEmailVerificationCode(e.target.value)}
+                          maxLength={6}
                         />
-                        <label htmlFor="selfie" className="cursor-pointer">
-                          <Camera className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-                          <p className="text-white font-medium">Upload Selfie</p>
-                          <p className="text-slate-400 text-sm">Take a photo holding your ID document</p>
-                        </label>
                       </div>
-                    )}
+                      
+                      <Button 
+                        onClick={handleVerifyEmailCode}
+                        disabled={!emailVerificationCode || isVerifyingCode}
+                        className="w-full"
+                      >
+                        {isVerifyingCode ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Verify Code
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="password" className="text-white">Confirm Password *</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password to confirm"
-                      className="bg-slate-700 border-slate-600 text-white pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
+                ) : (
+                  <div className="p-4 bg-green-500/10 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span className="font-semibold text-green-600">Email Verified</span>
+                    </div>
+                    <p className="text-sm text-green-600 mt-1">
+                      Your email has been verified. You can now access trading features.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Level 2: Identity Verification */}
+          <TabsContent value="level2" className="space-y-6">
+            <Card className="border-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Identity Verification
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {kycStatus.level2.status === 'not_started' ? (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-500/10 rounded-lg">
+                      <p className="text-sm text-blue-600">
+                        Please provide your identity information and upload required documents.
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="fullName">Full Name (as on ID)</Label>
+                        <Input
+                          id="fullName"
+                          value={identityData.fullName}
+                          onChange={(e) => setIdentityData(prev => ({ ...prev, fullName: e.target.value }))}
+                          placeholder="Enter your full name"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                        <Input
+                          id="dateOfBirth"
+                          type="date"
+                          value={identityData.dateOfBirth}
+                          onChange={(e) => setIdentityData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="country">Country</Label>
+                        <Select value={identityData.country} onValueChange={(value) => setIdentityData(prev => ({ ...prev, country: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="us">United States</SelectItem>
+                            <SelectItem value="ca">Canada</SelectItem>
+                            <SelectItem value="uk">United Kingdom</SelectItem>
+                            <SelectItem value="de">Germany</SelectItem>
+                            <SelectItem value="fr">France</SelectItem>
+                            <SelectItem value="jp">Japan</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="idType">ID Type</Label>
+                        <Select value={identityData.idType} onValueChange={(value: any) => setIdentityData(prev => ({ ...prev, idType: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ID type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="passport">Passport</SelectItem>
+                            <SelectItem value="national_id">National ID</SelectItem>
+                            <SelectItem value="drivers_license">Driver's License</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <Label htmlFor="idNumber">ID Number</Label>
+                        <Input
+                          id="idNumber"
+                          value={identityData.idNumber}
+                          onChange={(e) => setIdentityData(prev => ({ ...prev, idNumber: e.target.value }))}
+                          placeholder="Enter your ID number"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Document Upload */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold">Document Upload</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Front of ID */}
+                        <div className="space-y-2">
+                          <Label>Front of ID *</Label>
+                          <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                            {filePreviews.front ? (
+                              <div className="space-y-2">
+                                <img src={filePreviews.front} alt="Front" className="w-full h-32 object-cover rounded" />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeFile('frontFile')}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Remove
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => e.target.files?.[0] && handleFileUpload('frontFile', e.target.files[0])}
+                                  className="hidden"
+                                  id="frontFile"
+                                />
+                                <Label htmlFor="frontFile" className="cursor-pointer text-sm text-muted-foreground">
+                                  Click to upload
+                                </Label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Back of ID */}
+                        <div className="space-y-2">
+                          <Label>Back of ID (Optional)</Label>
+                          <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                            {filePreviews.back ? (
+                              <div className="space-y-2">
+                                <img src={filePreviews.back} alt="Back" className="w-full h-32 object-cover rounded" />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeFile('backFile')}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Remove
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => e.target.files?.[0] && handleFileUpload('backFile', e.target.files[0])}
+                                  className="hidden"
+                                  id="backFile"
+                                />
+                                <Label htmlFor="backFile" className="cursor-pointer text-sm text-muted-foreground">
+                                  Click to upload
+                                </Label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Selfie with ID */}
+                        <div className="space-y-2">
+                          <Label>Selfie with ID *</Label>
+                          <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                            {filePreviews.selfie ? (
+                              <div className="space-y-2">
+                                <img src={filePreviews.selfie} alt="Selfie" className="w-full h-32 object-cover rounded" />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeFile('selfieFile')}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Remove
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <Camera className="w-8 h-8 mx-auto text-muted-foreground" />
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => e.target.files?.[0] && handleFileUpload('selfieFile', e.target.files[0])}
+                                  className="hidden"
+                                  id="selfieFile"
+                                />
+                                <Label htmlFor="selfieFile" className="cursor-pointer text-sm text-muted-foreground">
+                                  Click to upload
+                                </Label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSubmitIdentityVerification}
+                      disabled={isLoading}
+                      className="w-full"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-slate-400" />
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
                       ) : (
-                        <Eye className="h-4 w-4 text-slate-400" />
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Submit for Review
+                        </>
                       )}
                     </Button>
                   </div>
-                  <p className="text-slate-400 text-sm mt-1">
-                    This confirms that you are the account holder
-                  </p>
-                </div>
-              </div>
-              
-              <div className="bg-slate-700/50 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-3">Information Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-400">Full Name</p>
-                    <p className="text-white">{kycData.fullName}</p>
+                ) : kycStatus.level2.status === 'pending' ? (
+                  <div className="p-4 bg-yellow-500/10 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                      <span className="font-semibold text-yellow-600">Under Review</span>
+                    </div>
+                    <p className="text-sm text-yellow-600 mt-1">
+                      Your identity verification is currently under review. You will be notified of the status.
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-slate-400">Date of Birth</p>
-                    <p className="text-white">{kycData.dateOfBirth}</p>
+                ) : kycStatus.level2.status === 'approved' ? (
+                  <div className="p-4 bg-green-500/10 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span className="font-semibold text-green-600">Approved</span>
+                    </div>
+                    <p className="text-sm text-green-600 mt-1">
+                      Your identity verification has been approved. You can now withdraw funds.
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-slate-400">Nationality</p>
-                    <p className="text-white">{kycData.nationality}</p>
+                ) : kycStatus.level2.status === 'rejected' ? (
+                  <div className="p-4 bg-red-500/10 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <X className="w-5 h-5 text-red-500" />
+                      <span className="font-semibold text-red-600">Rejected</span>
+                    </div>
+                    <p className="text-sm text-red-600 mt-1">
+                      Your identity verification was rejected. Please review the requirements and try again.
+                    </p>
+                    {kycStatus.level2.rejectionReason && (
+                      <p className="text-sm text-red-600 mt-2">
+                        Reason: {kycStatus.level2.rejectionReason}
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-slate-400">ID Type</p>
-                    <p className="text-white">{kycData.idType}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="text-slate-400">Address</p>
-                    <p className="text-white">{kycData.address}, {kycData.city}, {kycData.country} {kycData.postalCode}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 5 && (
-            <div className="text-center space-y-6">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">KYC Submitted Successfully!</h2>
-                <p className="text-slate-400">
-                  Your verification documents have been submitted and are under review. 
-                  You will receive a notification once the verification is complete.
-                </p>
-              </div>
-              
-              <div className="bg-slate-700/50 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">What happens next?</h3>
-                <ul className="text-slate-400 text-sm space-y-1 text-left">
-                  <li>• Our team will review your documents within 1-3 business days</li>
-                  <li>• You'll receive an email notification once verified</li>
-                  <li>• Once verified, you can proceed with withdrawals</li>
-                  <li>• You can check your KYC status in your profile settings</li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          {currentStep < 5 && (
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === 1}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
-              >
-                Back
-              </Button>
-              
-              {currentStep < 4 ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={!validateStep(currentStep)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Next
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!validateStep(currentStep) || isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Submit KYC
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          )}
-
-          {currentStep === 5 && (
-            <div className="flex justify-center mt-8">
-              <Button
-                onClick={fromWithdrawal ? handleBackToWithdrawal : handleBackToSettings}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {fromWithdrawal ? 'Continue to Withdrawal' : 'Back to Settings'}
-              </Button>
-            </div>
-          )}
-        </Card>
+                ) : null}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

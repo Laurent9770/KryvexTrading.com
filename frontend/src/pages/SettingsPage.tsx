@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Navigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { Navigate, useNavigate } from "react-router-dom";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,6 +87,7 @@ const SettingsPage = () => {
   const { user, updateUserProfile, isAdmin } = useAuth();
   const { t, currentLanguage, setLanguage, getAvailableLanguages } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Redirect admin users to admin dashboard
   if (isAdmin) {
@@ -1073,6 +1074,148 @@ const SettingsPage = () => {
                   </div>
                 </div>
               </div>
+            </Card>
+          </TabsContent>
+
+          {/* KYC Tab */}
+          <TabsContent value="kyc" className="space-y-6">
+            <Card className="border-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  KYC Verification Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* KYC Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border border-border rounded-lg">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Mail className="w-6 h-6 text-blue-500" />
+                      <div>
+                        <h3 className="font-semibold">Level 1: Email Verification</h3>
+                        <p className="text-sm text-muted-foreground">Verify your email address</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Badge className={
+                        user?.kycLevel1?.status === 'verified' 
+                          ? "bg-green-500/10 text-green-400" 
+                          : "bg-yellow-500/10 text-yellow-400"
+                      }>
+                        {user?.kycLevel1?.status === 'verified' ? 'Verified' : 'Unverified'}
+                      </Badge>
+                      {user?.kycLevel1?.status === 'verified' && (
+                        <span className="text-xs text-muted-foreground">
+                          {user.kycLevel1.verifiedAt && new Date(user.kycLevel1.verifiedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 border border-border rounded-lg">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Shield className="w-6 h-6 text-purple-500" />
+                      <div>
+                        <h3 className="font-semibold">Level 2: Identity Verification</h3>
+                        <p className="text-sm text-muted-foreground">Verify your identity</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Badge className={
+                        user?.kycLevel2?.status === 'approved' 
+                          ? "bg-green-500/10 text-green-400"
+                          : user?.kycLevel2?.status === 'rejected'
+                          ? "bg-red-500/10 text-red-400"
+                          : user?.kycLevel2?.status === 'pending'
+                          ? "bg-yellow-500/10 text-yellow-400"
+                          : "bg-gray-500/10 text-gray-400"
+                      }>
+                        {user?.kycLevel2?.status === 'approved' ? 'Approved' :
+                         user?.kycLevel2?.status === 'rejected' ? 'Rejected' :
+                         user?.kycLevel2?.status === 'pending' ? 'Pending Review' :
+                         'Not Started'}
+                      </Badge>
+                      {user?.kycLevel2?.status === 'approved' && user.kycLevel2.reviewedAt && (
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(user.kycLevel2.reviewedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* KYC Requirements */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Verification Requirements</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        user?.kycLevel1?.status === 'verified' ? 'bg-green-500' : 'bg-gray-400'
+                      }`} />
+                      <span className="text-sm">
+                        <strong>Level 1:</strong> Email verification required for trading access
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        user?.kycLevel2?.status === 'approved' ? 'bg-green-500' : 'bg-gray-400'
+                      }`} />
+                      <span className="text-sm">
+                        <strong>Level 2:</strong> Identity verification required for withdrawals
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={() => navigate('/kyc')}
+                    className="flex-1"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Manage KYC Verification
+                  </Button>
+                </div>
+
+                {/* Status Messages */}
+                {user?.kycLevel1?.status !== 'verified' && (
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                      <span className="font-semibold text-yellow-600">Trading Access Restricted</span>
+                    </div>
+                    <p className="text-sm text-yellow-600">
+                      Please complete email verification to access trading features.
+                    </p>
+                  </div>
+                )}
+
+                {user?.kycLevel1?.status === 'verified' && user?.kycLevel2?.status !== 'approved' && (
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-blue-500" />
+                      <span className="font-semibold text-blue-600">Withdrawal Access Restricted</span>
+                    </div>
+                    <p className="text-sm text-blue-600">
+                      Please complete identity verification to enable withdrawals.
+                    </p>
+                  </div>
+                )}
+
+                {user?.kycLevel2?.status === 'rejected' && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <X className="w-4 h-4 text-red-500" />
+                      <span className="font-semibold text-red-600">Identity Verification Rejected</span>
+                    </div>
+                    <p className="text-sm text-red-600">
+                      {user.kycLevel2.rejectionReason || 'Your identity verification was rejected. Please review and resubmit.'}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
             </Card>
           </TabsContent>
 

@@ -1,646 +1,518 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  UserCheck, 
+  Shield, 
   Search, 
   Filter, 
   Eye, 
   CheckCircle, 
-  XCircle, 
-  Clock,
-  FileText,
+  XCircle,
   AlertTriangle,
-  Shield,
+  Clock,
   Download,
-  MoreHorizontal,
-  Image,
-  File,
+  RefreshCw,
+  User,
+  FileText,
   Calendar,
-  Mail,
-  Phone,
   MapPin,
-  CreditCard,
-  Banknote,
-  Document
+  CreditCard
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import kycService from '@/services/kycService';
+import { Label } from '@/components/ui/label';
 
-interface KYCApplication {
-  id: string;
-  user_id: string;
-  full_name: string;
-  email: string;
-  phone?: string;
-  date_of_birth?: string;
-  nationality?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  postal_code?: string;
-  document_type: string;
-  document_number?: string;
-  document_front_url?: string;
-  document_back_url?: string;
-  selfie_url?: string;
-  proof_of_address_url?: string;
-  verification_level: string;
-  status: string;
-  submitted_at: string;
-  reviewed_at?: string;
-  reviewed_by?: string;
-  rejection_reason?: string;
-  kyc_notes?: string;
+interface KYCSubmission {
+  userId: string;
+  level2: {
+    status: 'pending' | 'approved' | 'rejected';
+    submittedAt: string;
+    reviewedAt?: string;
+    rejectionReason?: string;
+    documents?: {
+      fullName: string;
+      dateOfBirth: string;
+      country: string;
+      idType: string;
+      idNumber: string;
+      frontUrl?: string;
+      backUrl?: string;
+      selfieUrl?: string;
+    };
+  };
 }
 
 export default function AdminKYCManagement() {
   const { toast } = useToast();
-  const [kycApplications, setKycApplications] = useState<KYCApplication[]>([]);
-  const [filteredApplications, setFilteredApplications] = useState<KYCApplication[]>([]);
+  const [submissions, setSubmissions] = useState<KYCSubmission[]>([]);
+  const [filteredSubmissions, setFilteredSubmissions] = useState<KYCSubmission[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [levelFilter, setLevelFilter] = useState('all');
-  const [selectedApplication, setSelectedApplication] = useState<KYCApplication | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<KYCSubmission | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewData, setReviewData] = useState({
-    status: 'approved',
-    verification_level: 'basic',
-    notes: '',
-    rejection_reason: ''
+    status: 'approved' as 'approved' | 'rejected',
+    reason: ''
   });
 
   useEffect(() => {
-    fetchKYCApplications();
+    fetchKYCSubmissions();
   }, []);
 
   useEffect(() => {
-    filterApplications();
-  }, [kycApplications, searchTerm, statusFilter, levelFilter]);
+    filterSubmissions();
+  }, [submissions, searchTerm, statusFilter]);
 
-  const fetchKYCApplications = async () => {
+  const fetchKYCSubmissions = async () => {
+    setIsLoading(true);
     try {
-      // TODO: Implement real API call to fetch KYC applications
-      // const response = await fetch('/api/kyc/applications');
-      // const applications = await response.json();
-      // setKycApplications(applications);
-      
-      // For now, set empty array until real API is implemented
-      setKycApplications([]);
+      const data = await kycService.getKYCSubmissions();
+      setSubmissions(data);
     } catch (error) {
-      console.error('Error fetching KYC applications:', error);
+      console.error('Error fetching KYC submissions:', error);
       toast({
+        variant: "destructive",
         title: "Error",
-        description: "Failed to load KYC applications",
-        variant: "destructive"
+        description: "Failed to load KYC submissions",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const filterApplications = () => {
-    let filtered = kycApplications;
+  const filterSubmissions = () => {
+    let filtered = submissions;
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(app =>
-        app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.document_number?.toLowerCase().includes(searchTerm.toLowerCase())
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(submission => 
+        submission.userId.toLowerCase().includes(searchLower) ||
+        submission.level2.documents?.fullName.toLowerCase().includes(searchLower) ||
+        submission.level2.documents?.idNumber.toLowerCase().includes(searchLower)
       );
     }
 
     // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(app => app.status === statusFilter);
+      filtered = filtered.filter(submission => submission.level2.status === statusFilter);
     }
 
-    // Level filter
-    if (levelFilter !== 'all') {
-      filtered = filtered.filter(app => app.verification_level === levelFilter);
-    }
-
-    setFilteredApplications(filtered);
+    setFilteredSubmissions(filtered);
   };
 
-  const handleKYCReview = async () => {
-    if (!selectedApplication) return;
+  const handleReviewSubmission = async () => {
+    if (!selectedSubmission) return;
 
+    setIsLoading(true);
     try {
-      // TODO: Implement real API call to update KYC application
-      // const response = await fetch(`/api/kyc/applications/${selectedApplication.id}/review`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(reviewData)
-      // });
-      // 
-      // if (!response.ok) throw new Error('Failed to update KYC application');
-      // 
-      // const updatedApplication = await response.json();
-      // 
-      // // Update local state with the response from server
-      // const updatedApplications = kycApplications.map(app => 
-      //   app.id === selectedApplication.id ? updatedApplication : app
-      // );
-      // setKycApplications(updatedApplications);
+      const result = await kycService.reviewKYCSubmission(
+        selectedSubmission.userId,
+        reviewData.status,
+        reviewData.status === 'rejected' ? reviewData.reason : undefined
+      );
 
-      // For now, update local state until real API is implemented
-      const updatedApplications = kycApplications.map(app => {
-        if (app.id === selectedApplication.id) {
-          return {
-            ...app,
-            status: reviewData.status,
-            verification_level: reviewData.verification_level,
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: 'admin-001',
-            rejection_reason: reviewData.status === 'rejected' ? reviewData.rejection_reason : undefined,
-            kyc_notes: reviewData.notes
-          };
-        }
-        return app;
-      });
+      if (result.success) {
+        toast({
+          title: "Review Completed",
+          description: result.message,
+        });
 
-      setKycApplications(updatedApplications);
-
-      toast({
-        title: "Success",
-        description: `KYC application ${reviewData.status} successfully`
-      });
-
-      setIsReviewModalOpen(false);
-      setReviewData({ status: 'approved', verification_level: 'basic', notes: '', rejection_reason: '' });
+        // Refresh submissions
+        await fetchKYCSubmissions();
+        setIsReviewModalOpen(false);
+        setSelectedSubmission(null);
+        setReviewData({ status: 'approved', reason: '' });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Review Failed",
+          description: result.message,
+        });
+      }
     } catch (error) {
-      console.error('Error reviewing KYC:', error);
+      console.error('Error reviewing KYC submission:', error);
       toast({
+        variant: "destructive",
         title: "Error",
-        description: "Failed to review KYC application",
-        variant: "destructive"
+        description: "Failed to review KYC submission",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const exportKYCData = () => {
-    const csvContent = [
-      ['Name', 'Email', 'Document Type', 'Status', 'Level', 'Submitted', 'Reviewed'],
-      ...filteredApplications.map(app => [
-        app.full_name || 'N/A',
-        app.email,
-        app.document_type,
-        app.status,
-        app.verification_level,
-        new Date(app.submitted_at).toLocaleDateString(),
-        app.reviewed_at ? new Date(app.reviewed_at).toLocaleDateString() : 'Pending'
-      ])
-    ].map(row => row.join(',')).join('\n');
+    try {
+      const csvContent = [
+        ['User ID', 'Full Name', 'Date of Birth', 'Country', 'ID Type', 'ID Number', 'Status', 'Submitted At', 'Reviewed At', 'Rejection Reason'],
+        ...filteredSubmissions.map(submission => [
+          submission.userId,
+          submission.level2.documents?.fullName || '',
+          submission.level2.documents?.dateOfBirth || '',
+          submission.level2.documents?.country || '',
+          submission.level2.documents?.idType || '',
+          submission.level2.documents?.idNumber || '',
+          submission.level2.status,
+          submission.level2.submittedAt,
+          submission.level2.reviewedAt || '',
+          submission.level2.rejectionReason || ''
+        ])
+      ].map(row => row.join(',')).join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'kyc_applications_export.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'kyc_submissions_export.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: "KYC data exported to CSV",
+      });
+    } catch (error) {
+      console.error('Error exporting KYC data:', error);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "Failed to export KYC data",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+        return <Badge className="bg-green-500/10 text-green-400">Approved</Badge>;
       case 'rejected':
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+        return <Badge className="bg-red-500/10 text-red-400">Rejected</Badge>;
       case 'pending':
-        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        return <Badge className="bg-yellow-500/10 text-yellow-400">Pending</Badge>;
       default:
-        return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30">{status}</Badge>;
+        return <Badge className="bg-gray-500/10 text-gray-400">Unknown</Badge>;
     }
   };
 
-  const getLevelBadge = (level: string) => {
-    switch (level) {
-      case 'basic':
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Basic</Badge>;
-      case 'advanced':
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Advanced</Badge>;
-      case 'premium':
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Premium</Badge>;
-      default:
-        return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30">{level}</Badge>;
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-900/50 to-blue-800/30 border-blue-700/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-white">{filteredApplications.length}</p>
-                <p className="text-blue-300 text-sm">Total Applications</p>
-              </div>
-              <FileText className="w-8 h-8 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-900/50 to-orange-800/30 border-orange-700/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {filteredApplications.filter(app => app.status === 'pending').length}
-                </p>
-                <p className="text-orange-300 text-sm">Pending Review</p>
-              </div>
-              <Clock className="w-8 h-8 text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-900/50 to-green-800/30 border-green-700/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {filteredApplications.filter(app => app.status === 'approved').length}
-                </p>
-                <p className="text-green-300 text-sm">Approved</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-900/50 to-red-800/30 border-red-700/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {filteredApplications.filter(app => app.status === 'rejected').length}
-                </p>
-                <p className="text-red-300 text-sm">Rejected</p>
-              </div>
-              <XCircle className="w-8 h-8 text-red-400" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">KYC Management</h2>
+          <p className="text-muted-foreground">
+            Review and manage user identity verification submissions.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={fetchKYCSubmissions} 
+            variant="outline" 
+            size="sm"
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button 
+            onClick={exportKYCData} 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
-      {/* Filters and Actions */}
-      <Card className="bg-slate-900/50 border-slate-700">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col md:flex-row gap-4 flex-1">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Search applications..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-slate-800 border-slate-600 text-white w-64"
-                />
-              </div>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by user ID, name, or ID number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+        <div className="w-full sm:w-48">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48 bg-slate-800 border-slate-600 text-white">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-600">
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={levelFilter} onValueChange={setLevelFilter}>
-                <SelectTrigger className="w-48 bg-slate-800 border-slate-600 text-white">
-                  <Shield className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-600">
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button onClick={exportKYCData} variant="outline" className="border-slate-600 text-slate-300">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
+      {/* KYC Submissions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            KYC Submissions ({filteredSubmissions.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>ID Type</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSubmissions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {isLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Loading submissions...
+                        </div>
+                      ) : (
+                        "No KYC submissions found"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredSubmissions.map((submission) => (
+                    <TableRow key={submission.userId}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{submission.userId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {submission.level2.documents?.fullName || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-muted-foreground" />
+                          <span className="capitalize">
+                            {submission.level2.documents?.idType?.replace('_', ' ') || 'N/A'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>{formatDate(submission.level2.submittedAt)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(submission.level2.status)}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedSubmission(submission);
+                                setIsReviewModalOpen(true);
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Review Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* KYC Applications Table */}
-      <Card className="bg-slate-900/50 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">KYC Review Center</CardTitle>
-          <CardDescription className="text-slate-400">
-            Review and approve user verification documents
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-slate-700">
-                <TableHead className="text-slate-300">Applicant</TableHead>
-                <TableHead className="text-slate-300">Document</TableHead>
-                <TableHead className="text-slate-300">Status</TableHead>
-                <TableHead className="text-slate-300">Level</TableHead>
-                <TableHead className="text-slate-300">Submitted</TableHead>
-                <TableHead className="text-slate-300">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredApplications.map((application) => (
-                <TableRow key={application.id} className="border-slate-700">
-                  <TableCell>
-                    <div>
-                      <div className="font-medium text-white">{application.full_name}</div>
-                      <div className="text-sm text-slate-400">{application.email}</div>
-                      {application.phone && (
-                        <div className="text-xs text-slate-500">{application.phone}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Document className="w-4 h-4 text-blue-400" />
-                      <span className="text-white">{application.document_type}</span>
-                      {application.document_number && (
-                        <span className="text-xs text-slate-400">#{application.document_number}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(application.status)}
-                  </TableCell>
-                  <TableCell>
-                    {getLevelBadge(application.verification_level)}
-                  </TableCell>
-                  <TableCell className="text-slate-300">
-                    {new Date(application.submitted_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-slate-800 border-slate-600">
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setSelectedApplication(application);
-                            setIsReviewModalOpen(true);
-                          }}
-                          className="text-slate-300 hover:bg-slate-700"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Review Application
-                        </DropdownMenuItem>
-                        {application.status === 'pending' && (
-                          <>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setSelectedApplication(application);
-                                setReviewData({ ...reviewData, status: 'approved' });
-                                setIsReviewModalOpen(true);
-                              }}
-                              className="text-green-300 hover:bg-slate-700"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setSelectedApplication(application);
-                                setReviewData({ ...reviewData, status: 'rejected' });
-                                setIsReviewModalOpen(true);
-                              }}
-                              className="text-red-300 hover:bg-slate-700"
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Reject
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* KYC Review Modal */}
+      {/* Review Modal */}
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review KYC Application</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Review documents and approve or reject the application
+            <DialogTitle>Review KYC Submission</DialogTitle>
+            <DialogDescription>
+              Review the identity verification documents and approve or reject the submission.
             </DialogDescription>
           </DialogHeader>
-          {selectedApplication && (
+          
+          {selectedSubmission && (
             <div className="space-y-6">
-              {/* Applicant Information */}
+              {/* User Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Applicant Information</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <UserCheck className="w-4 h-4 text-blue-400" />
-                      <span className="text-white font-medium">{selectedApplication.full_name}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Mail className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-300">{selectedApplication.email}</span>
-                    </div>
-                    {selectedApplication.phone && (
-                      <div className="flex items-center space-x-2">
-                        <Phone className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-300">{selectedApplication.phone}</span>
-                      </div>
-                    )}
-                    {selectedApplication.date_of_birth && (
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-300">{selectedApplication.date_of_birth}</span>
-                      </div>
-                    )}
-                    {selectedApplication.nationality && (
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-300">{selectedApplication.nationality}</span>
-                      </div>
-                    )}
-                  </div>
+                <div>
+                  <Label className="text-sm font-medium">User ID</Label>
+                  <p className="text-sm text-muted-foreground">{selectedSubmission.userId}</p>
                 </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Address Information</h3>
-                  <div className="space-y-2">
-                    {selectedApplication.address && (
-                      <div className="text-slate-300">{selectedApplication.address}</div>
-                    )}
-                    {(selectedApplication.city || selectedApplication.country) && (
-                      <div className="text-slate-300">
-                        {selectedApplication.city}, {selectedApplication.country}
-                      </div>
-                    )}
-                    {selectedApplication.postal_code && (
-                      <div className="text-slate-300">{selectedApplication.postal_code}</div>
-                    )}
-                  </div>
+                <div>
+                  <Label className="text-sm font-medium">Full Name</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSubmission.level2.documents?.fullName || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Date of Birth</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSubmission.level2.documents?.dateOfBirth || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Country</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSubmission.level2.documents?.country || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">ID Type</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSubmission.level2.documents?.idType?.replace('_', ' ') || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">ID Number</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSubmission.level2.documents?.idNumber || 'N/A'}
+                  </p>
                 </div>
               </div>
 
-              {/* Document Information */}
+              {/* Document Previews */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">Document Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Document className="w-4 h-4 text-blue-400" />
-                      <span className="text-white font-medium">{selectedApplication.document_type}</span>
-                    </div>
-                    {selectedApplication.document_number && (
-                      <div className="text-slate-300">Number: {selectedApplication.document_number}</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Document Images */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">Document Images</h3>
+                <h4 className="font-semibold">Document Images</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {selectedApplication.document_front_url && (
+                  {selectedSubmission.level2.documents?.frontUrl && (
                     <div className="space-y-2">
-                      <label className="text-sm text-slate-400">Front Side</label>
-                      <div className="bg-slate-800 rounded-lg p-4 border border-slate-600">
-                        <Image className="w-full h-32 object-cover rounded" />
-                        <p className="text-xs text-slate-400 mt-2">Document Front</p>
-                      </div>
+                      <Label className="text-sm">Front of ID</Label>
+                      <img 
+                        src={selectedSubmission.level2.documents.frontUrl} 
+                        alt="Front of ID" 
+                        className="w-full h-32 object-cover rounded border"
+                      />
                     </div>
                   )}
-                  {selectedApplication.document_back_url && (
+                  {selectedSubmission.level2.documents?.backUrl && (
                     <div className="space-y-2">
-                      <label className="text-sm text-slate-400">Back Side</label>
-                      <div className="bg-slate-800 rounded-lg p-4 border border-slate-600">
-                        <Image className="w-full h-32 object-cover rounded" />
-                        <p className="text-xs text-slate-400 mt-2">Document Back</p>
-                      </div>
+                      <Label className="text-sm">Back of ID</Label>
+                      <img 
+                        src={selectedSubmission.level2.documents.backUrl} 
+                        alt="Back of ID" 
+                        className="w-full h-32 object-cover rounded border"
+                      />
                     </div>
                   )}
-                  {selectedApplication.selfie_url && (
+                  {selectedSubmission.level2.documents?.selfieUrl && (
                     <div className="space-y-2">
-                      <label className="text-sm text-slate-400">Selfie</label>
-                      <div className="bg-slate-800 rounded-lg p-4 border border-slate-600">
-                        <Image className="w-full h-32 object-cover rounded" />
-                        <p className="text-xs text-slate-400 mt-2">Selfie Verification</p>
-                      </div>
+                      <Label className="text-sm">Selfie with ID</Label>
+                      <img 
+                        src={selectedSubmission.level2.documents.selfieUrl} 
+                        alt="Selfie with ID" 
+                        className="w-full h-32 object-cover rounded border"
+                      />
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Review Form */}
+              {/* Review Actions */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">Review Decision</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-slate-400">Status</label>
-                    <Select value={reviewData.status} onValueChange={(value) => setReviewData(prev => ({ ...prev, status: value }))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-600">
-                        <SelectItem value="approved">Approve</SelectItem>
-                        <SelectItem value="rejected">Reject</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm text-slate-400">Verification Level</label>
-                    <Select value={reviewData.verification_level} onValueChange={(value) => setReviewData(prev => ({ ...prev, verification_level: value }))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-600">
-                        <SelectItem value="basic">Basic</SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label className="text-sm font-medium">Review Decision</Label>
+                  <Select 
+                    value={reviewData.status} 
+                    onValueChange={(value: 'approved' | 'rejected') => setReviewData(prev => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="approved">Approve</SelectItem>
+                      <SelectItem value="rejected">Reject</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {reviewData.status === 'rejected' && (
                   <div>
-                    <label className="text-sm text-slate-400">Rejection Reason</label>
+                    <Label className="text-sm font-medium">Rejection Reason</Label>
                     <Textarea
-                      value={reviewData.rejection_reason}
-                      onChange={(e) => setReviewData(prev => ({ ...prev, rejection_reason: e.target.value }))}
-                      className="bg-slate-800 border-slate-600 text-white"
-                      placeholder="Reason for rejection"
+                      placeholder="Provide a reason for rejection..."
+                      value={reviewData.reason}
+                      onChange={(e) => setReviewData(prev => ({ ...prev, reason: e.target.value }))}
                       rows={3}
                     />
                   </div>
                 )}
 
-                <div>
-                  <label className="text-sm text-slate-400">Review Notes</label>
-                  <Textarea
-                    value={reviewData.notes}
-                    onChange={(e) => setReviewData(prev => ({ ...prev, notes: e.target.value }))}
-                    className="bg-slate-800 border-slate-600 text-white"
-                    placeholder="Additional notes about this application"
-                    rows={3}
-                  />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleReviewSubmission}
+                    disabled={isLoading || (reviewData.status === 'rejected' && !reviewData.reason)}
+                    className="flex-1"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        {reviewData.status === 'approved' ? (
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                        ) : (
+                          <XCircle className="h-4 w-4 mr-2" />
+                        )}
+                        {reviewData.status === 'approved' ? 'Approve' : 'Reject'}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsReviewModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={handleKYCReview}
-                  className={reviewData.status === 'approved' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
-                >
-                  {reviewData.status === 'approved' ? (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve Application
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject Application
-                    </>
-                  )}
-                </Button>
-                <Button 
-                  onClick={() => setIsReviewModalOpen(false)} 
-                  variant="outline"
-                  className="border-slate-600 text-slate-300"
-                >
-                  Cancel
-                </Button>
               </div>
             </div>
           )}
