@@ -3125,14 +3125,14 @@ const TradingPage = () => {
 
         {/* Trading Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 gap-1 bg-muted/20 p-1 rounded-lg overflow-x-auto">
-            <TabsTrigger value="spot" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Spot</TabsTrigger>
-            <TabsTrigger value="futures" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Futures</TabsTrigger>
-            <TabsTrigger value="options" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Options</TabsTrigger>
-            <TabsTrigger value="binary" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Binary</TabsTrigger>
-            <TabsTrigger value="quant" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Quant</TabsTrigger>
-            <TabsTrigger value="bots" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Bots</TabsTrigger>
-            <TabsTrigger value="staking" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap">Staking</TabsTrigger>
+          <TabsList className="flex w-full gap-1 bg-muted/20 p-1 rounded-lg overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="spot" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Spot</TabsTrigger>
+            <TabsTrigger value="futures" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Futures</TabsTrigger>
+            <TabsTrigger value="options" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Options</TabsTrigger>
+            <TabsTrigger value="binary" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Binary</TabsTrigger>
+            <TabsTrigger value="quant" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Quant</TabsTrigger>
+            <TabsTrigger value="bots" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Bots</TabsTrigger>
+            <TabsTrigger value="staking" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Staking</TabsTrigger>
           </TabsList>
 
           {/* Spot Trading Tab */}
