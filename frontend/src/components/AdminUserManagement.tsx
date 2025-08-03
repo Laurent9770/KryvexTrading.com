@@ -187,11 +187,24 @@ export default function AdminUserManagement() {
 
   const loadUsers = async () => {
     try {
-      // Load from user persistence service (real registered users)
-      const registeredUsers = userPersistenceService.getAllUsers();
+      // Load from user persistence service (existing admin users)
+      const adminUsers = userPersistenceService.getAllUsers();
       
-      // Convert to User format for admin display
-      const adminUsers: User[] = registeredUsers.map((userData: any) => ({
+      // Load registered users from localStorage (new registrations)
+      let registeredUsers: any[] = [];
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const registeredUsersData = localStorage.getItem('registeredUsers');
+          if (registeredUsersData) {
+            registeredUsers = JSON.parse(registeredUsersData);
+          }
+        }
+      } catch (error) {
+        console.warn('Error loading registered users:', error);
+      }
+      
+      // Convert registered users to User format for admin display
+      const convertedRegisteredUsers: User[] = registeredUsers.map((userData: any) => ({
         id: userData.id,
         email: userData.email,
         firstName: userData.firstName || '',
@@ -219,11 +232,16 @@ export default function AdminUserManagement() {
         phoneVerified: false
       }));
       
-      setUsers(adminUsers);
-      calculateStats(adminUsers);
+      // Merge admin users with registered users
+      const allUsers = mergeUsers(adminUsers, convertedRegisteredUsers);
       
-      // Store in persistence for admin access
-      userPersistenceService.storeUsers(adminUsers);
+      setUsers(allUsers);
+      calculateStats(allUsers);
+      
+      // Store merged users in persistence for admin access
+      userPersistenceService.storeUsers(allUsers);
+      
+      console.log(`Loaded ${allUsers.length} users (${adminUsers.length} admin users + ${convertedRegisteredUsers.length} registered users)`);
       
     } catch (error) {
       console.error('Error loading users:', error);
