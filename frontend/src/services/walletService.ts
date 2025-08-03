@@ -51,6 +51,120 @@ export class WalletService {
   constructor() {
     // Initialize with empty state - no mock data
     this.loadPersistedData();
+    
+    // Create sample withdrawal requests if none exist
+    this.initializeSampleData();
+  }
+
+  private initializeSampleData() {
+    // Only create sample data if no withdrawal requests exist
+    if (this.withdrawalRequests.size === 0) {
+      const sampleRequests = [
+        {
+          id: 'withdrawal-1',
+          userId: 'user-1',
+          username: 'john_doe',
+          userEmail: 'john@example.com',
+          amount: 500,
+          asset: 'USDT',
+          blockchain: 'TRC20',
+          walletAddress: 'TQn9Y2khDD95J42FQtQTdwVVRKzN8kqKq',
+          status: 'pending' as const,
+          requestDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+          remarks: 'Need funds for trading'
+        },
+        {
+          id: 'withdrawal-2',
+          userId: 'user-2',
+          username: 'jane_smith',
+          userEmail: 'jane@example.com',
+          amount: 250,
+          asset: 'BTC',
+          blockchain: 'Bitcoin',
+          walletAddress: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+          status: 'approved' as const,
+          requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+          processedDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          processedBy: 'admin@kryvex.com',
+          txHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+          remarks: 'Approved for withdrawal'
+        },
+        {
+          id: 'withdrawal-3',
+          userId: 'user-3',
+          username: 'mike_wilson',
+          userEmail: 'mike@example.com',
+          amount: 1000,
+          asset: 'ETH',
+          blockchain: 'Ethereum',
+          walletAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+          status: 'rejected' as const,
+          requestDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+          processedDate: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          processedBy: 'admin@kryvex.com',
+          remarks: 'Insufficient KYC verification level'
+        },
+        {
+          id: 'withdrawal-4',
+          userId: 'user-4',
+          username: 'sarah_jones',
+          userEmail: 'sarah@example.com',
+          amount: 750,
+          asset: 'SOL',
+          blockchain: 'Solana',
+          walletAddress: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
+          status: 'pending' as const,
+          requestDate: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+          remarks: 'Trading profits withdrawal'
+        }
+      ];
+
+      sampleRequests.forEach(request => {
+        this.withdrawalRequests.set(request.id, request);
+      });
+
+      // Create sample user wallets
+      const sampleWallets = [
+        {
+          userId: 'user-1',
+          username: 'john_doe',
+          email: 'john@example.com',
+          fundingWallet: { USDT: 2500, BTC: 0.05, ETH: 2.5 },
+          tradingWallet: { USDT: 1500, BTC: 0.02, ETH: 1.2 },
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          userId: 'user-2',
+          username: 'jane_smith',
+          email: 'jane@example.com',
+          fundingWallet: { USDT: 1800, BTC: 0.03, ETH: 1.8 },
+          tradingWallet: { USDT: 900, BTC: 0.01, ETH: 0.8 },
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          userId: 'user-3',
+          username: 'mike_wilson',
+          email: 'mike@example.com',
+          fundingWallet: { USDT: 3200, BTC: 0.08, ETH: 4.0 },
+          tradingWallet: { USDT: 2100, BTC: 0.05, ETH: 2.5 },
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          userId: 'user-4',
+          username: 'sarah_jones',
+          email: 'sarah@example.com',
+          fundingWallet: { USDT: 1200, BTC: 0.02, ETH: 1.0 },
+          tradingWallet: { USDT: 600, BTC: 0.01, ETH: 0.5 },
+          lastUpdated: new Date().toISOString()
+        }
+      ];
+
+      sampleWallets.forEach(wallet => {
+        this.userWallets.set(wallet.userId, wallet);
+      });
+
+      this.persistData();
+    }
   }
 
   private loadPersistedData() {
@@ -386,4 +500,4 @@ export class WalletService {
 }
 
 const walletService = new WalletService();
-export default walletService; 
+export default walletService;
