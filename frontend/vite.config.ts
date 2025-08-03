@@ -19,4 +19,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    minify: 'terser',
+    rollupOptions: {
+      external: [],
+    },
+  },
 }));
