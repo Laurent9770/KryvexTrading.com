@@ -125,6 +125,29 @@ const WithdrawPage = () => {
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    // Check KYC status before allowing withdrawal
+    const userKYCStatus = user?.kycStatus;
+    if (!userKYCStatus || userKYCStatus === 'unverified' || userKYCStatus === 'pending') {
+      toast({
+        title: "KYC Verification Required",
+        description: "Please complete identity verification before withdrawing funds",
+        variant: "destructive"
+      });
+      
+      // Redirect to KYC page with withdrawal context
+      navigate(`/kyc?from=withdrawal&amount=${amount}&address=${address}`);
+      return;
+    }
+
+    if (userKYCStatus === 'rejected') {
+      toast({
+        title: "KYC Verification Failed",
+        description: "Your identity verification was rejected. Please contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     // Simulate API call
@@ -133,16 +156,8 @@ const WithdrawPage = () => {
         title: "Withdrawal Submitted",
         description: "Your withdrawal request has been submitted successfully",
       });
-      setIsSubmitting(false);
       setShowConfirmation(true);
-      
-      // Reset form after confirmation
-      setTimeout(() => {
-        setAmount("");
-        setAddress("");
-        setTag("");
-        setShowConfirmation(false);
-      }, 3000);
+      setIsSubmitting(false);
     }, 2000);
   };
 

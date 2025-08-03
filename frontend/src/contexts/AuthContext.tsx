@@ -13,6 +13,8 @@ interface User {
   country?: string;
   bio?: string;
   avatar?: string;
+  kycStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  kycSubmittedAt?: string;
 }
 
 interface AuthContextType {

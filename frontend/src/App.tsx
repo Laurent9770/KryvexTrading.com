@@ -30,6 +30,7 @@ import NotFound from "./pages/NotFound";
 import LiveChatWidget from "@/components/LiveChatWidget";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import KYCPage from "./pages/KYCPage";
 
 const queryClient = new QueryClient();
 
@@ -90,7 +91,7 @@ const AppContent = () => {
                     <Route path="/convert" element={<UserOnlyRoute><ConvertPage /></UserOnlyRoute>} />
                     <Route path="/profile" element={<UserOnlyRoute><Navigate to="/settings" replace /></UserOnlyRoute>} />
                     <Route path="/settings" element={<UserOnlyRoute><SettingsPage /></UserOnlyRoute>} />
-                    <Route path="/kyc" element={<UserOnlyRoute><KYCVerificationPage /></UserOnlyRoute>} />
+                                          <Route path="/kyc" element={<UserOnlyRoute><KYCPage /></UserOnlyRoute>} />
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/trading-control" element={<AdminDashboard />} />
                     <Route path="/admin/trading-control/:userId" element={<UserTradeControlPage />} />
