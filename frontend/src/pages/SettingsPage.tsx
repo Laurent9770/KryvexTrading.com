@@ -77,12 +77,6 @@ interface DisplayPreferences {
   timezone: string;
 }
 
-interface KYCSettings {
-  level1: { completed: boolean; status: 'completed' | 'pending' | 'failed' };
-  level2: { completed: boolean; status: 'completed' | 'pending' | 'failed' };
-  level3: { completed: boolean; status: 'completed' | 'pending' | 'failed' };
-}
-
 interface PasswordChangeData {
   currentPassword: string;
   newPassword: string;
@@ -104,7 +98,9 @@ const SettingsPage = () => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showKYCUploadDialog, setShowKYCUploadDialog] = useState(false);
+  const [showProfilePictureDialog, setShowProfilePictureDialog] = useState(false);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
   
   // Settings data
   const [settingsData, setSettingsData] = useState<SettingsData>({
@@ -139,31 +135,12 @@ const SettingsPage = () => {
     timezone: 'UTC'
   });
   
-  // KYC settings
-  const [kycSettings, setKycSettings] = useState<KYCSettings>({
-    level1: { completed: false, status: 'pending' },
-    level2: { completed: false, status: 'pending' },
-    level3: { completed: false, status: 'pending' }
-  });
-  
   // Password change
   const [passwordData, setPasswordData] = useState<PasswordChangeData>({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  
-  // KYC upload files
-  const [kycFiles, setKycFiles] = useState({
-    proofOfResidence: null as File | null,
-    selfieWithId: null as File | null,
-    additionalDocuments: null as File | null
-  });
-  
-  // Profile picture upload
-  const [profilePicture, setProfilePicture] = useState<File | null>(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
-  const [showProfilePictureDialog, setShowProfilePictureDialog] = useState(false);
   
   // API keys
   const [apiKey, setApiKey] = useState("kc_api_abc123...xyz789");
@@ -201,24 +178,6 @@ const SettingsPage = () => {
         const persistedDisplay = localStorage.getItem('displayPreferences');
         if (persistedDisplay) {
           setDisplayPrefs(JSON.parse(persistedDisplay));
-        }
-
-        // Load KYC settings - new users start with pending status
-        const persistedKYC = localStorage.getItem('kycSettings');
-        if (persistedKYC) {
-          const kycData = JSON.parse(persistedKYC);
-          // For new users, start with pending status for all levels
-          if (user && !user.firstName && !user.lastName) {
-            // New user - clear KYC settings and start fresh
-            localStorage.removeItem('kycSettings');
-            setKycSettings({
-              level1: { completed: false, status: 'pending' },
-              level2: { completed: false, status: 'pending' },
-              level3: { completed: false, status: 'pending' }
-            });
-          } else {
-            setKycSettings(kycData);
-          }
         }
       } catch (error) {
         console.error('Error loading persisted data:', error);
@@ -477,126 +436,6 @@ const SettingsPage = () => {
     }
   };
 
-  const handleLevel1Verification = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate email verification
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newKycSettings = {
-        ...kycSettings,
-        level1: { completed: true, status: 'completed' as const }
-      };
-      
-      setKycSettings(newKycSettings);
-      
-      // Persist to localStorage
-      localStorage.setItem('kycSettings', JSON.stringify(newKycSettings));
-      
-      toast({
-        title: "Level 1 Verification Complete",
-        description: "Your email has been verified successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Verification Failed",
-        description: "Failed to verify email. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLevel2Verification = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate identity verification
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const newKycSettings = {
-        ...kycSettings,
-        level2: { completed: true, status: 'completed' as const }
-      };
-      
-      setKycSettings(newKycSettings);
-      
-      // Persist to localStorage
-      localStorage.setItem('kycSettings', JSON.stringify(newKycSettings));
-      
-      toast({
-        title: "Level 2 Verification Complete",
-        description: "Your identity has been verified successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Verification Failed",
-        description: "Failed to verify identity. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKYCUpload = async () => {
-    if (!kycFiles.proofOfResidence || !kycFiles.selfieWithId) {
-      toast({
-        title: "Missing Documents",
-        description: "Please upload all required documents for Level 3 verification.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const newKycSettings = {
-        ...kycSettings,
-        level3: { completed: true, status: 'pending' as const }
-      };
-      
-      setKycSettings(newKycSettings);
-      
-      // Persist to localStorage
-      localStorage.setItem('kycSettings', JSON.stringify(newKycSettings));
-      
-      // Emit real-time update to admin
-      websocketService.updateKYCStatus('current-user', {
-        level3: { completed: true, status: 'pending' },
-        documents: {
-          proofOfResidence: kycFiles.proofOfResidence?.name,
-          selfieWithId: kycFiles.selfieWithId?.name,
-          additionalDocuments: kycFiles.additionalDocuments?.name
-        },
-        updatedAt: new Date().toISOString()
-      });
-      
-      setShowKYCUploadDialog(false);
-      setKycFiles({
-        proofOfResidence: null,
-        selfieWithId: null,
-        additionalDocuments: null
-      });
-      
-      toast({
-        title: "KYC Submitted",
-        description: "Your Level 3 verification documents have been submitted for review.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload KYC documents",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleGenerateApiKey = async () => {
     setIsLoading(true);
     try {
@@ -632,16 +471,8 @@ const SettingsPage = () => {
     });
   };
 
-  const handleFileUpload = (field: keyof typeof kycFiles, file: File) => {
-    setKycFiles(prev => ({
-      ...prev,
-      [field]: file
-    }));
-  };
-
   const handleProfilePictureUpload = (file: File | null) => {
     if (!file) {
-      setProfilePicture(null);
       setProfilePicturePreview(null);
       return;
     }
@@ -666,7 +497,7 @@ const SettingsPage = () => {
       return;
     }
 
-    setProfilePicture(file);
+    setProfilePictureFile(file);
     
     // Create preview
     const reader = new FileReader();
@@ -677,7 +508,7 @@ const SettingsPage = () => {
   };
 
   const handleSaveProfilePicture = async () => {
-    if (!profilePicture) {
+    if (!profilePictureFile) {
       toast({
         title: "No Image Selected",
         description: "Please select an image to upload",
@@ -727,52 +558,18 @@ const SettingsPage = () => {
   };
 
   const handleRemoveProfilePicture = () => {
-    setProfilePicture(null);
+    setProfilePictureFile(null);
     setProfilePicturePreview(null);
     
-    // Update user profile in AuthContext
-    updateUserProfile({
-      avatar: undefined
-    });
-    
-    // Emit real-time update to admin
-    websocketService.updateProfile('current-user', {
-      avatar: null,
-      updatedAt: new Date().toISOString()
-    });
+    // Update user profile
+    if (user) {
+      updateUserProfile({ avatar: '' });
+    }
     
     toast({
       title: "Profile Picture Removed",
       description: "Your profile picture has been removed.",
     });
-  };
-
-  const getKYCStatusBadge = (level: keyof KYCSettings) => {
-    const status = kycSettings[level].status;
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500/10 text-green-400">Completed</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-500/10 text-yellow-400">Pending</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-500/10 text-red-400">Failed</Badge>;
-      default:
-        return <Badge className="bg-gray-500/10 text-gray-400">Not Started</Badge>;
-    }
-  };
-
-  const getKYCStatusIcon = (level: keyof KYCSettings) => {
-    const status = kycSettings[level].status;
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />;
-      case 'pending':
-        return <AlertTriangle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />;
-      case 'failed':
-        return <X className="w-8 h-8 text-red-500 mx-auto mb-2" />;
-      default:
-        return <AlertTriangle className="w-8 h-8 text-gray-500 mx-auto mb-2" />;
-    }
   };
 
   return (
@@ -903,7 +700,7 @@ const SettingsPage = () => {
                     {profilePicturePreview && (
                       <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
                         <p className="text-sm text-green-600 font-medium">Preview Ready</p>
-                        <p className="text-xs text-green-500">{profilePicture?.name}</p>
+                        <p className="text-xs text-green-500">{profilePictureFile?.name}</p>
                       </div>
                     )}
                     
@@ -924,7 +721,7 @@ const SettingsPage = () => {
                         <Camera className="w-4 h-4 mr-2" />
                         Camera
                       </Button>
-                      {profilePicture && (
+                      {profilePictureFile && (
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -937,7 +734,7 @@ const SettingsPage = () => {
                       )}
                     </div>
                     
-                    {profilePicture && (
+                    {profilePictureFile && (
                       <Button 
                         onClick={handleSaveProfilePicture} 
                         className="kucoin-btn-primary w-full"
@@ -1279,153 +1076,7 @@ const SettingsPage = () => {
             </Card>
           </TabsContent>
 
-          {/* KYC Tab */}
-          <TabsContent value="kyc" className="space-y-6">
-            <Card className="kucoin-card p-6">
-              <h2 className="text-xl font-bold mb-6">KYC Verification</h2>
-              
-              {/* KYC Status Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 border border-border rounded-lg text-center">
-                  {getKYCStatusIcon('level1')}
-                  <h3 className="font-semibold mb-2">Level 1</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Email Verification</p>
-                  {getKYCStatusBadge('level1')}
-                </div>
-                
-                <div className="p-4 border border-border rounded-lg text-center">
-                  {getKYCStatusIcon('level2')}
-                  <h3 className="font-semibold mb-2">Level 2</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Identity Verification</p>
-                  {getKYCStatusBadge('level2')}
-                </div>
-                
-                <div className="p-4 border border-border rounded-lg text-center">
-                  {getKYCStatusIcon('level3')}
-                  <h3 className="font-semibold mb-2">Level 3</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Enhanced Verification</p>
-                  {getKYCStatusBadge('level3')}
-                </div>
-              </div>
 
-              {/* Level 1 and Level 2 Verification */}
-              {kycSettings.level1.status === 'pending' && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-kucoin-blue/10 rounded-lg">
-                    <Mail className="w-6 h-6 text-kucoin-blue" />
-                    <div>
-                      <h3 className="font-semibold">Complete Level 1 Verification</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Verify your email address to complete Level 1 KYC.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => handleLevel1Verification()} 
-                    className="kucoin-btn-primary"
-                  >
-                    <Mail className="w-4 h-4 mr-2" />
-                    Verify Email Address
-                  </Button>
-                </div>
-              )}
-
-              {kycSettings.level2.status === 'pending' && kycSettings.level1.status === 'completed' && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-kucoin-blue/10 rounded-lg">
-                    <User className="w-6 h-6 text-kucoin-blue" />
-                    <div>
-                      <h3 className="font-semibold">Complete Level 2 Verification</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Verify your identity with basic personal information.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => handleLevel2Verification()} 
-                    className="kucoin-btn-primary"
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Verify Identity
-                  </Button>
-                </div>
-              )}
-
-              {/* Level 3 Verification */}
-              {kycSettings.level3.status === 'pending' && !kycSettings.level3.completed && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-kucoin-blue/10 rounded-lg">
-                    <FileText className="w-6 h-6 text-kucoin-blue" />
-                    <div>
-                      <h3 className="font-semibold">Complete Level 3 Verification</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload additional documents for enhanced verification.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => setShowKYCUploadDialog(true)} 
-                    className="kucoin-btn-primary"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Complete Level 3 Verification
-                  </Button>
-                </div>
-              )}
-
-              {kycSettings.level3.status === 'pending' && kycSettings.level3.completed && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-kucoin-yellow/10 rounded-lg">
-                    <AlertTriangle className="w-6 h-6 text-kucoin-yellow" />
-                    <div>
-                      <h3 className="font-semibold">Verification Pending</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Your Level 3 verification documents are under review.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {kycSettings.level3.status === 'completed' && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-kucoin-green/10 rounded-lg">
-                    <CheckCircle className="w-6 h-6 text-kucoin-green" />
-                    <div>
-                      <h3 className="font-semibold">KYC Level 3 Verified</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Your KYC Level 3 verification has been completed.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {kycSettings.level3.status === 'failed' && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-kucoin-red/10 rounded-lg">
-                    <X className="w-6 h-6 text-kucoin-red" />
-                    <div>
-                      <h3 className="font-semibold">KYC Verification Failed</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Your KYC Level 3 verification has failed. Please try again or contact support.
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => setShowKYCUploadDialog(true)} 
-                    className="kucoin-btn-primary"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Try Again
-                  </Button>
-                </div>
-              )}
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
 
@@ -1475,48 +1126,7 @@ const SettingsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* KYC Upload Dialog */}
-      <Dialog open={showKYCUploadDialog} onOpenChange={setShowKYCUploadDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Complete Level 3 Verification</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="proofOfResidence">Proof of Residence</Label>
-              <Input 
-                type="file" 
-                accept="image/*"
-                onChange={(e) => handleFileUpload('proofOfResidence', e.target.files?.[0] || null)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="selfieWithId">Selfie with ID</Label>
-              <Input 
-                type="file" 
-                accept="image/*"
-                onChange={(e) => handleFileUpload('selfieWithId', e.target.files?.[0] || null)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="additionalDocuments">Additional Documents (Optional)</Label>
-              <Input 
-                type="file" 
-                accept="image/*"
-                onChange={(e) => handleFileUpload('additionalDocuments', e.target.files?.[0] || null)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowKYCUploadDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleKYCUpload} disabled={isLoading}>
-                {isLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : "Submit for Review"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Profile Picture Upload Dialog */}
       <Dialog open={showProfilePictureDialog} onOpenChange={setShowProfilePictureDialog}>
@@ -1549,7 +1159,7 @@ const SettingsPage = () => {
                       </AvatarFallback>
                     </Avatar>
                   </div>
-                  <p className="text-xs text-muted-foreground">{profilePicture?.name}</p>
+                  <p className="text-xs text-muted-foreground">{profilePictureFile?.name}</p>
                 </div>
               )}
             </div>
@@ -1560,7 +1170,7 @@ const SettingsPage = () => {
               </Button>
               <Button 
                 onClick={handleSaveProfilePicture} 
-                disabled={!profilePicture || isLoading}
+                disabled={!profilePictureFile || isLoading}
               >
                 {isLoading ? (
                   <>
