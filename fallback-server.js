@@ -3,13 +3,41 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 
+// Middleware for parsing JSON
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Check if the build directory exists
 const buildPath = path.join(__dirname, 'frontend/dist');
 const indexPath = path.join(buildPath, 'index.html');
 
-console.log('Starting fallback server...');
-console.log('Build path:', buildPath);
+console.log('🚀 Starting Kryvex Trading Platform Server...');
+console.log('📁 Build path:', buildPath);
+console.log('📄 Index path:', indexPath);
+console.log('🔍 Build exists:', fs.existsSync(buildPath));
+console.log('📄 Index exists:', fs.existsSync(indexPath));
 
+// API Routes (if any backend functionality is needed)
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Kryvex Trading Platform API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    buildPath: buildPath,
+    buildExists: fs.existsSync(buildPath),
+    indexExists: fs.existsSync(indexPath),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Check if build exists and serve React app
 if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
   console.log('✅ Build found, serving React app...');
   
@@ -25,30 +53,38 @@ if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
 } else {
   console.log('❌ Build not found, serving fallback page...');
   
-  // Serve a simple fallback page
+  // Serve a comprehensive fallback page with more information
   app.get('/', (req, res) => {
     res.send(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Kryvex Trading - Loading...</title>
+          <title>Kryvex Trading Platform - Loading...</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { 
-              font-family: Arial, sans-serif; 
-              background: #0f0f23; 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
               color: white; 
               display: flex; 
               justify-content: center; 
               align-items: center; 
               height: 100vh; 
               margin: 0; 
+              line-height: 1.6;
             }
             .container { 
               text-align: center; 
               padding: 2rem; 
+              max-width: 600px;
+              background: rgba(255, 255, 255, 0.05);
+              border-radius: 12px;
+              backdrop-filter: blur(10px);
+              border: 1px solid rgba(255, 255, 255, 0.1);
             }
             .spinner { 
-              border: 4px solid #333; 
+              border: 4px solid rgba(255, 255, 255, 0.1); 
               border-top: 4px solid #3498db; 
               border-radius: 50%; 
               width: 50px; 
@@ -60,15 +96,42 @@ if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
               0% { transform: rotate(0deg); } 
               100% { transform: rotate(360deg); } 
             }
+            .status {
+              background: rgba(255, 255, 255, 0.1);
+              padding: 1rem;
+              border-radius: 8px;
+              margin: 1rem 0;
+              font-family: monospace;
+              font-size: 0.9rem;
+            }
+            .error {
+              color: #ff6b6b;
+            }
+            .success {
+              color: #51cf66;
+            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="spinner"></div>
-            <h1>Kryvex Trading Platform</h1>
+            <h1>🚀 Kryvex Trading Platform</h1>
             <p>Application is starting up...</p>
+            
+            <div class="status">
+              <div>📁 Build Path: ${buildPath}</div>
+              <div class="${fs.existsSync(buildPath) ? 'success' : 'error'}">
+                📦 Build Directory: ${fs.existsSync(buildPath) ? '✅ Found' : '❌ Not Found'}
+              </div>
+              <div class="${fs.existsSync(indexPath) ? 'success' : 'error'}">
+                📄 Index File: ${fs.existsSync(indexPath) ? '✅ Found' : '❌ Not Found'}
+              </div>
+              <div>🌍 Environment: ${process.env.NODE_ENV || 'development'}</div>
+              <div>⏰ Timestamp: ${new Date().toISOString()}</div>
+            </div>
+            
             <p>If this page persists, please check the deployment logs.</p>
-            <p>Build status: ${fs.existsSync(buildPath) ? 'Found' : 'Not found'}</p>
+            <p>You can also check the <a href="/api/health" style="color: #3498db;">health endpoint</a> for more details.</p>
           </div>
         </body>
       </html>
@@ -82,28 +145,59 @@ if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
       <html>
         <head>
           <title>Kryvex Trading - Route Not Found</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { 
-              font-family: Arial, sans-serif; 
-              background: #0f0f23; 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
               color: white; 
               display: flex; 
               justify-content: center; 
               align-items: center; 
               height: 100vh; 
               margin: 0; 
+              line-height: 1.6;
             }
             .container { 
               text-align: center; 
               padding: 2rem; 
+              max-width: 600px;
+              background: rgba(255, 255, 255, 0.05);
+              border-radius: 12px;
+              backdrop-filter: blur(10px);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .error {
+              color: #ff6b6b;
+            }
+            .status {
+              background: rgba(255, 255, 255, 0.1);
+              padding: 1rem;
+              border-radius: 8px;
+              margin: 1rem 0;
+              font-family: monospace;
+              font-size: 0.9rem;
             }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>Route Not Found</h1>
-            <p>Requested route: ${req.path}</p>
+            <h1>❌ Route Not Found</h1>
+            <p>Requested route: <code>${req.path}</code></p>
+            
+            <div class="status">
+              <div>📁 Build Path: ${buildPath}</div>
+              <div class="${fs.existsSync(buildPath) ? 'success' : 'error'}">
+                📦 Build Directory: ${fs.existsSync(buildPath) ? '✅ Found' : '❌ Not Found'}
+              </div>
+              <div class="${fs.existsSync(indexPath) ? 'success' : 'error'}">
+                📄 Index File: ${fs.existsSync(indexPath) ? '✅ Found' : '❌ Not Found'}
+              </div>
+            </div>
+            
             <p>Build is not available. Please check deployment logs.</p>
+            <p>You can check the <a href="/api/health" style="color: #3498db;">health endpoint</a> for more details.</p>
           </div>
         </body>
       </html>
@@ -111,20 +205,12 @@ if (fs.existsSync(buildPath) && fs.existsSync(indexPath)) {
   });
 }
 
-// Add a health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: fs.existsSync(buildPath) ? 'ok' : 'fallback', 
-    timestamp: new Date().toISOString(),
-    buildPath: buildPath,
-    buildExists: fs.existsSync(buildPath),
-    message: fs.existsSync(buildPath) ? 'React app serving' : 'Serving fallback page'
-  });
-});
-
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`🚀 Fallback server running on port ${port}`);
+  console.log(`🚀 Kryvex Trading Platform server running on port ${port}`);
   console.log(`📁 Build path: ${buildPath}`);
   console.log(`✅ Build exists: ${fs.existsSync(buildPath)}`);
+  console.log(`📄 Index exists: ${fs.existsSync(indexPath)}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Health check: http://localhost:${port}/api/health`);
 }); 
