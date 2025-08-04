@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import walletService, { UserWallet, WalletTransaction } from '@/services/walletService';
+import walletService from '@/services/walletService';
+import adminDataService, { AdminWalletData } from '@/services/adminDataService';
 import { 
   Plus, 
   Minus, 
@@ -26,9 +27,9 @@ import {
 import websocketService from '@/services/websocketService';
 
 const AdminWalletManager: React.FC = () => {
-  const [userWallets, setUserWallets] = useState<UserWallet[]>([]);
-  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
-  const [selectedUser, setSelectedUser] = useState<UserWallet | null>(null);
+  const [userWallets, setUserWallets] = useState<AdminWalletData[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<AdminWalletData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   const [fundForm, setFundForm] = useState({
@@ -65,7 +66,7 @@ const AdminWalletManager: React.FC = () => {
       ));
       
       // Add new transaction to the list
-      const newTransaction: WalletTransaction = {
+      const newTransaction = {
         id: `tx-${Date.now()}`,
         userId: data.userId,
         username: data.username,
@@ -99,7 +100,8 @@ const AdminWalletManager: React.FC = () => {
   const loadData = () => {
     console.log('=== DEBUG: AdminWalletManager loading data ===');
     
-    const wallets = walletService.getAllUserWallets();
+    // Use adminDataService to get real wallet data based on actual users
+    const wallets = adminDataService.getWalletData();
     console.log('User wallets loaded:', wallets.length);
     console.log('User wallets data:', wallets);
     
@@ -113,7 +115,7 @@ const AdminWalletManager: React.FC = () => {
     console.log('=== DEBUG: AdminWalletManager data loading complete ===');
   };
 
-  const handleFundWallet = async (userWallet: UserWallet) => {
+  const handleFundWallet = async (userWallet: AdminWalletData) => {
     if (!user) return;
 
     const amount = parseFloat(fundForm.amount);
@@ -170,7 +172,7 @@ const AdminWalletManager: React.FC = () => {
     }
   };
 
-  const handleDeductFromWallet = async (userWallet: UserWallet) => {
+  const handleDeductFromWallet = async (userWallet: AdminWalletData) => {
     if (!user) return;
 
     const amount = parseFloat(fundForm.amount);

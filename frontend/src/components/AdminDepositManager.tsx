@@ -18,32 +18,17 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import websocketService from '@/services/websocketService';
-
-interface DepositRequest {
-  id: string;
-  userId: string;
-  userEmail: string;
-  amount: string;
-  network: string;
-  transactionHash?: string;
-  notes?: string;
-  proofFile?: File;
-  proofPreview?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  processedAt?: string;
-  processedBy?: string;
-}
+import adminDataService, { AdminDepositRequest } from '@/services/adminDataService';
 
 const AdminDepositManager = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<DepositRequest[]>([]);
+  const [depositRequests, setDepositRequests] = useState<AdminDepositRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<AdminDepositRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [networkFilter, setNetworkFilter] = useState<'all' | 'TRC20' | 'ERC20' | 'BEP20'>('all');
-  const [selectedRequest, setSelectedRequest] = useState<DepositRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<AdminDepositRequest | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -51,16 +36,13 @@ const AdminDepositManager = () => {
       try {
         console.log('=== DEBUG: AdminDepositManager loading deposit requests ===');
         
-        // TODO: Implement real API call to fetch deposit requests
-        // const response = await fetch('/api/admin/deposits');
-        // const requests = await response.json();
-        // setDepositRequests(requests);
-        // setFilteredRequests(requests);
+        // Use adminDataService to get real deposit requests based on actual users
+        const requests = adminDataService.getDepositRequests();
+        console.log('Deposit requests loaded:', requests.length);
+        console.log('Deposit requests data:', requests);
         
-        // For now, set empty array until real API is implemented
-        console.log('Deposit requests loaded: 0 (empty array for now)');
-        setDepositRequests([]);
-        setFilteredRequests([]);
+        setDepositRequests(requests);
+        setFilteredRequests(requests);
         
         console.log('=== DEBUG: AdminDepositManager data loading complete ===');
       } catch (error) {
@@ -74,7 +56,7 @@ const AdminDepositManager = () => {
     const handleNewDepositRequest = (data: any) => {
       console.log('AdminDepositManager: New deposit request received:', data);
       
-      const newRequest: DepositRequest = {
+      const newRequest: AdminDepositRequest = {
         id: data.requestId || `deposit-${Date.now()}`,
         userId: data.userId,
         userEmail: data.userEmail,
@@ -132,7 +114,7 @@ const AdminDepositManager = () => {
     setFilteredRequests(filtered);
   }, [depositRequests, searchTerm, statusFilter, networkFilter]);
 
-  const handleApprove = async (request: DepositRequest) => {
+  const handleApprove = async (request: AdminDepositRequest) => {
     setIsProcessing(true);
     try {
       // Simulate API call
@@ -167,7 +149,7 @@ const AdminDepositManager = () => {
     }
   };
 
-  const handleReject = async (request: DepositRequest) => {
+  const handleReject = async (request: AdminDepositRequest) => {
     setIsProcessing(true);
     try {
       // Simulate API call

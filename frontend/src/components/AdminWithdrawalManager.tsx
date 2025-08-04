@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import walletService, { WithdrawalRequest } from '@/services/walletService';
+import walletService from '@/services/walletService';
+import adminDataService, { AdminWithdrawalRequest } from '@/services/adminDataService';
 import { 
   Clock, 
   CheckCircle, 
@@ -24,8 +25,8 @@ import {
 import websocketService from '@/services/websocketService';
 
 const AdminWithdrawalManager: React.FC = () => {
-  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<AdminWithdrawalRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<AdminWithdrawalRequest | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [rejectReason, setRejectReason] = useState('');
@@ -41,7 +42,7 @@ const AdminWithdrawalManager: React.FC = () => {
     const handleNewWithdrawalRequest = (data: any) => {
       console.log('AdminWithdrawalManager: New withdrawal request received:', data);
       
-      const newRequest: WithdrawalRequest = {
+      const newRequest: AdminWithdrawalRequest = {
         id: data.requestId || `withdrawal-${Date.now()}`,
         userId: data.userId,
         username: data.username,
@@ -79,7 +80,8 @@ const AdminWithdrawalManager: React.FC = () => {
   const loadWithdrawalRequests = () => {
     console.log('=== DEBUG: AdminWithdrawalManager loading withdrawal requests ===');
     
-    const requests = walletService.getWithdrawalRequests();
+    // Use adminDataService to get real withdrawal requests based on actual users
+    const requests = adminDataService.getWithdrawalRequests();
     console.log('Withdrawal requests loaded:', requests.length);
     console.log('Withdrawal requests data:', requests);
     
@@ -88,7 +90,7 @@ const AdminWithdrawalManager: React.FC = () => {
     console.log('=== DEBUG: AdminWithdrawalManager data loading complete ===');
   };
 
-  const handleApprove = async (request: WithdrawalRequest) => {
+  const handleApprove = async (request: AdminWithdrawalRequest) => {
     if (!user) return;
 
     setIsProcessing(true);
@@ -122,7 +124,7 @@ const AdminWithdrawalManager: React.FC = () => {
     }
   };
 
-  const handleReject = async (request: WithdrawalRequest) => {
+  const handleReject = async (request: AdminWithdrawalRequest) => {
     if (!user) return;
 
     setIsProcessing(true);

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import adminDataService, { AdminTradeSummary } from '@/services/adminDataService';
 import { 
   Users, 
   Search, 
@@ -20,26 +21,9 @@ import {
 } from 'lucide-react';
 import websocketService from '@/services/websocketService';
 
-interface UserTradeSummary {
-  userId: string;
-  username: string;
-  email: string;
-  activeTrades: {
-    spot: number;
-    futures: number;
-    options: number;
-    binary: number;
-    quant: number;
-    bots: number;
-    staking: number;
-  };
-  totalActive: number;
-  lastActivity: string;
-}
-
 const AdminTradingControl: React.FC = () => {
-  const [users, setUsers] = useState<UserTradeSummary[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserTradeSummary[]>([]);
+  const [users, setUsers] = useState<AdminTradeSummary[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<AdminTradeSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -97,17 +81,13 @@ const AdminTradingControl: React.FC = () => {
     try {
       console.log('=== DEBUG: AdminTradingControl loading users with active trades ===');
       
-      // TODO: Implement real API call to fetch users with active trades
-      // const response = await fetch('/api/admin/users/active-trades');
-      // const users = await response.json();
+      // Use adminDataService to get real trade summaries based on actual users
+      const tradeSummaries = adminDataService.getTradeSummaries();
+      console.log('Users with active trades loaded:', tradeSummaries.length);
+      console.log('Users with active trades data:', tradeSummaries);
       
-      // For now, set empty array until real API is implemented
-      const mockUsers: UserTradeSummary[] = [];
-      console.log('Users with active trades loaded:', mockUsers.length);
-      console.log('Users with active trades data:', mockUsers);
-      
-      setUsers(mockUsers);
-      setFilteredUsers(mockUsers);
+      setUsers(tradeSummaries);
+      setFilteredUsers(tradeSummaries);
       
       console.log('=== DEBUG: AdminTradingControl data loading complete ===');
     } catch (error) {
