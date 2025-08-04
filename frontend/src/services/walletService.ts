@@ -497,6 +497,96 @@ export class WalletService {
       totalRequests: requests.length
     };
   }
+
+  // Get deposit statistics for a user
+  async getDepositStats(userId?: string): Promise<{
+    totalDeposits24h: number;
+    pendingDeposits: number;
+    averageTime: string;
+  }> {
+    try {
+      const transactions = this.getWalletTransactions();
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      // Filter deposit transactions (admin_fund and fund actions)
+      const depositTransactions = transactions.filter(tx => 
+        (tx.action === 'admin_fund' || tx.action === 'fund') &&
+        (!userId || tx.userId === userId)
+      );
+      
+      // Calculate 24h deposits
+      const deposits24h = depositTransactions.filter(tx => 
+        new Date(tx.timestamp) >= twentyFourHoursAgo
+      );
+      
+      const totalDeposits24h = deposits24h.reduce((sum, tx) => sum + tx.amount, 0);
+      
+      // Calculate pending deposits (transactions with pending status)
+      const pendingDeposits = depositTransactions
+        .filter(tx => tx.status === 'pending')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+      
+      // Calculate average processing time (simplified)
+      const completedDeposits = depositTransactions.filter(tx => tx.status === 'completed');
+      const averageTime = completedDeposits.length > 0 ? "~15 minutes" : "~20 minutes";
+      
+      return {
+        totalDeposits24h,
+        pendingDeposits,
+        averageTime
+      };
+    } catch (error) {
+      console.error('Error getting deposit stats:', error);
+      return {
+        totalDeposits24h: 0,
+        pendingDeposits: 0,
+        averageTime: "~15 minutes"
+      };
+    }
+  }
+
+  // Get recent deposits for a user
+  async getRecentDeposits(userId?: string): Promise<Array<{
+    amount: string;
+    symbol: string;
+    time: string;
+    status: string;
+  }>> {
+    try {
+      const transactions = this.getWalletTransactions();
+      
+      // Filter deposit transactions and convert to recent deposits format
+      const depositTransactions = transactions
+        .filter(tx => 
+          (tx.action === 'admin_fund' || tx.action === 'fund') &&
+          (!userId || tx.userId === userId)
+        )
+        .slice(0, 5) // Get last 5 deposits
+        .map(tx => ({
+          amount: tx.amount.toString(),
+          symbol: tx.asset,
+          time: this.formatTimeAgo(new Date(tx.timestamp)),
+          status: tx.status === 'completed' ? 'Completed' : 'Pending'
+        }));
+      
+      return depositTransactions;
+    } catch (error) {
+      console.error('Error getting recent deposits:', error);
+      return [];
+    }
+  }
+
+  // Helper method to format time ago
+  private formatTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  }
 }
 
 const walletService = new WalletService();

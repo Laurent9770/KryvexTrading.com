@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import walletService from "@/services/walletService";
 
 interface DepositRequest {
   amount: string;
@@ -36,10 +38,24 @@ interface DepositRequest {
   proofPreview?: string;
 }
 
+interface DepositStats {
+  totalDeposits24h: number;
+  pendingDeposits: number;
+  averageTime: string;
+}
+
+interface RecentDeposit {
+  amount: string;
+  symbol: string;
+  time: string;
+  status: string;
+}
+
 const DepositPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [selectedCrypto, setSelectedCrypto] = useState("USDT");
   const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
   const [showQR, setShowQR] = useState(false);
@@ -51,6 +67,14 @@ const DepositPage = () => {
     notes: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Real-time deposit data
+  const [depositStats, setDepositStats] = useState<DepositStats>({
+    totalDeposits24h: 0,
+    pendingDeposits: 0,
+    averageTime: "~15 minutes"
+  });
+  const [recentDeposits, setRecentDeposits] = useState<RecentDeposit[]>([]);
 
   // USDT Network addresses - can be configured by admin
   const usdtNetworks = [
@@ -256,7 +280,43 @@ const DepositPage = () => {
     }
   };
 
-  const recentDeposits: any[] = []; // Empty array - only real data will be shown
+  useEffect(() => {
+    const fetchDepositStats = async () => {
+      try {
+        const stats = await walletService.getDepositStats(user?.id);
+        setDepositStats(stats);
+      } catch (error) {
+        console.error("Failed to fetch deposit stats:", error);
+        toast({
+          title: "Error fetching stats",
+          description: "Could not load deposit statistics. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    const fetchRecentDeposits = async () => {
+      try {
+        const deposits = await walletService.getRecentDeposits(user?.id);
+        setRecentDeposits(deposits);
+      } catch (error) {
+        console.error("Failed to fetch recent deposits:", error);
+        toast({
+          title: "Error fetching recent deposits",
+          description: "Could not load recent deposits. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchDepositStats();
+    fetchRecentDeposits();
+    const interval = setInterval(() => {
+      fetchDepositStats();
+      fetchRecentDeposits();
+    }, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-background pt-20">
@@ -587,15 +647,15 @@ const DepositPage = () => {
               <div className="space-y-4">
                 <div className="p-3 bg-green-500/10 rounded border border-green-500/20">
                   <p className="text-sm text-slate-400">Total Deposits (24h)</p>
-                  <p className="text-xl font-bold text-green-400">$12,450.67</p>
+                  <p className="text-xl font-bold text-green-400">${depositStats.totalDeposits24h.toFixed(2)}</p>
                 </div>
                 <div className="p-3 bg-blue-500/10 rounded border border-blue-500/20">
                   <p className="text-sm text-slate-400">Pending Deposits</p>
-                  <p className="text-xl font-bold text-blue-400">$2,340.00</p>
+                  <p className="text-xl font-bold text-blue-400">${depositStats.pendingDeposits.toFixed(2)}</p>
                 </div>
                 <div className="p-3 bg-yellow-500/10 rounded border border-yellow-500/20">
                   <p className="text-sm text-slate-400">Average Time</p>
-                  <p className="text-xl font-bold text-yellow-400">~15 minutes</p>
+                  <p className="text-xl font-bold text-yellow-400">{depositStats.averageTime}</p>
                 </div>
               </div>
             </Card>
