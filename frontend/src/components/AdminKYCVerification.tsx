@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import kycService, { KYCUser, KYCSubmission } from '@/services/kycService';
+import kycService from '@/services/kycService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,46 @@ import {
   Mail
 } from 'lucide-react';
 
+// Define types locally since they're not exported from kycService
+interface KYCUser {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  kycLevel: {
+    level: number;
+    status: string;
+    verifiedAt?: string;
+  };
+  submissions: any[];
+  restrictions?: {
+    canTrade: boolean;
+    canDeposit: boolean;
+    canWithdraw: boolean;
+    canAccessFullPlatform: boolean;
+    tradeLimit?: number;
+  };
+}
+
+interface KYCSubmission {
+  id: string;
+  userId: string;
+  level: number;
+  status: string;
+  submittedAt: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  documents?: any;
+  personalInfo?: {
+    fullName: string;
+    dateOfBirth: string;
+    nationalId: string;
+    address?: string;
+    city?: string;
+    country: string;
+  };
+}
+
 const AdminKYCVerification = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<KYCUser[]>([]);
@@ -47,10 +87,20 @@ const AdminKYCVerification = () => {
   }, []);
 
   const loadData = () => {
+    console.log('=== DEBUG: AdminKYCVerification loading data ===');
+    
     const allUsers = kycService.getAllUsers();
+    console.log('KYC Users loaded:', allUsers.length);
+    console.log('KYC Users data:', allUsers);
+    
     const allSubmissions = kycService.getSubmissionsByStatus('pending');
+    console.log('KYC Submissions loaded:', allSubmissions.length);
+    console.log('KYC Submissions data:', allSubmissions);
+    
     setUsers(allUsers);
     setSubmissions(allSubmissions);
+    
+    console.log('=== DEBUG: AdminKYCVerification data loading complete ===');
   };
 
   const handleReviewSubmission = async () => {

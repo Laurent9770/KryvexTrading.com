@@ -49,6 +49,8 @@ const AdminDepositManager = () => {
   useEffect(() => {
     const fetchDepositRequests = async () => {
       try {
+        console.log('=== DEBUG: AdminDepositManager loading deposit requests ===');
+        
         // TODO: Implement real API call to fetch deposit requests
         // const response = await fetch('/api/admin/deposits');
         // const requests = await response.json();
@@ -56,8 +58,11 @@ const AdminDepositManager = () => {
         // setFilteredRequests(requests);
         
         // For now, set empty array until real API is implemented
+        console.log('Deposit requests loaded: 0 (empty array for now)');
         setDepositRequests([]);
         setFilteredRequests([]);
+        
+        console.log('=== DEBUG: AdminDepositManager data loading complete ===');
       } catch (error) {
         console.error('Error fetching deposit requests:', error);
       }

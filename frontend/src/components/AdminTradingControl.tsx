@@ -95,20 +95,23 @@ const AdminTradingControl: React.FC = () => {
   const loadUsersWithActiveTrades = async () => {
     setIsLoading(true);
     try {
+      console.log('=== DEBUG: AdminTradingControl loading users with active trades ===');
+      
       // TODO: Implement real API call to fetch users with active trades
       // const response = await fetch('/api/admin/users/active-trades');
       // const users = await response.json();
-      // setUsers(users);
-
+      
       // For now, set empty array until real API is implemented
-      setUsers([]);
+      const mockUsers: UserTradeSummary[] = [];
+      console.log('Users with active trades loaded:', mockUsers.length);
+      console.log('Users with active trades data:', mockUsers);
+      
+      setUsers(mockUsers);
+      setFilteredUsers(mockUsers);
+      
+      console.log('=== DEBUG: AdminTradingControl data loading complete ===');
     } catch (error) {
-      console.error('Error loading users:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load users with active trades"
-      });
+      console.error('Error loading users with active trades:', error);
     } finally {
       setIsLoading(false);
     }

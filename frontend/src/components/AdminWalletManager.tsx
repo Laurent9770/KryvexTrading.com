@@ -97,10 +97,20 @@ const AdminWalletManager: React.FC = () => {
   }, []);
 
   const loadData = () => {
+    console.log('=== DEBUG: AdminWalletManager loading data ===');
+    
     const wallets = walletService.getAllUserWallets();
+    console.log('User wallets loaded:', wallets.length);
+    console.log('User wallets data:', wallets);
+    
     const transactions = walletService.getWalletTransactions();
+    console.log('Wallet transactions loaded:', transactions.length);
+    console.log('Wallet transactions data:', transactions);
+    
     setUserWallets(wallets);
     setWalletTransactions(transactions);
+    
+    console.log('=== DEBUG: AdminWalletManager data loading complete ===');
   };
 
   const handleFundWallet = async (userWallet: UserWallet) => {

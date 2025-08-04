@@ -77,8 +77,15 @@ const AdminWithdrawalManager: React.FC = () => {
   }, []);
 
   const loadWithdrawalRequests = () => {
+    console.log('=== DEBUG: AdminWithdrawalManager loading withdrawal requests ===');
+    
     const requests = walletService.getWithdrawalRequests();
+    console.log('Withdrawal requests loaded:', requests.length);
+    console.log('Withdrawal requests data:', requests);
+    
     setWithdrawalRequests(requests);
+    
+    console.log('=== DEBUG: AdminWithdrawalManager data loading complete ===');
   };
 
   const handleApprove = async (request: WithdrawalRequest) => {

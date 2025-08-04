@@ -128,6 +128,8 @@ export default function AdminAuditTrail() {
 
   const fetchAuditData = async () => {
     try {
+      console.log('=== DEBUG: AdminAuditTrail loading audit data ===');
+      
       // TODO: Implement real API calls to fetch audit data
       // const [adminActionsRes, userSessionsRes, walletAdjustmentsRes] = await Promise.all([
       //   fetch('/api/admin/audit/actions'),
@@ -145,12 +147,22 @@ export default function AdminAuditTrail() {
 
       // Load real data from services
       const storedActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      console.log('Admin actions loaded:', storedActions.length);
+      console.log('Admin actions data:', storedActions);
+      
       const realUserSessions = userSessionService.getAllSessions();
+      console.log('User sessions loaded:', realUserSessions.length);
+      console.log('User sessions data:', realUserSessions);
+      
       const storedWalletAdjustments = JSON.parse(localStorage.getItem('wallet_adjustments') || '[]');
+      console.log('Wallet adjustments loaded:', storedWalletAdjustments.length);
+      console.log('Wallet adjustments data:', storedWalletAdjustments);
 
       setAdminActions(storedActions);
       setUserSessions(realUserSessions);
       setWalletAdjustments(storedWalletAdjustments);
+      
+      console.log('=== DEBUG: AdminAuditTrail data loading complete ===');
     } catch (error) {
       console.error('Error fetching audit data:', error);
       toast({
