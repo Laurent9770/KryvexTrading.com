@@ -35,7 +35,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import tradingEngine from "@/services/tradingEngine";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import AdminAccessHelper from "@/components/AdminAccessHelper";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -473,13 +472,6 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
-
-        {/* Admin Access Helper - Only show if user is not admin */}
-        {user && !user.email?.includes('admin') && (
-          <div className="mb-6">
-            <AdminAccessHelper />
-          </div>
-        )}
 
         {/* Portfolio Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
