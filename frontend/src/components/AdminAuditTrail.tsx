@@ -92,7 +92,7 @@ export default function AdminAuditTrail() {
 
     return last7Days.map(date => {
       const dayActions = adminActions.filter(action => 
-        action.created_at.startsWith(date)
+        action.created_at && action.created_at.startsWith(date)
       );
       return {
         date,
@@ -215,7 +215,7 @@ export default function AdminAuditTrail() {
           break;
       }
       
-      filtered = filtered.filter(action => new Date(action.created_at) >= filterDate);
+      filtered = filtered.filter(action => action.created_at && new Date(action.created_at) >= filterDate);
     }
 
     setFilteredActions(filtered);
@@ -354,7 +354,7 @@ export default function AdminAuditTrail() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-white">
-                  {filteredActions.filter(a => new Date(a.created_at).toDateString() === new Date().toDateString()).length}
+                  {filteredActions.filter(a => a.created_at && new Date(a.created_at).toDateString() === new Date().toDateString()).length}
                 </p>
                 <p className="text-orange-300 text-sm">Today's Actions</p>
               </div>
@@ -533,7 +533,7 @@ export default function AdminAuditTrail() {
                   {filteredActions.map((action) => (
                     <TableRow key={action.id} className="border-slate-700">
                       <TableCell className="text-slate-300">
-                        {new Date(action.created_at).toLocaleString()}
+                        {action.created_at ? new Date(action.created_at).toLocaleString() : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -683,7 +683,7 @@ export default function AdminAuditTrail() {
                   {walletAdjustments.map((adjustment) => (
                     <TableRow key={adjustment.id} className="border-slate-700">
                       <TableCell className="text-slate-300">
-                        {new Date(adjustment.created_at).toLocaleString()}
+                        {adjustment.created_at ? new Date(adjustment.created_at).toLocaleString() : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -753,7 +753,7 @@ export default function AdminAuditTrail() {
                 </div>
                 <div>
                   <label className="text-sm text-slate-400">Date & Time</label>
-                  <p className="text-white">{new Date(selectedAction.created_at).toLocaleString()}</p>
+                  <p className="text-white">{selectedAction.created_at ? new Date(selectedAction.created_at).toLocaleString() : 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-slate-400">Admin</label>

@@ -1,0 +1,5 @@
+[33m03375c0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m 🔧 Fix tradeLimit undefined error - Add safe property access and default restrictions data
+[33m3c3eefc[m 🔧 Fix backend server issues - Update Node.js engine version and fix WebSocket handler import
+[33m23fa0aa[m 🔧 Fix KYC service missing methods - Add getAllUsers, getSubmissionsByStatus, reviewSubmission, and event emitter methods
+[33me4e34a8[m 🔧 Fix dashboard routing issues - Users now correctly navigate to user dashboard instead of admin dashboard
+[33mfd34d44[m ✅ Complete Backend Implementation: KYC System, External APIs, Trading Engine, Market Data, and Database Integration

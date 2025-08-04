@@ -329,7 +329,7 @@ const Dashboard = () => {
   };
 
   const getPnlColor = (pnl: string) => {
-    return pnl.startsWith("+") ? "text-green-400" : "text-red-400";
+    return pnl && pnl.startsWith("+") ? "text-green-400" : "text-red-400";
   };
 
   const handleRefresh = async () => {
@@ -491,7 +491,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-xs sm:text-sm text-slate-400">Total Balance</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{livePortfolioStats.totalBalance}</p>
-                <p className={`text-xs sm:text-sm ${livePortfolioStats.pnlPercentage.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-xs sm:text-sm ${livePortfolioStats.pnlPercentage && livePortfolioStats.pnlPercentage.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
                   {livePortfolioStats.pnlPercentage}
                 </p>
               </div>
@@ -505,7 +505,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-slate-400">Total P&L</p>
-                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${livePortfolioStats.totalPnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${livePortfolioStats.totalPnl && livePortfolioStats.totalPnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
                   {livePortfolioStats.totalPnl}
                 </p>
                 <p className="text-xs sm:text-sm text-slate-400">{livePortfolioStats.totalTrades} trades</p>
@@ -630,7 +630,7 @@ const Dashboard = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-slate-400">Daily P&L</span>
-                      <span className={`font-medium ${performanceMetrics.dailyPnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-medium ${performanceMetrics.dailyPnl && performanceMetrics.dailyPnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
                         {performanceMetrics.dailyPnl}
                       </span>
                     </div>
@@ -678,7 +678,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm text-slate-400">Total Wallet Balance</p>
                     <p className="text-2xl font-bold text-white">{livePortfolioStats.totalBalance}</p>
-                    <p className={`text-sm ${livePortfolioStats.pnlPercentage.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className={`text-sm ${livePortfolioStats.pnlPercentage && livePortfolioStats.pnlPercentage.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
                       {livePortfolioStats.pnlPercentage} today
                     </p>
                   </div>
@@ -752,7 +752,7 @@ const Dashboard = () => {
                             <p className="font-medium text-white">{asset.symbol}</p>
                             <p className="text-sm text-slate-400">{asset.name}</p>
                             <p className="text-xs text-slate-500">
-                              <span className={`${asset.priceChange.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                              <span className={`${asset.priceChange && asset.priceChange.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
                                 {asset.priceChange}
                               </span>
                             </p>
