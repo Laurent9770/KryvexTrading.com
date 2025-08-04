@@ -148,6 +148,68 @@ export default function AdminUserManagement() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Debug function to add test users
+  const addTestUsers = () => {
+    const testUsers = [
+      {
+        id: 'user-1',
+        email: 'test1@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        phone: '+1234567890',
+        username: 'johndoe',
+        walletBalance: 1000,
+        country: 'USA',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'user-2',
+        email: 'test2@example.com',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        phone: '+0987654321',
+        username: 'janesmith',
+        walletBalance: 2500,
+        country: 'Canada',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'user-3',
+        email: 'test3@example.com',
+        firstName: 'Bob',
+        lastName: 'Johnson',
+        phone: '+1122334455',
+        username: 'bobjohnson',
+        walletBalance: 500,
+        country: 'UK',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'user-4',
+        email: 'test4@example.com',
+        firstName: 'Alice',
+        lastName: 'Brown',
+        phone: '+1555666777',
+        username: 'alicebrown',
+        walletBalance: 3000,
+        country: 'Australia',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const updatedUsers = [...existingUsers, ...testUsers];
+    localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
+    
+    console.log('Added test users:', testUsers.length);
+    loadUsers(); // Reload users
+    
+    toast({
+      title: "Test Users Added",
+      description: `Added ${testUsers.length} test users to the system.`,
+    });
+  };
+
   useEffect(() => {
     loadUsers();
     setupWebSocketListeners();
@@ -185,11 +247,14 @@ export default function AdminUserManagement() {
 
   const loadUsers = async () => {
     try {
+      console.log('=== DEBUG: Loading users ===');
+      
       // Load from user persistence service (existing admin users)
       let adminUsers: any[] = [];
       try {
         if (userPersistenceService && typeof userPersistenceService.getAllUsers === 'function') {
           adminUsers = userPersistenceService.getAllUsers();
+          console.log('Admin users loaded:', adminUsers.length);
         } else {
           console.warn('userPersistenceService.getAllUsers not available, using empty array');
         }
@@ -202,8 +267,10 @@ export default function AdminUserManagement() {
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           const registeredUsersData = localStorage.getItem('registeredUsers');
+          console.log('registeredUsers localStorage data:', registeredUsersData);
           if (registeredUsersData) {
             registeredUsers = JSON.parse(registeredUsersData);
+            console.log('Parsed registered users:', registeredUsers);
           }
         }
       } catch (error) {
@@ -221,7 +288,7 @@ export default function AdminUserManagement() {
         kycLevel: 0, // Start unverified
         kycStatus: 'pending',
         accountStatus: 'active',
-        walletBalance: 0, // Start with 0 balance
+        walletBalance: userData.walletBalance || 0, // Use actual wallet balance if available
         tradingBalance: 0,
         totalTrades: 0,
         winRate: 0,
@@ -231,7 +298,7 @@ export default function AdminUserManagement() {
         isVerified: false,
         loginAttempts: 0,
         profilePicture: '',
-        country: '',
+        country: userData.country || '',
         timezone: '',
         language: 'en',
         twoFactorEnabled: false,
@@ -239,8 +306,12 @@ export default function AdminUserManagement() {
         phoneVerified: false
       }));
       
+      console.log('Converted registered users:', convertedRegisteredUsers.length);
+      
       // Merge admin users with registered users
       const allUsers = mergeUsers(adminUsers, convertedRegisteredUsers);
+      
+      console.log('Final merged users:', allUsers.length);
       
       setUsers(allUsers);
       calculateStats(allUsers);
@@ -961,6 +1032,15 @@ export default function AdminUserManagement() {
           >
             <Download className="h-4 w-4" />
             Export
+          </Button>
+          <Button 
+            onClick={addTestUsers} 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <User className="h-4 w-4" />
+            Add Test Users
           </Button>
         </div>
       </div>
