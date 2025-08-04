@@ -57,7 +57,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
               </Button>
               <Button 
                 className="flex-1 bg-red-600 hover:bg-red-700"
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => window.location.href = '/'}
               >
                 Go to Dashboard
               </Button>

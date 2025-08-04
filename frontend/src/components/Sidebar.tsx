@@ -72,7 +72,7 @@ export function Sidebar() {
     // Regular user navigation
     {
       title: t('dashboard'),
-      href: "/dashboard",
+      href: "/",
       icon: LayoutDashboard,
       badge: "New",
       shortcut: "D",

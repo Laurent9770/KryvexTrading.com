@@ -35,7 +35,7 @@ const Navigation = () => {
         {/* Main Navigation */}
         {user ? (
           <div className="hidden lg:flex items-center space-x-8">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="kucoin-btn-secondary text-sm">
+            <Button variant="ghost" onClick={() => navigate('/')} className="kucoin-btn-secondary text-sm">
               Dashboard
             </Button>
             <Button variant="ghost" onClick={() => navigate('/market')} className="kucoin-btn-secondary text-sm">
@@ -116,7 +116,7 @@ const Navigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-border">
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  <DropdownMenuItem onClick={() => navigate('/')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Dashboard
                   </DropdownMenuItem>

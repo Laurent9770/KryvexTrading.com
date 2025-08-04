@@ -38,7 +38,7 @@ export function MobileNav() {
   const navItems: NavItem[] = [
     {
       title: t('dashboard'),
-      href: "/dashboard",
+      href: "/",
       icon: LayoutDashboard,
       badge: "New"
     },

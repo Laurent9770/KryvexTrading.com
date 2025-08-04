@@ -923,7 +923,7 @@ export default function AdminDashboard() {
   };
 
   if (!user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (
