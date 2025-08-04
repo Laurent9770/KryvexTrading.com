@@ -17,6 +17,7 @@ interface User {
   country?: string;
   bio?: string;
   avatar?: string;
+  walletBalance?: number;
   
   // New 2-level KYC system
   kycLevel1?: {
@@ -809,6 +810,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     return false;
   };
+
+  // Refresh user's wallet balance from localStorage
+  const refreshUserWalletBalance = useCallback(() => {
+    if (user && typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const updatedUser = registeredUsers.find((u: any) => u.id === user.id);
+        
+        if (updatedUser && updatedUser.walletBalance !== user.walletBalance) {
+          // Update user state with new wallet balance
+          setUser(prev => prev ? { ...prev, walletBalance: updatedUser.walletBalance } : null);
+          
+          // Update session storage
+          const sessionUser = JSON.parse(localStorage.getItem('authUser') || sessionStorage.getItem('authUser') || 'null');
+          if (sessionUser && sessionUser.id === user.id) {
+            const updatedSessionUser = { ...sessionUser, walletBalance: updatedUser.walletBalance };
+            localStorage.setItem('authUser', JSON.stringify(updatedSessionUser));
+            sessionStorage.setItem('authUser', JSON.stringify(updatedSessionUser));
+          }
+          
+          // Sync to trading account
+          if (updatedUser.walletBalance > 0) {
+            setTradingAccount(prev => ({
+              ...prev,
+              USDT: {
+                balance: updatedUser.walletBalance.toFixed(8),
+                usdValue: `$${updatedUser.walletBalance.toFixed(2)}`,
+                available: updatedUser.walletBalance.toFixed(8)
+              }
+            }));
+            
+            setFundingAccount(prev => ({
+              USDT: {
+                balance: updatedUser.walletBalance.toFixed(2),
+                usdValue: `$${updatedUser.walletBalance.toFixed(2)}`,
+                available: updatedUser.walletBalance.toFixed(2)
+              }
+            }));
+          }
+          
+          console.log('Wallet balance refreshed:', updatedUser.walletBalance);
+        }
+      } catch (error) {
+        console.warn('Error refreshing wallet balance:', error);
+      }
+    }
+  }, [user]);
+
+  // Refresh wallet balance periodically when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Refresh immediately
+      refreshUserWalletBalance();
+      
+      // Then refresh every 30 seconds
+      const interval = setInterval(refreshUserWalletBalance, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user, refreshUserWalletBalance]);
 
   const value: AuthContextType = {
     user,

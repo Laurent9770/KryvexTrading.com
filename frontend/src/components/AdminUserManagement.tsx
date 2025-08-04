@@ -649,20 +649,48 @@ export default function AdminUserManagement() {
         userId: selectedUser.id
       };
 
+      // Calculate new balance
+      const newBalance = walletAdjustment.type === 'add' 
+        ? selectedUser.walletBalance + walletAdjustment.amount
+        : Math.max(0, selectedUser.walletBalance - walletAdjustment.amount);
+
       // Update user wallet balance in admin state
       setUsers(prevUsers => {
         const updatedUsers = prevUsers.map(user => 
           user.id === selectedUser.id ? { 
             ...user, 
-            walletBalance: walletAdjustment.type === 'add' 
-              ? user.walletBalance + walletAdjustment.amount
-              : user.walletBalance - walletAdjustment.amount
+            walletBalance: newBalance
           } : user
         );
         userPersistenceService.storeUsers(updatedUsers);
         calculateStats(updatedUsers);
         return updatedUsers;
       });
+
+      // Update the actual user's wallet balance in localStorage
+      // This ensures the user sees the updated balance when they log in
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const updatedRegisteredUsers = registeredUsers.map((user: any) => {
+        if (user.id === selectedUser.id) {
+          return {
+            ...user,
+            walletBalance: newBalance
+          };
+        }
+        return user;
+      });
+      localStorage.setItem('registeredUsers', JSON.stringify(updatedRegisteredUsers));
+
+      // If the user is currently logged in, update their session data
+      const currentUser = JSON.parse(localStorage.getItem('authUser') || sessionStorage.getItem('authUser') || 'null');
+      if (currentUser && currentUser.id === selectedUser.id) {
+        const updatedUser = {
+          ...currentUser,
+          walletBalance: newBalance
+        };
+        localStorage.setItem('authUser', JSON.stringify(updatedUser));
+        sessionStorage.setItem('authUser', JSON.stringify(updatedUser));
+      }
 
       // Store wallet adjustment for audit trail
       const walletAdjustmentRecord = {
@@ -674,9 +702,7 @@ export default function AdminUserManagement() {
         currency: 'USDT',
         reason: walletAdjustment.reason,
         previous_balance: selectedUser.walletBalance,
-        new_balance: walletAdjustment.type === 'add' 
-          ? selectedUser.walletBalance + walletAdjustment.amount
-          : selectedUser.walletBalance - walletAdjustment.amount,
+        new_balance: newBalance,
         created_at: new Date().toISOString(),
         user_profile: {
           full_name: `${selectedUser.firstName} ${selectedUser.lastName}`,
@@ -717,68 +743,37 @@ export default function AdminUserManagement() {
       existingActions.push(adminAction);
       localStorage.setItem('admin_actions', JSON.stringify(existingActions));
 
-      // Send WebSocket notification for real-time update
-      websocketService.updateWallet(
-        selectedUser.id,
-        'USDT',
-        walletAdjustment.amount,
-        walletAdjustment.type as 'add' | 'subtract'
-      );
-
-      // Update the actual user's wallet balance in localStorage
-      // This ensures the user sees the updated balance when they log in
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const updatedRegisteredUsers = registeredUsers.map((user: any) => {
-        if (user.id === selectedUser.id) {
-          return {
-            ...user,
-            walletBalance: walletAdjustment.type === 'add' 
-              ? (user.walletBalance || 0) + walletAdjustment.amount
-              : (user.walletBalance || 0) - walletAdjustment.amount
-          };
-        }
-        return user;
-      });
-      localStorage.setItem('registeredUsers', JSON.stringify(updatedRegisteredUsers));
-
-      // If the user is currently logged in, update their session data and AuthContext
-      const currentUser = JSON.parse(localStorage.getItem('authUser') || sessionStorage.getItem('authUser') || 'null');
-      if (currentUser && currentUser.id === selectedUser.id) {
-        const updatedUser = {
-          ...currentUser,
-          walletBalance: walletAdjustment.type === 'add' 
-            ? (currentUser.walletBalance || 0) + walletAdjustment.amount
-            : (currentUser.walletBalance || 0) - walletAdjustment.amount
-        };
-        
-        // Update both localStorage and sessionStorage
-        localStorage.setItem('authUser', JSON.stringify(updatedUser));
-        sessionStorage.setItem('authUser', JSON.stringify(updatedUser));
-
-        // Update the user's trading balance in AuthContext (real-time update)
-        if (updateTradingBalance) {
-          updateTradingBalance('USDT', walletAdjustment.amount, walletAdjustment.type as 'add' | 'subtract');
-        }
-
-        // Also update funding balance if available
-        if (updateFundingBalance) {
-          updateFundingBalance(walletAdjustment.amount, walletAdjustment.type as 'add' | 'subtract');
-        }
+      // Try to send WebSocket notification, but don't fail if it doesn't work
+      try {
+        websocketService.updateWallet(
+          selectedUser.id,
+          'USDT',
+          walletAdjustment.amount,
+          walletAdjustment.type as 'add' | 'subtract'
+        );
+      } catch (error) {
+        console.warn('WebSocket notification failed, but wallet adjustment was successful:', error);
       }
 
+      // Reset form
+      setWalletAdjustment({
+        type: 'add',
+        amount: 0,
+        reason: ''
+      });
       setIsWalletModalOpen(false);
-      setWalletAdjustment({ type: 'add', amount: 0, reason: '' });
 
       toast({
-        title: 'Wallet Adjusted',
-        description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} USDT to ${selectedUser.firstName} ${selectedUser.lastName}'s wallet`,
+        title: "Wallet Adjusted",
+        description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} USDT to ${selectedUser.firstName} ${selectedUser.lastName}'s wallet.`,
       });
+
     } catch (error) {
       console.error('Error adjusting wallet:', error);
       toast({
         title: 'Error',
-        description: 'Failed to adjust wallet',
-        variant: 'destructive'
+        description: `Failed to adjust wallet: ${error.message}`,
+        variant: 'destructive',
       });
     }
   };
