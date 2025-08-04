@@ -23,6 +23,7 @@ import {
   TrendingUp,
   TrendingDown
 } from 'lucide-react';
+import websocketService from '@/services/websocketService';
 
 const AdminWalletManager: React.FC = () => {
   const [userWallets, setUserWallets] = useState<UserWallet[]>([]);
@@ -42,6 +43,57 @@ const AdminWalletManager: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    
+    // Set up WebSocket listener for real-time wallet updates
+    const handleWalletUpdate = (data: any) => {
+      console.log('AdminWalletManager: Wallet updated:', data);
+      
+      // Update the specific user's wallet
+      setUserWallets(prev => prev.map(wallet => 
+        wallet.userId === data.userId 
+          ? {
+              ...wallet,
+              fundingWallet: data.walletType === 'funding' 
+                ? { ...wallet.fundingWallet, [data.asset]: data.newBalance }
+                : wallet.fundingWallet,
+              tradingWallet: data.walletType === 'trading'
+                ? { ...wallet.tradingWallet, [data.asset]: data.newBalance }
+                : wallet.tradingWallet,
+              lastUpdated: new Date().toISOString()
+            }
+          : wallet
+      ));
+      
+      // Add new transaction to the list
+      const newTransaction: WalletTransaction = {
+        id: `tx-${Date.now()}`,
+        userId: data.userId,
+        username: data.username,
+        action: data.operation === 'add' ? 'admin_fund' : 'admin_deduct',
+        walletType: data.walletType,
+        amount: data.amount,
+        asset: data.asset,
+        performedBy: data.adminEmail || 'admin',
+        timestamp: new Date().toISOString(),
+        remarks: data.remarks,
+        status: 'completed',
+        balance: data.newBalance,
+        adminEmail: data.adminEmail
+      };
+      
+      setWalletTransactions(prev => [newTransaction, ...prev]);
+    };
+    
+    // Subscribe to WebSocket events
+    websocketService.on('wallet_updated', handleWalletUpdate);
+    
+    // Set up periodic refresh
+    const interval = setInterval(loadData, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      websocketService.off('wallet_updated', handleWalletUpdate);
+    };
   }, []);
 
   const loadData = () => {

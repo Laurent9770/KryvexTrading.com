@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import websocketService from '@/services/websocketService';
 
 interface DepositRequest {
   id: string;
@@ -45,10 +46,10 @@ const AdminDepositManager = () => {
   const [selectedRequest, setSelectedRequest] = useState<DepositRequest | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // TODO: Implement real API call to fetch deposit requests
   useEffect(() => {
     const fetchDepositRequests = async () => {
       try {
+        // TODO: Implement real API call to fetch deposit requests
         // const response = await fetch('/api/admin/deposits');
         // const requests = await response.json();
         // setDepositRequests(requests);
@@ -63,6 +64,44 @@ const AdminDepositManager = () => {
     };
     
     fetchDepositRequests();
+    
+    // Set up WebSocket listener for real-time deposit requests
+    const handleNewDepositRequest = (data: any) => {
+      console.log('AdminDepositManager: New deposit request received:', data);
+      
+      const newRequest: DepositRequest = {
+        id: data.requestId || `deposit-${Date.now()}`,
+        userId: data.userId,
+        userEmail: data.userEmail,
+        amount: data.amount,
+        network: data.network || 'TRC20',
+        transactionHash: data.transactionHash,
+        notes: data.notes,
+        proofFile: data.proofFile,
+        proofPreview: data.proofPreview,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      
+      setDepositRequests(prev => [newRequest, ...prev]);
+      
+      toast({
+        title: "New Deposit Request",
+        description: `${data.userEmail} has submitted a deposit request for ${data.amount} ${data.currency}`,
+        duration: 5000
+      });
+    };
+    
+    // Subscribe to WebSocket events
+    websocketService.on('deposit_request', handleNewDepositRequest);
+    
+    // Set up periodic refresh
+    const interval = setInterval(fetchDepositRequests, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      websocketService.off('deposit_request', handleNewDepositRequest);
+    };
   }, []);
 
   // Filter requests

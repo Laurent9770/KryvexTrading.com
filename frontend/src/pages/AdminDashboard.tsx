@@ -143,12 +143,13 @@ export default function AdminDashboard() {
     pendingDeposits: 0,
     totalBalance: 0,
     avgWinRate: 0,
+    newUsersToday: 0,
     withdrawalStats: {
-      pending: 0,
-      approved: 0,
-      rejected: 0,
-      totalAmount: 0,
-      totalRequests: 0
+      totalRequests: 0,
+      pendingRequests: 0,
+      approvedRequests: 0,
+      rejectedRequests: 0,
+      totalAmount: 0
     }
   });
 
@@ -157,46 +158,192 @@ export default function AdminDashboard() {
 
 
   useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-      
-      // Set up periodic refresh every 30 seconds
-      const refreshInterval = setInterval(() => {
-        fetchDashboardData();
-      }, 30000);
-      
-      // Set up WebSocket listeners for real-time updates
-      websocketService.on('profile_updated', handleProfileUpdate);
-      websocketService.on('security_updated', handleSecurityUpdate);
-      websocketService.on('notification_updated', handleNotificationUpdate);
-      websocketService.on('display_updated', handleDisplayUpdate);
-      websocketService.on('kyc_updated', handleKYCUpdate);
-      websocketService.on('spot_trade_updated', handleSpotTradeUpdate);
-      
-      // Enhanced real-time event listeners for admin dashboard
-      websocketService.on('user_registered', handleNewUserRegistration);
-      websocketService.on('wallet_updated', handleWalletUpdate);
-      websocketService.on('trade_completed', handleTradeCompleted);
-      websocketService.on('kyc_status_updated', handleKYCStatusUpdate);
-      websocketService.on('kyc_submission_created', handleKYCSubmissionCreated);
-      
-      return () => {
-        clearInterval(refreshInterval);
-        // Clean up all WebSocket listeners
-        websocketService.off('profile_updated', handleProfileUpdate);
-        websocketService.off('security_updated', handleSecurityUpdate);
-        websocketService.off('notification_updated', handleNotificationUpdate);
-        websocketService.off('display_updated', handleDisplayUpdate);
-        websocketService.off('kyc_updated', handleKYCUpdate);
-        websocketService.off('spot_trade_updated', handleSpotTradeUpdate);
-        websocketService.off('user_registered', handleNewUserRegistration);
-        websocketService.off('wallet_updated', handleWalletUpdate);
-        websocketService.off('trade_completed', handleTradeCompleted);
-        websocketService.off('kyc_status_updated', handleKYCStatusUpdate);
-        websocketService.off('kyc_submission_created', handleKYCSubmissionCreated);
+    // Subscribe to WebSocket events for real-time updates
+    const handleNewUserRegistration = (data: any) => {
+      console.log('AdminDashboard: New user registered:', data);
+      // Add new user to users list
+      const newUser = {
+        id: data.userId || `user-${Date.now()}`,
+        full_name: data.fullName || `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        email: data.email,
+        kyc_status: data.kycStatus || 'pending',
+        account_balance: data.accountBalance || 0,
+        is_verified: data.isVerified || false,
+        created_at: new Date().toISOString()
       };
-    }
-  }, [user]);
+      
+      setUsers(prev => [newUser, ...prev]);
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalUsers: prev.totalUsers + 1,
+        newUsersToday: prev.newUsersToday + 1
+      }));
+      
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'user_registered',
+        description: `New user ${newUser.full_name} registered`,
+        timestamp: new Date().toISOString(),
+        userId: newUser.id,
+        userEmail: newUser.email
+      }, ...prev.slice(0, 9)]);
+      
+      toast({
+        title: "New User Registered",
+        description: `${newUser.full_name} (${newUser.email}) has joined the platform`,
+        duration: 5000
+      });
+    };
+
+    const handleWalletUpdate = (data: any) => {
+      console.log('AdminDashboard: Wallet updated:', data);
+      // Update user wallet balance
+      setUsers(prev => prev.map(user => 
+        user.id === data.userId 
+          ? { ...user, account_balance: data.newBalance || user.account_balance }
+          : user
+      ));
+      
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'wallet_updated',
+        description: `Wallet updated for user ${data.userId}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        amount: data.amount,
+        operation: data.operation
+      }, ...prev.slice(0, 9)]);
+    };
+
+    const handleTradeCompleted = (data: any) => {
+      console.log('AdminDashboard: Trade completed:', data);
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'trade_completed',
+        description: `Trade ${data.tradeId} completed - ${data.result} (${data.profitLoss})`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        tradeId: data.tradeId,
+        result: data.result,
+        profitLoss: data.profitLoss
+      }, ...prev.slice(0, 9)]);
+      
+      // Update trading stats
+      fetchDashboardData();
+    };
+
+    const handleKYCStatusUpdate = (data: any) => {
+      console.log('AdminDashboard: KYC status updated:', data);
+      // Update user KYC status
+      setUsers(prev => prev.map(user => 
+        user.id === data.userId 
+          ? { ...user, kyc_status: data.status }
+          : user
+      ));
+      
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'kyc_status_updated',
+        description: `KYC status updated for user ${data.userId} to ${data.status}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        status: data.status
+      }, ...prev.slice(0, 9)]);
+    };
+
+    const handleKYCSubmissionCreated = (data: any) => {
+      console.log('AdminDashboard: KYC submission created:', data);
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'kyc_submission_created',
+        description: `New KYC submission from user ${data.userId}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        submissionId: data.submissionId
+      }, ...prev.slice(0, 9)]);
+      
+      toast({
+        title: "New KYC Submission",
+        description: `User ${data.userId} has submitted KYC documents for review`,
+        duration: 5000
+      });
+    };
+
+    const handleDepositRequest = (data: any) => {
+      console.log('AdminDashboard: Deposit request received:', data);
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'deposit_request',
+        description: `New deposit request: ${data.amount} ${data.currency}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        amount: data.amount,
+        currency: data.currency
+      }, ...prev.slice(0, 9)]);
+      
+      toast({
+        title: "New Deposit Request",
+        description: `User ${data.userId} has requested deposit of ${data.amount} ${data.currency}`,
+        duration: 5000
+      });
+    };
+
+    const handleWithdrawalRequest = (data: any) => {
+      console.log('AdminDashboard: Withdrawal request received:', data);
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'withdrawal_request',
+        description: `New withdrawal request: ${data.amount} ${data.currency}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        amount: data.amount,
+        currency: data.currency
+      }, ...prev.slice(0, 9)]);
+      
+      toast({
+        title: "New Withdrawal Request",
+        description: `User ${data.userId} has requested withdrawal of ${data.amount} ${data.currency}`,
+        duration: 5000
+      });
+    };
+
+    // Subscribe to WebSocket events
+    websocketService.on('user_registered', handleNewUserRegistration);
+    websocketService.on('wallet_updated', handleWalletUpdate);
+    websocketService.on('trade_completed', handleTradeCompleted);
+    websocketService.on('kyc_status_updated', handleKYCStatusUpdate);
+    websocketService.on('kyc_submission_created', handleKYCSubmissionCreated);
+    websocketService.on('deposit_request', handleDepositRequest);
+    websocketService.on('withdrawal_request', handleWithdrawalRequest);
+
+    // Initial data fetch
+    fetchDashboardData();
+
+    // Set up periodic refresh
+    const interval = setInterval(fetchDashboardData, 30000); // Refresh every 30 seconds
+
+    return () => {
+      // Cleanup WebSocket listeners
+      websocketService.off('user_registered', handleNewUserRegistration);
+      websocketService.off('wallet_updated', handleWalletUpdate);
+      websocketService.off('trade_completed', handleTradeCompleted);
+      websocketService.off('kyc_status_updated', handleKYCStatusUpdate);
+      websocketService.off('kyc_submission_created', handleKYCSubmissionCreated);
+      websocketService.off('deposit_request', handleDepositRequest);
+      websocketService.off('withdrawal_request', handleWithdrawalRequest);
+      
+      clearInterval(interval);
+    };
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -298,7 +445,14 @@ export default function AdminDashboard() {
         totalVolume: totalVolume,
         totalBalance: totalBalance,
         avgWinRate: avgWinRate,
-        withdrawalStats: withdrawalStats
+        newUsersToday: 0, // TODO: Calculate from user creation dates
+        withdrawalStats: {
+          totalRequests: withdrawalStats.totalRequests,
+          pendingRequests: withdrawalStats.pending,
+          approvedRequests: withdrawalStats.approved,
+          rejectedRequests: withdrawalStats.rejected,
+          totalAmount: withdrawalStats.totalAmount
+        }
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

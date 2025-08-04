@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Filter
 } from 'lucide-react';
+import websocketService from '@/services/websocketService';
 
 interface UserTradeSummary {
   userId: string;
@@ -48,6 +49,43 @@ const AdminTradingControl: React.FC = () => {
 
   useEffect(() => {
     loadUsersWithActiveTrades();
+    
+    // Set up WebSocket listener for real-time trade updates
+    const handleTradeUpdate = (data: any) => {
+      console.log('AdminTradingControl: Trade update received:', data);
+      
+      // Update the user's trade summary
+      setUsers(prev => prev.map(user => 
+        user.userId === data.userId 
+          ? {
+              ...user,
+              activeTrades: {
+                ...user.activeTrades,
+                [data.tradeType]: data.status === 'completed' 
+                  ? Math.max(0, user.activeTrades[data.tradeType] - 1)
+                  : user.activeTrades[data.tradeType]
+              },
+              totalActive: data.status === 'completed' 
+                ? Math.max(0, user.totalActive - 1)
+                : user.totalActive,
+              lastActivity: new Date().toISOString()
+            }
+          : user
+      ));
+    };
+    
+    // Subscribe to WebSocket events
+    websocketService.on('trade_completed', handleTradeUpdate);
+    websocketService.on('trade_started', handleTradeUpdate);
+    
+    // Set up periodic refresh
+    const interval = setInterval(loadUsersWithActiveTrades, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      websocketService.off('trade_completed', handleTradeUpdate);
+      websocketService.off('trade_started', handleTradeUpdate);
+    };
   }, []);
 
   useEffect(() => {

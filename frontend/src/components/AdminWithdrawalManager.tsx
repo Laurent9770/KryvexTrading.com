@@ -21,6 +21,7 @@ import {
   Copy,
   ExternalLink
 } from 'lucide-react';
+import websocketService from '@/services/websocketService';
 
 const AdminWithdrawalManager: React.FC = () => {
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
@@ -35,6 +36,44 @@ const AdminWithdrawalManager: React.FC = () => {
 
   useEffect(() => {
     loadWithdrawalRequests();
+    
+    // Set up WebSocket listener for real-time withdrawal requests
+    const handleNewWithdrawalRequest = (data: any) => {
+      console.log('AdminWithdrawalManager: New withdrawal request received:', data);
+      
+      const newRequest: WithdrawalRequest = {
+        id: data.requestId || `withdrawal-${Date.now()}`,
+        userId: data.userId,
+        username: data.username,
+        userEmail: data.userEmail,
+        amount: data.amount,
+        asset: data.asset,
+        blockchain: data.blockchain,
+        walletAddress: data.walletAddress,
+        status: 'pending',
+        requestDate: new Date().toISOString(),
+        remarks: data.remarks
+      };
+      
+      setWithdrawalRequests(prev => [newRequest, ...prev]);
+      
+      toast({
+        title: "New Withdrawal Request",
+        description: `${data.username} has requested withdrawal of ${data.amount} ${data.asset}`,
+        duration: 5000
+      });
+    };
+    
+    // Subscribe to WebSocket events
+    websocketService.on('withdrawal_request', handleNewWithdrawalRequest);
+    
+    // Set up periodic refresh
+    const interval = setInterval(loadWithdrawalRequests, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      websocketService.off('withdrawal_request', handleNewWithdrawalRequest);
+    };
   }, []);
 
   const loadWithdrawalRequests = () => {

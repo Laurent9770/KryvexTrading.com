@@ -150,13 +150,17 @@ export default function AdminUserManagement() {
     loadUsers();
     setupWebSocketListeners();
     
-    // Load users from localStorage
-    const storedUsers = localStorage.getItem('admin_users');
-    if (storedUsers) {
-      const parsedUsers = JSON.parse(storedUsers);
-      setUsers(parsedUsers);
-      calculateStats(parsedUsers);
-    }
+    // Set up periodic refresh
+    const interval = setInterval(loadUsers, 30000); // Refresh every 30 seconds
+    
+    return () => {
+      clearInterval(interval);
+      // Clean up WebSocket listeners
+      websocketService.off('user_registered', handleNewUserRegistration);
+      websocketService.off('user_updated', handleUserUpdate);
+      websocketService.off('kyc_status_updated', handleKYCUpdate);
+      websocketService.off('wallet_updated', handleWalletUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -167,22 +171,14 @@ export default function AdminUserManagement() {
     // Listen for new user registrations
     websocketService.on('user_registered', handleNewUserRegistration);
     
-    // Listen for user updates
-    websocketService.on('profile_updated', handleUserUpdate);
+    // Listen for user profile updates
+    websocketService.on('user_updated', handleUserUpdate);
     
-    // Listen for KYC updates
-    websocketService.on('kyc_level_updated', handleKYCUpdate);
+    // Listen for KYC status updates
+    websocketService.on('kyc_status_updated', handleKYCUpdate);
     
     // Listen for wallet updates
     websocketService.on('wallet_updated', handleWalletUpdate);
-    
-    // Cleanup function
-    return () => {
-      websocketService.off('user_registered', handleNewUserRegistration);
-      websocketService.off('profile_updated', handleUserUpdate);
-      websocketService.off('kyc_level_updated', handleKYCUpdate);
-      websocketService.off('wallet_updated', handleWalletUpdate);
-    };
   };
 
   const loadUsers = async () => {

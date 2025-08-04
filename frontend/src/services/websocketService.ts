@@ -244,6 +244,31 @@ class WebSocketService {
           this.emit('kyc_status_updated', data);
           break;
           
+        case 'deposit_request':
+          console.log('WebSocketService: Received deposit_request event:', data);
+          this.emit('deposit_request', data);
+          break;
+          
+        case 'withdrawal_request':
+          console.log('WebSocketService: Received withdrawal_request event:', data);
+          this.emit('withdrawal_request', data);
+          break;
+          
+        case 'deposit_status_updated':
+          console.log('WebSocketService: Received deposit_status_updated event:', data);
+          this.emit('deposit_status_updated', data);
+          break;
+          
+        case 'withdrawal_status_updated':
+          console.log('WebSocketService: Received withdrawal_status_updated event:', data);
+          this.emit('withdrawal_status_updated', data);
+          break;
+          
+        case 'trade_started':
+          console.log('WebSocketService: Received trade_started event:', data);
+          this.emit('trade_started', data);
+          break;
+          
         case 'profile_updated':
           this.emit('profile_updated', data);
           break;

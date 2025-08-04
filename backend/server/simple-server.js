@@ -1417,6 +1417,266 @@ app.post('/api/kyc/review/:submissionId', (req, res) => {
   });
 });
 
+// Deposit Management Endpoints
+app.post('/api/deposits/submit', (req, res) => {
+  try {
+    const { userId, userEmail, amount, currency, network, transactionHash, notes, proofFile } = req.body;
+    
+    if (!userId || !userEmail || !amount || !currency || !network) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'User ID, email, amount, currency, and network are required'
+      });
+    }
+    
+    const depositRequest = {
+      id: `deposit-${Date.now()}`,
+      userId,
+      userEmail,
+      amount: parseFloat(amount),
+      currency,
+      network,
+      transactionHash,
+      notes,
+      proofFile,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    
+    // Store deposit request (in production, save to database)
+    if (!global.depositRequests) global.depositRequests = [];
+    global.depositRequests.push(depositRequest);
+    
+    // Broadcast deposit request to admin
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'deposit_request',
+          requestId: depositRequest.id,
+          userId,
+          userEmail,
+          amount: depositRequest.amount,
+          currency,
+          network,
+          transactionHash,
+          notes,
+          proofFile,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Deposit request submitted successfully',
+      requestId: depositRequest.id
+    });
+    
+  } catch (error) {
+    console.error('Deposit submission error:', error);
+    res.status(500).json({
+      error: 'Deposit submission failed',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
+
+// Withdrawal Management Endpoints
+app.post('/api/withdrawals/submit', (req, res) => {
+  try {
+    const { userId, username, userEmail, amount, asset, blockchain, walletAddress, remarks } = req.body;
+    
+    if (!userId || !username || !userEmail || !amount || !asset || !blockchain || !walletAddress) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'User ID, username, email, amount, asset, blockchain, and wallet address are required'
+      });
+    }
+    
+    const withdrawalRequest = {
+      id: `withdrawal-${Date.now()}`,
+      userId,
+      username,
+      userEmail,
+      amount: parseFloat(amount),
+      asset,
+      blockchain,
+      walletAddress,
+      status: 'pending',
+      requestDate: new Date().toISOString(),
+      remarks
+    };
+    
+    // Store withdrawal request (in production, save to database)
+    if (!global.withdrawalRequests) global.withdrawalRequests = [];
+    global.withdrawalRequests.push(withdrawalRequest);
+    
+    // Broadcast withdrawal request to admin
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'withdrawal_request',
+          requestId: withdrawalRequest.id,
+          userId,
+          username,
+          userEmail,
+          amount: withdrawalRequest.amount,
+          asset,
+          blockchain,
+          walletAddress,
+          remarks,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Withdrawal request submitted successfully',
+      requestId: withdrawalRequest.id
+    });
+    
+  } catch (error) {
+    console.error('Withdrawal submission error:', error);
+    res.status(500).json({
+      error: 'Withdrawal submission failed',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
+
+// Get deposit requests (admin only)
+app.get('/api/admin/deposits', (req, res) => {
+  try {
+    const deposits = global.depositRequests || [];
+    res.json(deposits);
+  } catch (error) {
+    console.error('Error fetching deposits:', error);
+    res.status(500).json({
+      error: 'Failed to fetch deposits',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
+
+// Get withdrawal requests (admin only)
+app.get('/api/admin/withdrawals', (req, res) => {
+  try {
+    const withdrawals = global.withdrawalRequests || [];
+    res.json(withdrawals);
+  } catch (error) {
+    console.error('Error fetching withdrawals:', error);
+    res.status(500).json({
+      error: 'Failed to fetch withdrawals',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
+
+// Update deposit status (admin only)
+app.put('/api/admin/deposits/:id/status', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, processedBy, remarks } = req.body;
+    
+    if (!global.depositRequests) {
+      return res.status(404).json({ error: 'No deposit requests found' });
+    }
+    
+    const depositIndex = global.depositRequests.findIndex(d => d.id === id);
+    if (depositIndex === -1) {
+      return res.status(404).json({ error: 'Deposit request not found' });
+    }
+    
+    global.depositRequests[depositIndex] = {
+      ...global.depositRequests[depositIndex],
+      status,
+      processedBy,
+      processedAt: new Date().toISOString(),
+      remarks
+    };
+    
+    // Broadcast deposit status update
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'deposit_status_updated',
+          requestId: id,
+          status,
+          processedBy,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Deposit status updated successfully',
+      deposit: global.depositRequests[depositIndex]
+    });
+    
+  } catch (error) {
+    console.error('Error updating deposit status:', error);
+    res.status(500).json({
+      error: 'Failed to update deposit status',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
+
+// Update withdrawal status (admin only)
+app.put('/api/admin/withdrawals/:id/status', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, processedBy, txHash, remarks } = req.body;
+    
+    if (!global.withdrawalRequests) {
+      return res.status(404).json({ error: 'No withdrawal requests found' });
+    }
+    
+    const withdrawalIndex = global.withdrawalRequests.findIndex(w => w.id === id);
+    if (withdrawalIndex === -1) {
+      return res.status(404).json({ error: 'Withdrawal request not found' });
+    }
+    
+    global.withdrawalRequests[withdrawalIndex] = {
+      ...global.withdrawalRequests[withdrawalIndex],
+      status,
+      processedBy,
+      processedDate: new Date().toISOString(),
+      txHash,
+      remarks
+    };
+    
+    // Broadcast withdrawal status update
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'withdrawal_status_updated',
+          requestId: id,
+          status,
+          processedBy,
+          txHash,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Withdrawal status updated successfully',
+      withdrawal: global.withdrawalRequests[withdrawalIndex]
+    });
+    
+  } catch (error) {
+    console.error('Error updating withdrawal status:', error);
+    res.status(500).json({
+      error: 'Failed to update withdrawal status',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
