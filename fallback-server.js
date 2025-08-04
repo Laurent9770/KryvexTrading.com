@@ -12,10 +12,12 @@ const buildPath = path.join(__dirname, 'frontend/dist');
 const indexPath = path.join(buildPath, 'index.html');
 
 console.log('🚀 Starting Kryvex Trading Platform Server...');
+console.log('📦 Node.js version:', process.version);
 console.log('📁 Build path:', buildPath);
 console.log('📄 Index path:', indexPath);
 console.log('🔍 Build exists:', fs.existsSync(buildPath));
 console.log('📄 Index exists:', fs.existsSync(indexPath));
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 
 // API Routes (if any backend functionality is needed)
 app.get('/api/test', (req, res) => {

@@ -5,6 +5,8 @@ services:
     plan: free
     buildCommand: |
       echo "🚀 Starting Kryvex Trading Platform build..."
+      echo "📦 Node.js version: $(node --version)"
+      echo "📦 npm version: $(npm --version)"
       npm install
       echo "📦 Frontend dependencies..."
       cd frontend && npm install
@@ -20,6 +22,8 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: NODE_VERSION
+        value: "20"
     healthCheckPath: /api/health
     autoDeploy: true
     branch: main 
