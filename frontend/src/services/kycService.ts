@@ -266,6 +266,17 @@ class KYCService {
     }
   }
 
+  // Alias for reviewKYCSubmission for compatibility
+  async reviewSubmission(submissionId: string, status: 'approved' | 'rejected', reason?: string): Promise<boolean> {
+    try {
+      const result = await this.reviewKYCSubmission(submissionId, status, reason);
+      return result.success;
+    } catch (error) {
+      console.error('Error in reviewSubmission:', error);
+      return false;
+    }
+  }
+
   // Helper function to simulate file upload
   private async uploadFile(file: File): Promise<string> {
     // TODO: Implement real file upload
@@ -284,6 +295,66 @@ class KYCService {
 
   getCountries(): Country[] {
     return getCountries();
+  }
+
+  // Admin: Get all users with KYC data
+  getAllUsers(): any[] {
+    try {
+      // TODO: Implement real API call to get all users
+      console.log('Getting all users for admin KYC verification');
+      
+      // Get from localStorage for demo
+      const userData = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const kycSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      
+      return userData.map((user: any) => {
+        const userSubmission = kycSubmissions.find((s: any) => s.userId === user.email);
+        return {
+          ...user,
+          kycLevel: {
+            level: userSubmission ? 2 : 1,
+            status: userSubmission?.level2?.status || 'not_started',
+            verifiedAt: user?.kycLevel1?.verifiedAt,
+            submittedAt: userSubmission?.level2?.submittedAt
+          },
+          submissions: userSubmission ? [userSubmission] : []
+        };
+      });
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  }
+
+  // Admin: Get submissions by status
+  getSubmissionsByStatus(status: string): any[] {
+    try {
+      // TODO: Implement real API call to get submissions by status
+      console.log('Getting KYC submissions by status:', status);
+      
+      // Get from localStorage for demo
+      const kycSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      
+      if (status === 'all') {
+        return kycSubmissions;
+      }
+      
+      return kycSubmissions.filter((s: any) => s.level2?.status === status);
+    } catch (error) {
+      console.error('Error getting submissions by status:', error);
+      return [];
+    }
+  }
+
+  // Event emitter methods for real-time updates
+  on(event: string, callback: Function) {
+    // TODO: Implement real event emitter
+    console.log('KYC service event listener added:', event);
+  }
+
+  off(event: string, callback: Function) {
+    // TODO: Implement real event emitter
+    console.log('KYC service event listener removed:', event);
   }
 }
 
