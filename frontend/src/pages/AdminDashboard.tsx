@@ -348,8 +348,17 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       // Get real user data from user persistence service
-      const userPersistenceService = await import('@/services/userPersistenceService');
-      const allUsers = userPersistenceService.default.getAllUsers();
+      let allUsers: any[] = [];
+      try {
+        const userPersistenceService = await import('@/services/userPersistenceService');
+        if (userPersistenceService.default && typeof userPersistenceService.default.getAllUsers === 'function') {
+          allUsers = userPersistenceService.default.getAllUsers();
+        } else {
+          console.warn('userPersistenceService.getAllUsers not available, using fallback');
+        }
+      } catch (error) {
+        console.warn('Error loading userPersistenceService:', error);
+      }
       
       // Get registered users from localStorage
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
@@ -366,12 +375,33 @@ export default function AdminDashboard() {
       const spotTrades = tradingEngine.getSpotTrades();
       
       // Get real wallet data
-      const walletService = await import('@/services/walletService');
-      const allUserWallets = walletService.default.getAllUserWallets();
-      const withdrawalStats = walletService.default.getWithdrawalStats();
+      let allUserWallets: any[] = [];
+      let withdrawalStats: any = { totalRequests: 0, pending: 0, approved: 0, rejected: 0, totalAmount: 0 };
+      try {
+        const walletService = await import('@/services/walletService');
+        if (walletService.default && typeof walletService.default.getAllUserWallets === 'function') {
+          allUserWallets = walletService.default.getAllUserWallets();
+          withdrawalStats = walletService.default.getWithdrawalStats();
+        } else {
+          console.warn('walletService methods not available, using fallback');
+        }
+      } catch (error) {
+        console.warn('Error loading walletService:', error);
+      }
       
       // Get real deposit data (from wallet transactions)
-      const walletTransactions = walletService.default.getWalletTransactions();
+      let walletTransactions: any[] = [];
+      try {
+        const walletService = await import('@/services/walletService');
+        if (walletService.default && typeof walletService.default.getWalletTransactions === 'function') {
+          walletTransactions = walletService.default.getWalletTransactions();
+        } else {
+          console.warn('walletService.getWalletTransactions not available, using fallback');
+        }
+      } catch (error) {
+        console.warn('Error loading walletService for transactions:', error);
+      }
+      
       const depositTransactions = walletTransactions.filter(tx => 
         tx.action === 'admin_fund' || tx.action === 'fund'
       );
