@@ -42,7 +42,6 @@ import {
 } from 'lucide-react';
 
 import AdminUserManagement from '@/components/AdminUserManagement';
-import AdminKYCManagement from '@/components/AdminKYCManagement';
 import AdminKYCVerification from '@/components/AdminKYCVerification';
 import AdminAuditTrail from '@/components/AdminAuditTrail';
 import AdminDepositManager from '@/components/AdminDepositManager';

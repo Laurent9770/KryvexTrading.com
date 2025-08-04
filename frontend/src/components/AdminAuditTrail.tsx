@@ -82,17 +82,41 @@ export default function AdminAuditTrail() {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('actions');
 
-  // TODO: Implement real analytics data from API
-  const mockActivityData: any[] = []; // Empty array - only real data will be shown
+  // Real analytics data calculated from actual admin actions
+  const getActivityData = () => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    }).reverse();
 
-  // TODO: Implement real action type data from API
-  const actionTypeData = [
-    { type: 'user_status_change', count: 0, color: '#3b82f6' },
-    { type: 'wallet_adjustment', count: 0, color: '#10b981' },
-    { type: 'kyc_review', count: 0, color: '#f59e0b' },
-    { type: 'send_message', count: 0, color: '#8b5cf6' },
-    { type: 'deposit_approval', count: 0, color: '#ef4444' }
-  ];
+    return last7Days.map(date => {
+      const dayActions = adminActions.filter(action => 
+        action.created_at.startsWith(date)
+      );
+      return {
+        date,
+        actions: dayActions.length,
+        users: new Set(dayActions.map(a => a.target_user_id)).size
+      };
+    });
+  };
+
+  // Real action type data calculated from actual actions
+  const getActionTypeData = () => {
+    const actionCounts = adminActions.reduce((acc, action) => {
+      acc[action.action_type] = (acc[action.action_type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { type: 'user_status_change', count: actionCounts['user_status_change'] || 0, color: '#3b82f6' },
+      { type: 'wallet_adjustment', count: actionCounts['wallet_adjustment'] || 0, color: '#10b981' },
+      { type: 'kyc_review', count: actionCounts['kyc_review'] || 0, color: '#f59e0b' },
+      { type: 'send_message', count: actionCounts['send_message'] || 0, color: '#8b5cf6' },
+      { type: 'deposit_approval', count: actionCounts['deposit_approval'] || 0, color: '#ef4444' }
+    ];
+  };
 
   useEffect(() => {
     fetchAuditData();
@@ -349,7 +373,7 @@ export default function AdminAuditTrail() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockActivityData}>
+              <LineChart data={getActivityData()}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="date" stroke="#64748b" />
                 <YAxis stroke="#64748b" />
@@ -362,8 +386,7 @@ export default function AdminAuditTrail() {
                   }}
                 />
                 <Line type="monotone" dataKey="actions" stroke="#3b82f6" strokeWidth={3} />
-                <Line type="monotone" dataKey="sessions" stroke="#10b981" strokeWidth={3} />
-                <Line type="monotone" dataKey="adjustments" stroke="#f59e0b" strokeWidth={3} />
+                <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -378,14 +401,14 @@ export default function AdminAuditTrail() {
             <ResponsiveContainer width="100%" height={300}>
               <RechartsPieChart>
                 <Pie
-                  data={actionTypeData}
+                  data={getActionTypeData()}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
                   dataKey="count"
                   label={({ type, count }) => `${type}: ${count}`}
                 >
-                  {actionTypeData.map((entry, index) => (
+                  {getActionTypeData().map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>

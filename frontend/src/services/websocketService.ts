@@ -156,7 +156,8 @@ class WebSocketService {
           break;
           
         case 'wallet_updated':
-          this.emit('wallet_updated', data.wallet);
+          console.log('WebSocketService: Received wallet_updated event:', data);
+          this.emit('wallet_updated', data);
           break;
           
         case 'kyc_updated':
@@ -175,29 +176,29 @@ class WebSocketService {
           this.emit('room_joined', data.room);
           break;
           
-                 case 'room_left':
-           this.emit('room_left', data.room);
-           break;
+        case 'room_left':
+          this.emit('room_left', data.room);
+          break;
            
-         case 'room_created':
-           this.emit('room_created', data);
-           break;
+        case 'room_created':
+          this.emit('room_created', data);
+          break;
            
-         case 'user_added_to_room':
-           this.emit('user_added_to_room', data);
-           break;
+        case 'user_added_to_room':
+          this.emit('user_added_to_room', data);
+          break;
            
-         case 'added_to_room':
-           this.emit('added_to_room', data);
-           break;
+        case 'added_to_room':
+          this.emit('added_to_room', data);
+          break;
            
-         case 'user_rooms':
-           this.emit('user_rooms', data.rooms);
-           break;
+        case 'user_rooms':
+          this.emit('user_rooms', data.rooms);
+          break;
            
-         case 'all_rooms':
-           this.emit('all_rooms', data.rooms);
-           break;
+        case 'all_rooms':
+          this.emit('all_rooms', data.rooms);
+          break;
           
         case 'price_update':
           this.emit('price_update', data.price);
@@ -223,22 +224,22 @@ class WebSocketService {
           console.log('WebSocketService: Received user_registered event:', data);
           this.emit('user_registered', data);
           break;
+          
         case 'kyc_level_updated':
           console.log('WebSocketService: Received kyc_level_updated event:', data);
           this.emit('kyc_level_updated', data);
           break;
+          
         case 'kyc_submission_created':
           console.log('WebSocketService: Received kyc_submission_created event:', data);
           this.emit('kyc_submission_created', data);
           break;
-        case 'wallet_updated':
-          console.log('WebSocketService: Received wallet_updated event:', data);
-          this.emit('wallet_updated', data);
-          break;
+          
         case 'trade_completed':
           console.log('WebSocketService: Received trade_completed event:', data);
           this.emit('trade_completed', data);
           break;
+          
         case 'kyc_status_updated':
           console.log('WebSocketService: Received kyc_status_updated event:', data);
           this.emit('kyc_status_updated', data);
@@ -269,24 +270,17 @@ class WebSocketService {
           this.emit('trade_started', data);
           break;
           
-        case 'profile_updated':
-          this.emit('profile_updated', data);
-          break;
-          
-        case 'admin_user_update':
-          this.emit('admin_user_update', data);
-          break;
-          
-        case 'error':
-          this.emit('error', data.message);
+        case 'user_updated':
+          console.log('WebSocketService: Received user_updated event:', data);
+          this.emit('user_updated', data);
           break;
           
         default:
-          console.log('Unknown message type:', data.type);
+          console.log('Unknown WebSocket message type:', data.type);
+          break;
       }
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
-      this.emit('error', 'Failed to process message');
     }
   }
 
