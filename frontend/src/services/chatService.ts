@@ -149,51 +149,28 @@ class ChatService {
       // Clean the roomId to remove any invalid characters
       const cleanRoomId = roomId.replace(/[^a-zA-Z0-9-_]/g, '');
       
-      // Try API call but fallback to local messages
-      try {
-        const response = await fetch(`/api/chat/messages/${cleanRoomId}`);
-        if (response.ok) {
-          const apiMessages = await response.json();
-          // Merge with local messages
-          const localMessages = this.messages.get(roomId) || [];
-          const allMessages = [...apiMessages, ...localMessages];
-          // Sort by timestamp
-          return allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        } else if (response.status === 404) {
-          console.warn(`Chat room '${cleanRoomId}' not found, using local messages only`);
-          // Return local messages if API returns 404
-          return this.messages.get(roomId) || [];
-        }
-      } catch (fetchError) {
-        console.warn('API call failed, using local messages:', fetchError);
-        // Return local messages on any fetch error
-        return this.messages.get(roomId) || [];
-      }
+      // Use local messages only - no API calls
+      console.log(`Loading local messages for room: ${cleanRoomId}`);
+      const localMessages = this.messages.get(roomId) || [];
+      
+      // Return sorted messages
+      return localMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     } catch (error) {
       console.error('Error loading messages:', error);
       // Return local messages on error
       return this.messages.get(roomId) || [];
     }
-    return this.messages.get(roomId) || [];
   }
 
   async getRooms(): Promise<ChatRoom[]> {
     try {
-      // Try API call but fallback to local rooms
-      try {
-        const response = await fetch('/api/chat/rooms');
-        if (response.ok) {
-          this.rooms = await response.json();
-        } else {
-          console.warn('API call failed, using local rooms');
-        }
-      } catch (fetchError) {
-        console.warn('API call failed, using local rooms:', fetchError);
-      }
+      // Use local rooms only - no API calls
+      console.log('Loading local chat rooms');
+      return this.rooms;
     } catch (error) {
       console.error('Error loading rooms:', error);
+      return this.rooms;
     }
-    return this.rooms;
   }
 
   async getCurrentRoom(): Promise<string | null> {
@@ -202,21 +179,13 @@ class ChatService {
 
   async getUsers(): Promise<any[]> {
     try {
-      // Try API call but fallback to empty array
-      try {
-        const response = await fetch('/api/chat/users');
-        if (response.ok) {
-          return await response.json();
-        } else {
-          console.warn('API call failed, using empty users list');
-        }
-      } catch (fetchError) {
-        console.warn('API call failed, using empty users list:', fetchError);
-      }
+      // Return empty array - no API calls
+      console.log('Loading local chat users');
+      return [];
     } catch (error) {
       console.error('Error loading users:', error);
+      return [];
     }
-    return [];
   }
 
   // Admin functions
