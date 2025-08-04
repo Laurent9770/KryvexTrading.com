@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Kryvex Trading Platform - Full Stack Trading Application",
   "main": "fallback-server.js",
+  "homepage": "https://kryvextrading.com",
   "scripts": {
     "start": "node fallback-server.js",
     "build": "cd frontend && npm install && npm run build",
@@ -27,7 +28,8 @@
     "cryptocurrency",
     "react",
     "typescript",
-    "tailwindcss"
+    "tailwindcss",
+    "kryvextrading.com"
   ],
   "author": "Kryvex Team",
   "license": "MIT"
