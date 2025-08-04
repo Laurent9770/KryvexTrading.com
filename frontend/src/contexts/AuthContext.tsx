@@ -798,15 +798,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const checkAdminAccess = () => {
-    return isAdmin;
+    // Enhanced admin access check with additional security
+    const isAuthenticated = !!user;
+    const isAdminUser = isAdmin === true;
+    const hasValidAdminToken = typeof window !== 'undefined' && 
+      (localStorage.getItem('authIsAdmin') === 'true' || sessionStorage.getItem('authIsAdmin') === 'true');
+    
+    const hasAdminAccess = isAuthenticated && isAdminUser && hasValidAdminToken;
+    
+    console.log('Admin access check:', {
+      isAuthenticated,
+      isAdminUser,
+      hasValidAdminToken,
+      hasAdminAccess,
+      userEmail: user?.email
+    });
+    
+    return hasAdminAccess;
   };
 
   const requireAdmin = () => {
-    if (!isAdmin) {
-      console.error('Access denied: Admin privileges required.');
-      return false;
+    const hasAccess = checkAdminAccess();
+    if (!hasAccess) {
+      console.warn('Admin access denied for user:', user?.email);
+      // You could redirect to login or show an error here
     }
-    return true;
+    return hasAccess;
   };
 
   // Helper function to check if user is already registered

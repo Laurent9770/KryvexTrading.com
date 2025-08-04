@@ -112,10 +112,32 @@ interface TradeRequest {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isAdmin, checkAdminAccess } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Additional security check - redirect if not admin
+  useEffect(() => {
+    const hasAdminAccess = checkAdminAccess();
+    if (!hasAdminAccess) {
+      console.warn('Unauthorized access attempt to admin dashboard by:', user?.email);
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access the admin dashboard.",
+        variant: "destructive"
+      });
+      navigate('/');
+      return;
+    }
+    
+    console.log('Admin dashboard accessed by:', user?.email);
+  }, [user, isAuthenticated, isAdmin, checkAdminAccess, navigate, toast]);
+
+  // Don't render anything if not admin
+  if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
   
   // Determine active tab based on URL
   const getInitialTab = () => {
@@ -921,10 +943,6 @@ export default function AdminDashboard() {
       description: "Data exported successfully"
     });
   };
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
