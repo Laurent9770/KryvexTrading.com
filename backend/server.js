@@ -23,7 +23,7 @@ const chatRoutes = require('./routes/chat');
 const marketRoutes = require('./routes/market');
 
 // Import WebSocket handler
-const { setupWebSocket } = require('./websocket/websocketHandler');
+const websocketHandler = require('./websocket/websocketHandler');
 
 // Import external API service
 const externalApiService = require('./services/externalApiService');
@@ -126,7 +126,7 @@ app.use((error, req, res, next) => {
 
 // Setup WebSocket server
 const wss = new WebSocket.Server({ server });
-setupWebSocket(wss);
+websocketHandler.setupWebSocket(wss);
 
 // Start server
 const PORT = process.env.PORT || 3001;
@@ -137,19 +137,21 @@ const startServer = async () => {
     // Test database connection
     const dbConnected = await testConnection();
     if (!dbConnected) {
-      console.error('❌ Failed to connect to database. Server will not start.');
-      process.exit(1);
+      console.warn('⚠️ Database connection failed. Running in fallback mode with mock data.');
+      console.warn('⚠️ Some features may not work properly without database connection.');
+    } else {
+      console.log('✅ Database connected successfully');
     }
 
     // Start HTTP server
     server.listen(PORT, () => {
-                 console.log(`🚀 Server running on port ${PORT}`);
-           console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-           console.log(`🔌 WebSocket server ready on port ${WS_PORT}`);
-           console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-           
-           // Start external API service cleanup
-           externalApiService.startCleanup();
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🔌 WebSocket server ready on port ${WS_PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      
+      // Start external API service cleanup
+      externalApiService.startCleanup();
     });
 
   } catch (error) {
