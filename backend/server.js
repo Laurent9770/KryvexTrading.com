@@ -20,9 +20,13 @@ const tradingRoutes = require('./routes/trading');
 const kycRoutes = require('./routes/kyc');
 const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
+const marketRoutes = require('./routes/market');
 
 // Import WebSocket handler
 const { setupWebSocket } = require('./websocket/websocketHandler');
+
+// Import external API service
+const externalApiService = require('./services/externalApiService');
 
 // Create Express app
 const app = express();
@@ -86,6 +90,7 @@ app.use('/api/trading', tradingRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/market', marketRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -138,10 +143,13 @@ const startServer = async () => {
 
     // Start HTTP server
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🔌 WebSocket server ready on port ${WS_PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+                 console.log(`🚀 Server running on port ${PORT}`);
+           console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+           console.log(`🔌 WebSocket server ready on port ${WS_PORT}`);
+           console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+           
+           // Start external API service cleanup
+           externalApiService.startCleanup();
     });
 
   } catch (error) {

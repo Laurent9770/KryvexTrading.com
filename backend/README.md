@@ -52,7 +52,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=kryvex_trading
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=Kotera@123
 
 # JWT Configuration
 JWT_SECRET=your_super_secret_jwt_key_here
