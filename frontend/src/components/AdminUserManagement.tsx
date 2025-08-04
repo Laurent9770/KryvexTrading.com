@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Users, 
   Search, 
@@ -99,6 +100,7 @@ interface UserStats {
 
 export default function AdminUserManagement() {
   const { toast } = useToast();
+  const { updateTradingBalance, updateFundingBalance } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -511,7 +513,7 @@ export default function AdminUserManagement() {
         userId: selectedUser.id
       };
 
-      // Update user wallet balance
+      // Update user wallet balance in admin state
       setUsers(prevUsers => {
         const updatedUsers = prevUsers.map(user => 
           user.id === selectedUser.id ? { 
@@ -526,6 +528,59 @@ export default function AdminUserManagement() {
         return updatedUsers;
       });
 
+      // Store wallet adjustment for audit trail
+      const walletAdjustmentRecord = {
+        id: `adjustment-${Date.now()}`,
+        user_id: selectedUser.id,
+        admin_id: 'admin-001',
+        adjustment_type: walletAdjustment.type,
+        amount: walletAdjustment.amount,
+        currency: 'USDT',
+        reason: walletAdjustment.reason,
+        previous_balance: selectedUser.walletBalance,
+        new_balance: walletAdjustment.type === 'add' 
+          ? selectedUser.walletBalance + walletAdjustment.amount
+          : selectedUser.walletBalance - walletAdjustment.amount,
+        created_at: new Date().toISOString(),
+        user_profile: {
+          full_name: `${selectedUser.firstName} ${selectedUser.lastName}`,
+          email: selectedUser.email
+        },
+        admin_profile: {
+          full_name: 'Admin Kryvex',
+          email: 'admin@kryvex.com'
+        }
+      };
+
+      // Store wallet adjustments for audit trail
+      const existingAdjustments = JSON.parse(localStorage.getItem('wallet_adjustments') || '[]');
+      existingAdjustments.push(walletAdjustmentRecord);
+      localStorage.setItem('wallet_adjustments', JSON.stringify(existingAdjustments));
+
+      // Log admin action
+      const adminAction = {
+        id: `action-${Date.now()}`,
+        admin_id: 'admin-001',
+        action_type: 'wallet_adjustment',
+        target_user_id: selectedUser.id,
+        description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} USDT to user wallet. Reason: ${walletAdjustment.reason}`,
+        ip_address: '127.0.0.1',
+        created_at: new Date().toISOString(),
+        admin_profile: {
+          full_name: 'Admin Kryvex',
+          email: 'admin@kryvex.com'
+        },
+        target_user_profile: {
+          full_name: `${selectedUser.firstName} ${selectedUser.lastName}`,
+          email: selectedUser.email
+        }
+      };
+
+      // Store admin action for audit trail
+      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      existingActions.push(adminAction);
+      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
+
       // Send WebSocket notification for real-time update
       websocketService.updateWallet(
         selectedUser.id,
@@ -534,28 +589,46 @@ export default function AdminUserManagement() {
         walletAdjustment.type as 'add' | 'subtract'
       );
 
-      // Log admin action
-      const adminAction = {
-        id: `action-${Date.now()}`,
-        type: 'wallet_adjustment',
-        adminId: 'admin-001',
-        userId: selectedUser.id,
-        details: {
-          type: walletAdjustment.type,
-          amount: walletAdjustment.amount,
-          reason: walletAdjustment.reason,
-          previousBalance: selectedUser.walletBalance,
-          newBalance: walletAdjustment.type === 'add' 
-            ? selectedUser.walletBalance + walletAdjustment.amount
-            : selectedUser.walletBalance - walletAdjustment.amount
-        },
-        timestamp: new Date().toISOString()
-      };
+      // Update the actual user's wallet balance in localStorage
+      // This ensures the user sees the updated balance when they log in
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const updatedRegisteredUsers = registeredUsers.map((user: any) => {
+        if (user.id === selectedUser.id) {
+          return {
+            ...user,
+            walletBalance: walletAdjustment.type === 'add' 
+              ? (user.walletBalance || 0) + walletAdjustment.amount
+              : (user.walletBalance || 0) - walletAdjustment.amount
+          };
+        }
+        return user;
+      });
+      localStorage.setItem('registeredUsers', JSON.stringify(updatedRegisteredUsers));
 
-      // Store admin action for audit trail
-      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
-      existingActions.push(adminAction);
-      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
+      // If the user is currently logged in, update their session data and AuthContext
+      const currentUser = JSON.parse(localStorage.getItem('authUser') || sessionStorage.getItem('authUser') || 'null');
+      if (currentUser && currentUser.id === selectedUser.id) {
+        const updatedUser = {
+          ...currentUser,
+          walletBalance: walletAdjustment.type === 'add' 
+            ? (currentUser.walletBalance || 0) + walletAdjustment.amount
+            : (currentUser.walletBalance || 0) - walletAdjustment.amount
+        };
+        
+        // Update both localStorage and sessionStorage
+        localStorage.setItem('authUser', JSON.stringify(updatedUser));
+        sessionStorage.setItem('authUser', JSON.stringify(updatedUser));
+
+        // Update the user's trading balance in AuthContext (real-time update)
+        if (updateTradingBalance) {
+          updateTradingBalance('USDT', walletAdjustment.amount, walletAdjustment.type as 'add' | 'subtract');
+        }
+
+        // Also update funding balance if available
+        if (updateFundingBalance) {
+          updateFundingBalance(walletAdjustment.amount, walletAdjustment.type as 'add' | 'subtract');
+        }
+      }
 
       setIsWalletModalOpen(false);
       setWalletAdjustment({ type: 'add', amount: 0, reason: '' });

@@ -599,7 +599,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             country: user.country || '',
             bio: user.bio || '',
             avatar: user.avatar || '',
-            kycStatus: user.kycStatus || 'unverified'
+            kycStatus: user.kycStatus || 'unverified',
+            walletBalance: user.walletBalance || 0
           };
           
           const mockToken = 'user-jwt-token-' + Date.now();
@@ -620,6 +621,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(sessionUser);
           setIsAuthenticated(true);
           setIsAdmin(false);
+          
+          // Sync user's wallet balance to trading account
+          if (sessionUser.walletBalance && sessionUser.walletBalance > 0) {
+            // Update trading account with user's wallet balance
+            setTradingAccount(prev => ({
+              ...prev,
+              USDT: {
+                balance: sessionUser.walletBalance.toFixed(8),
+                usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
+                available: sessionUser.walletBalance.toFixed(8)
+              }
+            }));
+            
+            // Also update funding account
+            setFundingAccount(prev => ({
+              USDT: {
+                balance: sessionUser.walletBalance.toFixed(2),
+                usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
+                available: sessionUser.walletBalance.toFixed(2)
+              }
+            }));
+          }
           
           // Create user session for tracking
           const sessionToken = mockToken;
