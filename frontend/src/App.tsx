@@ -92,7 +92,7 @@ const AppContent = () => {
                     <Route path="/convert" element={<UserOnlyRoute><ConvertPage /></UserOnlyRoute>} />
                     <Route path="/profile" element={<UserOnlyRoute><Navigate to="/settings" replace /></UserOnlyRoute>} />
                     <Route path="/settings" element={<UserOnlyRoute><SettingsPage /></UserOnlyRoute>} />
-                                          <Route path="/kyc" element={<UserOnlyRoute><KYCPage /></UserOnlyRoute>} />
+                    <Route path="/kyc" element={<UserOnlyRoute><KYCPage /></UserOnlyRoute>} />
                     <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
                     <Route path="/admin/trading-control" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
                     <Route path="/admin/trading-control/:userId" element={<ProtectedAdminRoute><UserTradeControlPage /></ProtectedAdminRoute>} />
