@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import websocketService from '../services/websocketService';
-import tradingEngine from '../services/tradingEngine';
-import activityService, { ActivityItem } from '../services/activityService';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { ActivityItem } from '@/services/activityService';
+import activityService from '@/services/activityService';
+import tradingEngine from '@/services/tradingEngine';
+import websocketService from '@/services/websocketService';
+import { useToast } from '@/hooks/use-toast';
 import kycService from '../services/kycService'; // Added import for kycService
 import userSessionService from '../services/userSessionService'; // Added import for userSessionService
-import { toast } from '../components/ui/use-toast'; // Added import for toast
 
 interface User {
   id: string;
@@ -101,6 +102,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(() => {
     // Initialize user from localStorage or sessionStorage on app load
     try {
@@ -166,12 +168,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   // Global state for real-time updates - Start with clean data for new users
-  const [tradingAccount, setTradingAccount] = useState({
-    USDT: { balance: "0.00", usdValue: "$0.00", available: "0.00" }
+  const [tradingAccount, setTradingAccount] = useState<{ [key: string]: { balance: string; usdValue: string; available: string } }>({
+    USDT: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+    BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+    ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
   });
 
-  const [fundingAccount, setFundingAccount] = useState({
-    USDT: { balance: "0.00", usdValue: "$0.00", available: "0.00" }
+  const [fundingAccount, setFundingAccount] = useState<{ USDT: { balance: string; usdValue: string; available: string } }>({
+    USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
   });
 
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
@@ -179,23 +183,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [tradingHistory, setTradingHistory] = useState<any[]>([]);
 
   const [portfolioStats, setPortfolioStats] = useState({
-    totalBalance: "$0.00",
-    totalPnl: "$0.00",
-    pnlPercentage: "0.0%",
+    totalBalance: '$0.00',
+    totalPnl: '$0.00',
+    pnlPercentage: '0.0%',
     totalTrades: 0,
-    winRate: "0.0%",
+    winRate: '0.0%',
     activePositions: 0
   });
 
   // Real-time price data
-  const [realTimePrices, setRealTimePrices] = useState<{ [key: string]: { price: number; change: number; volume: number; timestamp: string } }>({
-    BTC: { price: 48500, change: 2.45, volume: 342000000, timestamp: new Date().toISOString() },
-    ETH: { price: 3200, change: -1.23, volume: 187000000, timestamp: new Date().toISOString() },
-    SOL: { price: 485, change: 6.78, volume: 76000000, timestamp: new Date().toISOString() },
-    ADA: { price: 1, change: 0.5, volume: 45000000, timestamp: new Date().toISOString() },
-    XRP: { price: 2.34, change: 15.67, volume: 98000000, timestamp: new Date().toISOString() },
-    USDT: { price: 1, change: 0, volume: 1000000000, timestamp: new Date().toISOString() }
-  });
+  const [realTimePrices, setRealTimePrices] = useState<{ [key: string]: { price: number; change: number; volume: number; timestamp: string } }>({});
 
   // TODO: Implement real API call to get asset prices
   const getAssetPrice = (asset: string): number => {
@@ -208,103 +205,77 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return 0;
   };
 
-  // Function to update trading account balance
-  const updateTradingBalance = (asset: string, amount: number, operation: 'add' | 'subtract') => {
+  // Memoize functions to prevent infinite re-renders
+  const updateTradingBalance = useCallback((asset: string, amount: number, operation: 'add' | 'subtract') => {
     setTradingAccount(prev => {
-      const current = prev[asset as keyof typeof prev];
-      if (!current) return prev;
-
-      const currentBalance = parseFloat(current.balance.replace(/,/g, ''));
-      const currentAvailable = parseFloat(current.available.replace(/,/g, ''));
+      const currentBalance = parseFloat(prev[asset]?.balance || '0');
+      const newBalance = operation === 'add' ? currentBalance + amount : currentBalance - amount;
+      const newBalanceStr = newBalance.toFixed(8);
       
-      let newBalance, newAvailable;
-      if (operation === 'add') {
-        newBalance = currentBalance + amount;
-        newAvailable = currentAvailable + amount;
-      } else {
-        newBalance = Math.max(0, currentBalance - amount);
-        newAvailable = Math.max(0, currentAvailable - amount);
-      }
-
-      const newUsdValue = (newBalance * getAssetPrice(asset)).toFixed(2);
-
       return {
         ...prev,
         [asset]: {
-          balance: newBalance.toFixed(8),
-          usdValue: `$${newUsdValue}`,
-          available: newAvailable.toFixed(8)
+          balance: newBalanceStr,
+          usdValue: `$${newBalance.toFixed(2)}`,
+          available: newBalanceStr
         }
       };
     });
-  };
+  }, []);
 
-  // Function to update funding account balance
-  const updateFundingBalance = (amount: number, operation: 'add' | 'subtract') => {
+  const updateFundingBalance = useCallback((amount: number, operation: 'add' | 'subtract') => {
     setFundingAccount(prev => {
-      const current = prev.USDT;
-      const currentBalance = parseFloat(current.balance.replace(/,/g, ''));
-      const currentAvailable = parseFloat(current.available.replace(/,/g, ''));
-
-      let newBalance, newAvailable;
-      if (operation === 'add') {
-        newBalance = currentBalance + amount;
-        newAvailable = currentAvailable + amount;
-      } else {
-        newBalance = Math.max(0, currentBalance - amount);
-        newAvailable = Math.max(0, currentAvailable - amount);
-      }
-
+      const currentBalance = parseFloat(prev.USDT.balance);
+      const newBalance = operation === 'add' ? currentBalance + amount : currentBalance - amount;
+      const newBalanceStr = newBalance.toFixed(2);
+      
       return {
         USDT: {
-          balance: newBalance.toFixed(2),
+          balance: newBalanceStr,
           usdValue: `$${newBalance.toFixed(2)}`,
-          available: newAvailable.toFixed(2)
+          available: newBalanceStr
         }
       };
     });
-  };
+  }, []);
 
-  // Function to add new activity
-  const addActivity = (activity: Omit<ActivityItem, 'id' | 'userId' | 'timestamp' | 'time'>) => {
-    if (user?.id) {
-      const newActivity = activityService.addActivity(user.id, activity);
-      setActivityFeed(activityService.getUserActivities(user.id));
-    }
-  };
-
-  // Function to add new trade
-  const addTrade = (trade: any) => {
-    const newTrade = {
-      ...trade,
-      id: Date.now(),
-      date: new Date().toLocaleDateString('en-GB')
+  const addActivity = useCallback((activity: Omit<ActivityItem, 'id' | 'userId' | 'timestamp' | 'time'>) => {
+    const newActivity: ActivityItem = {
+      id: `activity-${Date.now()}`,
+      userId: user?.id || 'unknown',
+      timestamp: new Date(),
+      time: new Date().toLocaleTimeString(),
+      ...activity
     };
-    setTradingHistory(prev => [newTrade, ...prev.slice(0, 49)]); // Keep last 50 trades
-  };
+    
+    setActivityFeed(prev => [newActivity, ...prev]);
+    activityService.addActivity(user?.id || 'unknown', activity);
+  }, [user?.id]);
 
-  // Function to update portfolio stats
-  const updatePortfolioStats = () => {
+  const addTrade = useCallback((trade: any) => {
+    setTradingHistory(prev => [trade, ...prev]);
+  }, []);
+
+  const updatePortfolioStats = useCallback(() => {
     const totalBalance = Object.values(tradingAccount).reduce((sum, asset) => {
-      return sum + parseFloat(asset.usdValue.replace('$', '').replace(',', ''));
-    }, 0) + parseFloat(fundingAccount.USDT.usdValue.replace('$', '').replace(',', ''));
-
-    const totalPnl = Object.values(tradingAccount).reduce((sum, asset) => {
-      // TODO: Implement real P&L calculation from API
-      // For now, return 0 until real calculation is implemented
-      return sum + 0;
+      return sum + parseFloat(asset.usdValue.replace('$', ''));
     }, 0);
+    
+    const totalPnl = Object.values(tradingAccount).reduce((sum, asset) => {
+      return sum + parseFloat(asset.usdValue.replace('$', ''));
+    }, 0);
+    
+    setPortfolioStats({
+      totalBalance: `$${totalBalance.toFixed(2)}`,
+      totalPnl: `$${totalPnl.toFixed(2)}`,
+      pnlPercentage: '0.0%',
+      totalTrades: tradingHistory.length,
+      winRate: '0.0%',
+      activePositions: 0
+    });
+  }, [tradingAccount, tradingHistory.length]);
 
-    setPortfolioStats(prev => ({
-      ...prev,
-      totalBalance: `$${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      totalPnl: `+$${totalPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      pnlPercentage: `+${((totalPnl / totalBalance) * 100).toFixed(1)}%`
-    }));
-  };
-
-  // Function to update real-time prices
-  const updateRealTimePrice = (symbol: string, price: number, change: number, volume: number) => {
+  const updateRealTimePrice = useCallback((symbol: string, price: number, change: number, volume: number) => {
     setRealTimePrices(prev => ({
       ...prev,
       [symbol]: {
@@ -314,7 +285,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         timestamp: new Date().toISOString()
       }
     }));
-  };
+  }, []);
 
   // Auto-login effect - check for existing auth token on app load
   useEffect(() => {
@@ -406,7 +377,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       tradingAccount,
       updateTradingBalance
     });
-  }, [tradingAccount, updateTradingBalance]);
+  }, [tradingAccount]); // Remove updateTradingBalance from dependencies since it's now memoized
 
   // WebSocket event listeners for real-time updates
   useEffect(() => {
