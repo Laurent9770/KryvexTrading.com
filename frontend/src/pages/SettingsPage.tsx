@@ -45,6 +45,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import websocketService from "@/services/websocketService";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCountries } from '@/utils/countries';
 
 // Types for the settings functionality
 interface SettingsData {
@@ -646,12 +647,11 @@ const SettingsPage = () => {
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="us">United States</SelectItem>
-                        <SelectItem value="ca">Canada</SelectItem>
-                        <SelectItem value="uk">United Kingdom</SelectItem>
-                        <SelectItem value="de">Germany</SelectItem>
-                        <SelectItem value="fr">France</SelectItem>
-                        <SelectItem value="jp">Japan</SelectItem>
+                        {getCountries().map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

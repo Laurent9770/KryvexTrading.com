@@ -1,4 +1,5 @@
 import websocketService from './websocketService';
+import { getCountries, Country } from '@/utils/countries';
 
 export interface KYCLevel1Data {
   email: string;
@@ -278,7 +279,11 @@ class KYCService {
 
   // Check if user can withdraw
   canWithdraw(kycStatus: KYCStatus): boolean {
-    return kycStatus.level1.status === 'verified' && kycStatus.level2.status === 'approved';
+    return kycStatus.level2.status === 'approved';
+  }
+
+  getCountries(): Country[] {
+    return getCountries();
   }
 }
 

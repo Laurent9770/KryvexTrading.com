@@ -74,6 +74,9 @@ const KYCPage = () => {
     selfie?: string;
   }>({});
 
+  // Get countries list
+  const countries = kycService.getCountries();
+
   // Load KYC status on component mount
   useEffect(() => {
     if (user?.email) {
@@ -487,12 +490,11 @@ const KYCPage = () => {
                             <SelectValue placeholder="Select country" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="us">United States</SelectItem>
-                            <SelectItem value="ca">Canada</SelectItem>
-                            <SelectItem value="uk">United Kingdom</SelectItem>
-                            <SelectItem value="de">Germany</SelectItem>
-                            <SelectItem value="fr">France</SelectItem>
-                            <SelectItem value="jp">Japan</SelectItem>
+                            {countries.map(country => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {country.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
