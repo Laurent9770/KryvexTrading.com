@@ -17,6 +17,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import LiveChatWidget from "@/components/LiveChatWidget";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Simple ProtectedRoute component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -26,50 +27,52 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function AppContent() {
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <div className="flex h-screen bg-background">
-          <Sidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <main className="flex-1 overflow-y-auto">
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/auth" element={<Auth />} />
-                
-                {/* Protected Routes */}
-                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
-                <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
-                <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
-                <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
-                <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
-                
-                {/* Admin Routes */}
-                <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-                
-                {/* Redirect to dashboard for unknown routes */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-            <MobileNav />
-          </div>
-        </div>
-      </LanguageProvider>
-    </AuthProvider>
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Protected Routes */}
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
+            <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
+            <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
+            <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
+            <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+            
+            {/* Redirect to dashboard for unknown routes */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <MobileNav />
+      </div>
+    </div>
   );
 }
 
 function App() {
   return (
-    <BrowserRouter>
-      <TooltipProvider>
-        <AppContent />
-        <Toaster />
-        <Sonner />
-        <LiveChatWidget />
-        <WhatsAppButton />
-      </TooltipProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <TooltipProvider>
+          <AuthProvider>
+            <LanguageProvider>
+              <AppContent />
+              <Toaster />
+              <Sonner />
+              <LiveChatWidget />
+              <WhatsAppButton />
+            </LanguageProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
