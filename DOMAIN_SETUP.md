@@ -6,7 +6,7 @@ This guide will help you configure your custom domain `kryvextrading.com` purcha
 ## 🚀 Step-by-Step Configuration
 
 ### **Step 1: Get Your Render App URL**
-Your Render app is deployed at: `https://kryvex-trading-platform.onrender.com`
+Your Render app is deployed at: `https://kryvex-frontend.onrender.com`
 
 ### **Step 2: Configure DNS in GoDaddy**
 
@@ -16,32 +16,31 @@ Your Render app is deployed at: `https://kryvex-trading-platform.onrender.com`
 3. Find `kryvextrading.com` and click "Manage"
 4. Click on the "DNS" tab
 
-#### **2.2 Add CNAME Records**
+#### **2.2 Add DNS Records**
 Add these DNS records:
 
-**Record 1 - Root Domain:**
-```
-Type: CNAME
-Name: @ (or leave blank)
-Value: kryvex-trading-platform.onrender.com
-TTL: 600 (or 1 hour)
-```
-
-**Record 2 - www Subdomain:**
-```
-Type: CNAME
-Name: www
-Value: kryvex-trading-platform.onrender.com
-TTL: 600 (or 1 hour)
-```
-
-**Record 3 - Apex Domain (Alternative):**
-If CNAME doesn't work for root domain, use A record:
+**Record 1 - Root Domain (A Record):**
 ```
 Type: A
 Name: @ (or leave blank)
-Value: 76.76.19.19
-TTL: 600 (or 1 hour)
+Value: 216.24.57.1
+TTL: 1 Hour
+```
+
+**Record 2 - www Subdomain (CNAME Record):**
+```
+Type: CNAME
+Name: www
+Value: kryvex-frontend.onrender.com
+TTL: 1 Hour
+```
+
+**Alternative for Root Domain (if A record doesn't work):**
+```
+Type: ANAME or ALIAS
+Name: @ (or leave blank)
+Value: kryvex-frontend.onrender.com
+TTL: 1 Hour
 ```
 
 ### **Step 3: Configure Custom Domain in Render**
@@ -49,7 +48,7 @@ TTL: 600 (or 1 hour)
 #### **3.1 Access Render Dashboard**
 1. Go to [render.com](https://render.com)
 2. Log into your account
-3. Find your "kryvex-trading-platform" service
+3. Find your "kryvex-frontend" service
 
 #### **3.2 Add Custom Domains**
 1. Click on your service
@@ -64,17 +63,24 @@ TTL: 600 (or 1 hour)
 2. Enter: `www.kryvextrading.com`
 3. Click "Add Domain"
 
-### **Step 4: SSL Certificate**
+### **Step 4: Verify Domain Ownership**
+After adding DNS records:
+1. Wait 1-2 hours for DNS propagation
+2. Go back to Render dashboard
+3. Click "Verify" button next to each domain
+4. Status should change from "DNS update needed" to "Active"
+
+### **Step 5: SSL Certificate**
 Render will automatically provision SSL certificates for your custom domain. This may take 24-48 hours.
 
-### **Step 5: Verify Configuration**
+### **Step 6: Verify Configuration**
 
-#### **5.1 Test DNS Propagation**
+#### **6.1 Test DNS Propagation**
 Use these tools to check DNS propagation:
 - [whatsmydns.net](https://whatsmydns.net)
 - [dnschecker.org](https://dnschecker.org)
 
-#### **5.2 Test Your Domain**
+#### **6.2 Test Your Domain**
 Once configured, test these URLs:
 - `https://kryvextrading.com`
 - `https://www.kryvextrading.com`
@@ -94,7 +100,7 @@ Once configured, test these URLs:
 - Ensure DNS is properly configured
 
 #### **3. Domain Not Loading**
-- Verify CNAME records are correct
+- Verify DNS records are correct
 - Check Render service is running
 - Test with health endpoint: `https://kryvextrading.com/api/health`
 
@@ -102,6 +108,11 @@ Once configured, test these URLs:
 - Ensure both records are added in GoDaddy
 - Configure both domains in Render
 - Test both URLs
+
+#### **5. Verification Failing**
+- Double-check DNS record values
+- Ensure TTL is set to 1 hour or less
+- Wait for DNS propagation before verifying
 
 ## 📊 Monitoring
 
@@ -123,9 +134,11 @@ Once configured, test these URLs:
 
 ## 🎯 Final Checklist
 
-- [ ] CNAME records added in GoDaddy
-- [ ] Custom domains added in Render
+- [ ] A record added for root domain (216.24.57.1)
+- [ ] CNAME record added for www subdomain (kryvex-frontend.onrender.com)
+- [ ] Custom domains added in Render dashboard
 - [ ] DNS propagation verified
+- [ ] Domain ownership verified in Render
 - [ ] SSL certificate provisioned
 - [ ] Both www and non-www working
 - [ ] Health endpoint responding
@@ -147,6 +160,13 @@ Once properly configured, you should see:
 - ✅ SSL certificate is active (green lock)
 - ✅ Health endpoint returns status "ok"
 - ✅ All application features work correctly
+
+## 🔍 Current Status
+
+Based on your Render dashboard:
+- ✅ Custom domains added: `kryvextrading.com` and `www.kryvextrading.com`
+- ⏳ Waiting for DNS verification
+- ⏳ SSL certificate provisioning in progress
 
 ---
 
