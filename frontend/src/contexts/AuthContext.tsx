@@ -3,6 +3,7 @@ import websocketService from '../services/websocketService';
 import tradingEngine from '../services/tradingEngine';
 import activityService, { ActivityItem } from '../services/activityService';
 import kycService from '../services/kycService'; // Added import for kycService
+import userSessionService from '../services/userSessionService'; // Added import for userSessionService
 import { toast } from '../components/ui/use-toast'; // Added import for toast
 
 interface User {
@@ -619,6 +620,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(sessionUser);
           setIsAuthenticated(true);
           setIsAdmin(false);
+          
+          // Create user session for tracking
+          const sessionToken = mockToken;
+          const ipAddress = '127.0.0.1'; // In real app, get from request
+          const userAgent = navigator.userAgent;
+          userSessionService.createSession(
+            sessionUser.id,
+            sessionUser.username || `${sessionUser.firstName} ${sessionUser.lastName}`,
+            sessionUser.email,
+            sessionToken,
+            ipAddress,
+            userAgent
+          );
           
           websocketService.authenticate(email, password);
           

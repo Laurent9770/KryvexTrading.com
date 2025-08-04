@@ -53,8 +53,61 @@ export class WalletService {
     // Initialize with empty state - no mock data
     this.loadPersistedData();
     
+    // Clear any existing mock data
+    this.clearMockData();
+    
     // Create sample withdrawal requests if none exist
     this.initializeSampleData();
+  }
+
+  // Clear all mock data from localStorage
+  private clearMockData() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Clear withdrawal requests that contain mock data
+        const savedRequests = localStorage.getItem('withdrawalRequests');
+        if (savedRequests) {
+          const requests = JSON.parse(savedRequests);
+          const mockUserIds = ['user-1', 'user-2', 'user-3', 'user-4'];
+          const mockEmails = ['john@example.com', 'jane@example.com', 'mike@example.com', 'sarah@example.com'];
+          
+          // Remove requests with mock data
+          Object.keys(requests).forEach(key => {
+            const request = requests[key];
+            if (mockUserIds.includes(request.userId) || mockEmails.includes(request.userEmail)) {
+              delete requests[key];
+            }
+          });
+          
+          // Update localStorage with cleaned data
+          localStorage.setItem('withdrawalRequests', JSON.stringify(requests));
+          this.withdrawalRequests = new Map(Object.entries(requests));
+        }
+        
+        // Clear user wallets that contain mock data
+        const savedWallets = localStorage.getItem('userWallets');
+        if (savedWallets) {
+          const wallets = JSON.parse(savedWallets);
+          const mockUserIds = ['user-1', 'user-2', 'user-3', 'user-4'];
+          
+          // Remove wallets with mock data
+          Object.keys(wallets).forEach(key => {
+            const wallet = wallets[key];
+            if (mockUserIds.includes(wallet.userId)) {
+              delete wallets[key];
+            }
+          });
+          
+          // Update localStorage with cleaned data
+          localStorage.setItem('userWallets', JSON.stringify(wallets));
+          this.userWallets = new Map(Object.entries(wallets));
+        }
+        
+        console.log('Mock data cleared from localStorage');
+      }
+    } catch (error) {
+      console.warn('Error clearing mock data:', error);
+    }
   }
 
   private initializeSampleData() {
@@ -99,6 +152,12 @@ export class WalletService {
     } catch (error) {
       console.warn('Error persisting wallet data:', error);
     }
+  }
+
+  // Clear all mock data (public method for admin use)
+  clearAllMockData() {
+    this.clearMockData();
+    console.log('All mock data cleared by admin');
   }
 
   // Get all withdrawal requests

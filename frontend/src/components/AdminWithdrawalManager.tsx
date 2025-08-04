@@ -238,10 +238,29 @@ const AdminWithdrawalManager: React.FC = () => {
       {/* Withdrawal Requests */}
       <Card>
         <CardHeader>
-          <CardTitle>Withdrawal Requests</CardTitle>
-          <CardDescription>
-            Manage user withdrawal requests. Review and approve or reject based on verification.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Withdrawal Requests</CardTitle>
+              <CardDescription>
+                Manage user withdrawal requests. Review and approve or reject based on verification.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                walletService.clearAllMockData();
+                loadWithdrawalRequests();
+                toast({
+                  title: "Mock Data Cleared",
+                  description: "All mock withdrawal requests have been removed."
+                });
+              }}
+              className="text-xs"
+            >
+              Clear Mock Data
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>

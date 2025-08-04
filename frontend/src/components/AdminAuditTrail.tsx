@@ -3,38 +3,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Activity, 
+  Download, 
   Search, 
   Filter, 
   Eye, 
-  Download, 
-  Clock,
+  Calendar,
   User,
-  Shield,
-  DollarSign,
-  AlertTriangle,
+  Activity,
+  Wallet,
   CheckCircle,
   XCircle,
-  FileText,
-  Calendar,
-  MapPin,
-  MoreHorizontal,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  PieChart,
-  Settings,
-  Lock,
-  Unlock,
-  MessageSquare,
-  Wallet,
-  CreditCard
+  Clock,
+  AlertCircle
 } from 'lucide-react';
+import userSessionService, { UserSession } from '@/services/userSessionService';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
@@ -55,22 +43,6 @@ interface AdminAction {
     email: string;
   };
   target_user_profile?: {
-    full_name: string;
-    email: string;
-  };
-}
-
-interface UserSession {
-  id: string;
-  user_id: string;
-  session_token?: string;
-  ip_address?: string;
-  user_agent?: string;
-  is_active: boolean;
-  login_at: string;
-  last_activity?: string;
-  logout_at?: string;
-  user_profile?: {
     full_name: string;
     email: string;
   };
@@ -147,13 +119,13 @@ export default function AdminAuditTrail() {
       // setUserSessions(userSessions);
       // setWalletAdjustments(walletAdjustments);
 
-      // For now, load from localStorage until real API is implemented
+      // Load real data from services
       const storedActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
-      const storedSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+      const realUserSessions = userSessionService.getAllSessions();
       const storedWalletAdjustments = JSON.parse(localStorage.getItem('wallet_adjustments') || '[]');
 
       setAdminActions(storedActions);
-      setUserSessions(storedSessions);
+      setUserSessions(realUserSessions);
       setWalletAdjustments(storedWalletAdjustments);
     } catch (error) {
       console.error('Error fetching audit data:', error);
@@ -229,12 +201,12 @@ export default function AdminAuditTrail() {
     const typeConfig: { [key: string]: { color: string; icon: any; label: string } } = {
       'user_status_change': { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: User, label: 'User Status' },
       'wallet_adjustment': { color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: Wallet, label: 'Wallet' },
-      'kyc_review': { color: 'bg-orange-500/20 text-orange-400 border-orange-500/30', icon: Shield, label: 'KYC' },
-      'send_message': { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: MessageSquare, label: 'Message' },
-      'deposit_approval': { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: CreditCard, label: 'Deposit' }
+      'kyc_review': { color: 'bg-orange-500/20 text-orange-400 border-orange-500/30', icon: AlertCircle, label: 'KYC' },
+      'send_message': { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: User, label: 'Message' },
+      'deposit_approval': { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: Wallet, label: 'Deposit' }
     };
 
-    const config = typeConfig[actionType] || { color: 'bg-slate-500/20 text-slate-400 border-slate-500/30', icon: Settings, label: actionType };
+    const config = typeConfig[actionType] || { color: 'bg-slate-500/20 text-slate-400 border-slate-500/30', icon: Activity, label: actionType };
     const Icon = config.icon;
 
     return (
@@ -303,13 +275,13 @@ export default function AdminAuditTrail() {
       case 'wallet_adjustment':
         return <Wallet className="w-4 h-4" />;
       case 'kyc_review':
-        return <Shield className="w-4 h-4" />;
+        return <AlertCircle className="w-4 h-4" />;
       case 'send_message':
-        return <MessageSquare className="w-4 h-4" />;
+        return <User className="w-4 h-4" />;
       case 'deposit_approval':
-        return <CreditCard className="w-4 h-4" />;
+        return <Wallet className="w-4 h-4" />;
       default:
-        return <Settings className="w-4 h-4" />;
+        return <Activity className="w-4 h-4" />;
     }
   };
 
@@ -348,7 +320,7 @@ export default function AdminAuditTrail() {
                 <p className="text-2xl font-bold text-white">{walletAdjustments.length}</p>
                 <p className="text-purple-300 text-sm">Wallet Adjustments</p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-400" />
+              <Wallet className="w-8 h-8 text-purple-400" />
             </div>
           </CardContent>
         </Card>
@@ -577,7 +549,7 @@ export default function AdminAuditTrail() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
+                              {/* <MoreHorizontal className="h-4 w-4" /> */}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="bg-slate-800 border-slate-600">
@@ -629,30 +601,30 @@ export default function AdminAuditTrail() {
                       <TableCell>
                         <div>
                           <div className="font-medium text-white">
-                            {session.user_profile?.full_name || 'Unknown'}
+                            {session.username || 'Unknown'}
                           </div>
                           <div className="text-sm text-slate-400">
-                            {session.user_profile?.email}
+                            {session.email}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={session.is_active ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
-                          {session.is_active ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                          {session.is_active ? 'Active' : 'Inactive'}
+                        <Badge className={session.isActive ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
+                          {session.isActive ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
+                          {session.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-300">
-                        {new Date(session.login_at).toLocaleString()}
+                        {new Date(session.loginAt).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-slate-300">
-                        {session.last_activity ? new Date(session.last_activity).toLocaleString() : 'N/A'}
+                        {session.lastActivity ? new Date(session.lastActivity).toLocaleString() : 'N/A'}
                       </TableCell>
                       <TableCell className="text-slate-400">
-                        {session.ip_address || 'N/A'}
+                        {session.ipAddress || 'N/A'}
                       </TableCell>
                       <TableCell className="text-slate-400 max-w-xs truncate">
-                        {session.user_agent || 'N/A'}
+                        {session.userAgent || 'N/A'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -712,7 +684,8 @@ export default function AdminAuditTrail() {
                       </TableCell>
                       <TableCell>
                         <Badge className={adjustment.adjustment_type === 'add' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}>
-                          {adjustment.adjustment_type === 'add' ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                          {/* <TrendingUp className="w-3 h-3 mr-1" /> */}
+                          {/* <TrendingDown className="w-3 h-3 mr-1" /> */}
                           {adjustment.adjustment_type === 'add' ? 'Added' : 'Subtracted'}
                         </Badge>
                       </TableCell>

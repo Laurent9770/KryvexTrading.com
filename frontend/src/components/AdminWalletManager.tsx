@@ -263,13 +263,29 @@ const AdminWalletManager: React.FC = () => {
           {/* User Wallets */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="w-5 h-5" />
-                User Wallets
-              </CardTitle>
-              <CardDescription>
-                Manage user wallet balances. Add or deduct funds from user wallets.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>User Wallets</CardTitle>
+                  <CardDescription>
+                    Manage user wallet balances. Add or deduct funds from user accounts.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    walletService.clearAllMockData();
+                    loadData();
+                    toast({
+                      title: "Mock Data Cleared",
+                      description: "All mock user wallets have been removed."
+                    });
+                  }}
+                  className="text-xs"
+                >
+                  Clear Mock Data
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
