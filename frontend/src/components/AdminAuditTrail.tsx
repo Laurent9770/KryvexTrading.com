@@ -266,11 +266,11 @@ export default function AdminAuditTrail() {
         ['Type', 'Admin ID', 'User ID', 'Action', 'Details', 'Timestamp'],
         ...allActions.map(action => [
           action.type,
-          action.adminId || 'N/A',
-          action.userId || 'N/A',
-          action.action || action.type,
-          JSON.stringify(action.details || action),
-          action.timestamp
+          'admin_id' in action ? action.admin_id : 'N/A',
+          'user_id' in action ? action.user_id : 'target_user_id' in action ? action.target_user_id : 'N/A',
+          'action_type' in action ? action.action_type : action.type,
+          JSON.stringify(action),
+          'created_at' in action ? action.created_at : 'timestamp' in action ? action.timestamp : new Date().toISOString()
         ])
       ].map(row => row.join(',')).join('\n');
 

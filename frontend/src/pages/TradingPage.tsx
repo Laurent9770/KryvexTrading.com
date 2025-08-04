@@ -326,13 +326,14 @@ const TradingPage = () => {
 
       if (result.success) {
         const tradeActivity = {
-          type: "trade",
+          type: "spot" as const,
           action: tradeType.toUpperCase(),
+          description: `${tradeType.toUpperCase()} ${amount} ${selectedPair.split('/')[0]} at $${orderPrice.toLocaleString()}`,
           symbol: selectedPair,
           amount: `${amount} ${selectedPair.split('/')[0]}`,
           price: `$${orderPrice.toLocaleString()}`,
           pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
-          status: "completed",
+          status: "completed" as const,
           time: "Just now",
           icon: tradeType === 'buy' ? "📈" : "📉"
         };
