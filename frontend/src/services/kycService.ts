@@ -317,7 +317,12 @@ class KYCService {
             verifiedAt: user?.kycLevel1?.verifiedAt,
             submittedAt: userSubmission?.level2?.submittedAt
           },
-          submissions: userSubmission ? [userSubmission] : []
+          submissions: userSubmission ? [userSubmission] : [],
+          restrictions: {
+            tradeLimit: userSubmission?.level2?.status === 'approved' ? 10000 : 1000,
+            withdrawalLimit: userSubmission?.level2?.status === 'approved' ? 5000 : 500,
+            dailyLimit: userSubmission?.level2?.status === 'approved' ? 5000 : 1000
+          }
         };
       });
     } catch (error) {

@@ -322,7 +322,7 @@ const AdminKYCVerification = () => {
                           <div className="flex items-center gap-2">
                             {getStatusBadge(user.kycLevel.status)}
                             <div className="text-sm text-muted-foreground">
-                              Trade Limit: ${user.restrictions.tradeLimit.toLocaleString()}
+                              Trade Limit: ${user.restrictions?.tradeLimit?.toLocaleString() || '0'}
                             </div>
                           </div>
                         </div>
