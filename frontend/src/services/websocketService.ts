@@ -1,3 +1,5 @@
+import { getWebSocketUrl } from '@/config/api';
+
 class WebSocketService {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
@@ -20,7 +22,7 @@ class WebSocketService {
     if (import.meta.env.PROD) {
       return import.meta.env.VITE_WS_URL || 'wss://your-backend-domain.com';
     }
-    return 'ws://localhost:3001';
+    return getWebSocketUrl();
   }
 
   private connect() {
