@@ -1,8 +1,8 @@
 // API Configuration
 export const API_CONFIG = {
-  // Base URLs
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
-  WS_URL: import.meta.env.VITE_WS_URL || 'ws://localhost:3002',
+  // Base URLs - Production deployment
+  BASE_URL: import.meta.env.VITE_API_URL || 'https://kryvextrading-com.onrender.com',
+  WS_URL: import.meta.env.VITE_WS_URL || 'wss://kryvextrading-com.onrender.com',
   
   // API Endpoints
   ENDPOINTS: {

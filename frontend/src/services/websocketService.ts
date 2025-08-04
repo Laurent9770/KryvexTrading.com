@@ -18,9 +18,9 @@ class WebSocketService {
   }
 
   private getWebSocketUrl(): string {
-    // Use environment variable in production, fallback to localhost in development
+    // Use environment variable in production, fallback to production URL
     if (import.meta.env.PROD) {
-      return import.meta.env.VITE_WS_URL || 'wss://your-backend-domain.com';
+      return import.meta.env.VITE_WS_URL || 'wss://kryvextrading-com.onrender.com';
     }
     return getWebSocketUrl();
   }

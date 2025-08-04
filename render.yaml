@@ -1,12 +1,46 @@
 services:
   - type: web
-    name: kryvex-frontend
+    name: kryvex-trading-backend
     env: node
     plan: free
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000 
+        value: 10000
+      - key: CORS_ORIGIN
+        value: https://kryvex-frontend.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: kryvex-trading-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: kryvex-trading-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: kryvex-trading-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: kryvex-trading-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: kryvex-trading-db
+          property: password
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kryvex-trading-db
+          property: connectionString
+
+databases:
+  - name: kryvex-trading-db
+    databaseName: kryvex_trading
+    user: kryvex_user
+    plan: free 
