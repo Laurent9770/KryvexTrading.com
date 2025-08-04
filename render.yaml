@@ -1,29 +1,12 @@
 services:
   - type: web
-    name: kryvex-trading-platform
+    name: kryvex-frontend
     env: node
     plan: free
-    buildCommand: |
-      echo "🚀 Starting Kryvex Trading Platform build..."
-      echo "📦 Node.js version: $(node --version)"
-      echo "📦 npm version: $(npm --version)"
-      npm install
-      echo "📦 Frontend dependencies..."
-      cd frontend && npm install
-      echo "🔨 Building React application..."
-      npm run build
-      echo "✅ Build completed successfully"
-      cd ..
-      echo "📁 Build directory contents:"
-      ls -la frontend/dist/
-    startCommand: npm start
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
-      - key: NODE_VERSION
-        value: "20"
-    healthCheckPath: /api/health
-    autoDeploy: true
-    branch: main 
+        value: 10000 

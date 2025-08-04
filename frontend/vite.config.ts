@@ -28,4 +28,9 @@ export default defineConfig(({ mode }) => ({
       target: 'esnext',
     },
   },
+  // SPA routing configuration
+  preview: {
+    port: 8080,
+    host: true,
+  },
 }));
