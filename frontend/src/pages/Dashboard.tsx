@@ -115,11 +115,27 @@ const Dashboard = () => {
     const loadPortfolioData = async () => {
       try {
         if (user?.id) {
-          const response = await fetch(`/api/portfolio/${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setPortfolioData(data);
-          }
+          // Use local data instead of API call
+          const localPortfolioData = {
+            totalBalance: Object.entries(tradingAccount).reduce((sum, [symbol, asset]) => {
+              const realTimePrice = realTimePrices[symbol]?.price || 0;
+              const balance = parseFloat(asset.balance.replace(/,/g, ''));
+              return sum + (balance * realTimePrice);
+            }, 0) + parseFloat(fundingAccount.USDT.usdValue.replace('$', '').replace(',', '')),
+            assets: Object.entries(tradingAccount).map(([symbol, asset]) => ({
+              symbol,
+              balance: asset.balance,
+              usdValue: asset.usdValue,
+              price: realTimePrices[symbol]?.price || 0,
+              change: realTimePrices[symbol]?.change || 0
+            })),
+            distribution: Object.entries(tradingAccount).map(([symbol, asset]) => ({
+              symbol,
+              percentage: parseFloat(asset.balance.replace(/,/g, '')) / 
+                Object.entries(tradingAccount).reduce((sum, [_, a]) => sum + parseFloat(a.balance.replace(/,/g, '')), 0) * 100
+            }))
+          };
+          setPortfolioData(localPortfolioData);
         }
       } catch (error) {
         console.error('Error loading portfolio data:', error);
@@ -132,18 +148,24 @@ const Dashboard = () => {
     const interval = setInterval(loadPortfolioData, 10000);
     
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [user?.id, tradingAccount, fundingAccount, realTimePrices]);
 
   // Load recent trades data
   useEffect(() => {
     const loadRecentTrades = async () => {
       try {
         if (user?.id) {
-          const response = await fetch(`/api/trades/recent/${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setRecentTrades(data);
-          }
+          // Use local trading history instead of API call
+          const localRecentTrades = tradingHistory.slice(0, 10).map(trade => ({
+            id: trade.id,
+            symbol: trade.symbol,
+            type: trade.type,
+            amount: trade.amount,
+            price: trade.price,
+            timestamp: trade.timestamp,
+            status: trade.status
+          }));
+          setRecentTrades(localRecentTrades);
         }
       } catch (error) {
         console.error('Error loading recent trades:', error);
@@ -156,18 +178,46 @@ const Dashboard = () => {
     const interval = setInterval(loadRecentTrades, 15000);
     
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [user?.id, tradingHistory]);
 
   // Load analytics data
   useEffect(() => {
     const loadAnalyticsData = async () => {
       try {
         if (user?.id) {
-          const response = await fetch(`/api/analytics/${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setAnalyticsData(data);
-          }
+          // Use local data instead of API call
+          const localAnalyticsData = {
+            pnlChart: tradingHistory.slice(-30).map(trade => ({
+              date: trade.timestamp,
+              pnl: trade.pnl || 0
+            })),
+            volumeChart: tradingHistory.slice(-30).map(trade => ({
+              date: trade.timestamp,
+              volume: trade.amount || 0
+            })),
+            winLossDistribution: {
+              wins: tradingHistory.filter(t => t.pnl > 0).length,
+              losses: tradingHistory.filter(t => t.pnl < 0).length
+            },
+            insights: {
+              mostTradedPair: tradingHistory.length > 0 ? 
+                tradingHistory.reduce((acc, trade) => {
+                  acc[trade.symbol] = (acc[trade.symbol] || 0) + 1;
+                  return acc;
+                }, {} as any) : {},
+              mostUsedTradeType: tradingHistory.length > 0 ? 
+                tradingHistory.reduce((acc, trade) => {
+                  acc[trade.type] = (acc[trade.type] || 0) + 1;
+                  return acc;
+                }, {} as any) : {},
+              bestPerformingBot: 'Manual Trading',
+              bestTrade: tradingHistory.length > 0 ? 
+                tradingHistory.reduce((best, trade) => 
+                  (trade.pnl || 0) > (best.pnl || 0) ? trade : best
+                ) : null
+            }
+          };
+          setAnalyticsData(localAnalyticsData);
         }
       } catch (error) {
         console.error('Error loading analytics data:', error);
@@ -180,7 +230,7 @@ const Dashboard = () => {
     const interval = setInterval(loadAnalyticsData, 30000);
     
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [user?.id, tradingHistory]);
 
   // Calculate total values with real-time updates
   useEffect(() => {
@@ -399,14 +449,20 @@ const Dashboard = () => {
             break;
           case 'trade_completed':
             if (data.userId === user?.id) {
-              // Refresh recent trades
+              // Refresh recent trades using local data
               const loadRecentTrades = async () => {
                 try {
-                  const response = await fetch(`/api/trades/recent/${user.id}`);
-                  if (response.ok) {
-                    const tradeData = await response.json();
-                    setRecentTrades(tradeData);
-                  }
+                  // Use local trading history instead of API call
+                  const localRecentTrades = tradingHistory.slice(0, 10).map(trade => ({
+                    id: trade.id,
+                    symbol: trade.symbol,
+                    type: trade.type,
+                    amount: trade.amount,
+                    price: trade.price,
+                    timestamp: trade.timestamp,
+                    status: trade.status
+                  }));
+                  setRecentTrades(localRecentTrades);
                 } catch (error) {
                   console.error('Error refreshing recent trades:', error);
                 }

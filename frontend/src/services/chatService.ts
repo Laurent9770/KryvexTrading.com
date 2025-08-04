@@ -149,17 +149,24 @@ class ChatService {
       // Clean the roomId to remove any invalid characters
       const cleanRoomId = roomId.replace(/[^a-zA-Z0-9-_]/g, '');
       
-      const response = await fetch(`/api/chat/messages/${cleanRoomId}`);
-      if (response.ok) {
-        const apiMessages = await response.json();
-        // Merge with local messages
-        const localMessages = this.messages.get(roomId) || [];
-        const allMessages = [...apiMessages, ...localMessages];
-        // Sort by timestamp
-        return allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      } else if (response.status === 404) {
-        console.warn(`Chat room '${cleanRoomId}' not found, using local messages only`);
-        // Return local messages if API returns 404
+      // Try API call but fallback to local messages
+      try {
+        const response = await fetch(`/api/chat/messages/${cleanRoomId}`);
+        if (response.ok) {
+          const apiMessages = await response.json();
+          // Merge with local messages
+          const localMessages = this.messages.get(roomId) || [];
+          const allMessages = [...apiMessages, ...localMessages];
+          // Sort by timestamp
+          return allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        } else if (response.status === 404) {
+          console.warn(`Chat room '${cleanRoomId}' not found, using local messages only`);
+          // Return local messages if API returns 404
+          return this.messages.get(roomId) || [];
+        }
+      } catch (fetchError) {
+        console.warn('API call failed, using local messages:', fetchError);
+        // Return local messages on any fetch error
         return this.messages.get(roomId) || [];
       }
     } catch (error) {
@@ -172,9 +179,16 @@ class ChatService {
 
   async getRooms(): Promise<ChatRoom[]> {
     try {
-      const response = await fetch('/api/chat/rooms');
-      if (response.ok) {
-        this.rooms = await response.json();
+      // Try API call but fallback to local rooms
+      try {
+        const response = await fetch('/api/chat/rooms');
+        if (response.ok) {
+          this.rooms = await response.json();
+        } else {
+          console.warn('API call failed, using local rooms');
+        }
+      } catch (fetchError) {
+        console.warn('API call failed, using local rooms:', fetchError);
       }
     } catch (error) {
       console.error('Error loading rooms:', error);
@@ -188,9 +202,16 @@ class ChatService {
 
   async getUsers(): Promise<any[]> {
     try {
-      const response = await fetch('/api/chat/users');
-      if (response.ok) {
-        return await response.json();
+      // Try API call but fallback to empty array
+      try {
+        const response = await fetch('/api/chat/users');
+        if (response.ok) {
+          return await response.json();
+        } else {
+          console.warn('API call failed, using empty users list');
+        }
+      } catch (fetchError) {
+        console.warn('API call failed, using empty users list:', fetchError);
       }
     } catch (error) {
       console.error('Error loading users:', error);
