@@ -70,11 +70,29 @@ wss.on('connection', (ws) => {
              userRooms.set(userId, new Set());
            }
            
+           // Initialize general room if it doesn't exist
+           if (!roomUsers.has('general')) {
+             roomUsers.set('general', new Set());
+             roomPermissions.set('general', { 
+               creator: 'system', 
+               isAdminOnly: false,
+               name: 'General Support'
+             });
+           }
+           
+           // Add user to general room by default
+           roomUsers.get('general').add(userId);
+           userRooms.get(userId).add('general');
+           
            // If admin, add to admin-only rooms by default
            if (isAdmin) {
              if (!roomUsers.has('admin')) {
                roomUsers.set('admin', new Set());
-               roomPermissions.set('admin', { creator: userId, isAdminOnly: true });
+               roomPermissions.set('admin', { 
+                 creator: userId, 
+                 isAdminOnly: true,
+                 name: 'Admin Channel'
+               });
              }
              roomUsers.get('admin').add(userId);
              userRooms.get(userId).add('admin');
@@ -529,6 +547,29 @@ wss.on('connection', (ws) => {
              }));
            }
          });
+         
+         // If message is in general room, also notify all admins
+         if (roomId === 'general') {
+           const adminUsers = Array.from(userConnections.keys()).filter(userId => {
+             // Check if user is admin (you might want to store admin status in a separate map)
+             const connection = userConnections.get(userId);
+             return connection && connection !== ws; // Don't send back to sender
+           });
+           
+           adminUsers.forEach(adminId => {
+             const adminConnection = userConnections.get(adminId);
+             if (adminConnection && adminConnection.readyState === 1) {
+               adminConnection.send(JSON.stringify({
+                 type: 'chat_message',
+                 message: {
+                   ...chatMessage,
+                   room: 'admin', // Show in admin room
+                   originalRoom: 'general' // Track original room
+                 }
+               }));
+             }
+           });
+         }
          
          // Log the message for debugging
          console.log(`Broadcasting message to room ${data.room}:`, chatMessage);

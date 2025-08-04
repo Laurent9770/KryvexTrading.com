@@ -143,8 +143,24 @@ const LiveChatWidget = () => {
   const subscribeToMessages = () => {
     const handleMessageReceived = (message: ChatMessage) => {
       console.log('Message received:', message);
+      
+      // Show message in current room if it matches
       if (message.room === currentRoom) {
         setMessages(prev => [...prev, message]);
+      }
+      
+      // For admins, also show messages from general room in admin room
+      if (isAdmin && message.originalRoom === 'general' && currentRoom === 'admin') {
+        setMessages(prev => [...prev, message]);
+      }
+      
+      // Show notification for new messages (if not from current user)
+      if (message.userId !== user?.id && message.type !== 'system') {
+        toast({
+          title: "New Message",
+          description: `${message.userName}: ${message.message}`,
+          duration: 3000
+        });
       }
     };
 

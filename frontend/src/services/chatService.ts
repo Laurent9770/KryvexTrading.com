@@ -23,10 +23,12 @@ class ChatService {
   private rooms: ChatRoom[] = [];
   private currentRoom: string | null = null;
   private listeners: Map<string, Function[]> = new Map();
+  private userId: string | null = null; // Added userId property
 
   constructor() {
     this.setupWebSocketListeners();
     this.initializeRooms();
+    this.userId = websocketService.user; // Initialize userId
   }
 
   private setupWebSocketListeners() {
@@ -109,7 +111,7 @@ class ChatService {
   async sendMessage(message: string, roomId: string, userName: string, type: 'user' | 'admin' | 'system' = 'user') {
     const chatMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      userId: websocketService.user || 'anonymous',
+      userId: this.userId || 'anonymous',
       userName,
       message,
       timestamp: new Date().toISOString(),
@@ -117,9 +119,16 @@ class ChatService {
       type
     };
 
+    // Send via WebSocket
     websocketService.sendChatMessage(message, roomId, userName, type);
+    
+    // Add to local storage for persistence
     this.addMessage(chatMessage);
+    
+    // Emit event for local handling
     this.emit('message_sent', chatMessage);
+    
+    return chatMessage;
   }
 
   private addMessage(message: ChatMessage) {
