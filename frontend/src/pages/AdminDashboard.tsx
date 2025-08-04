@@ -200,6 +200,13 @@ export default function AdminDashboard() {
 
     const handleWalletUpdate = (data: any) => {
       console.log('AdminDashboard: Wallet updated:', data);
+      
+      // Check if data is valid
+      if (!data || !data.userId) {
+        console.warn('AdminDashboard: Invalid wallet update data:', data);
+        return;
+      }
+      
       // Update user wallet balance
       setUsers(prev => prev.map(user => 
         user.id === data.userId 
@@ -221,6 +228,13 @@ export default function AdminDashboard() {
 
     const handleTradeCompleted = (data: any) => {
       console.log('AdminDashboard: Trade completed:', data);
+      
+      // Check if data is valid
+      if (!data || !data.userId) {
+        console.warn('AdminDashboard: Invalid trade completed data:', data);
+        return;
+      }
+      
       // Add to recent activity
       setRecentActivity(prev => [{
         id: `activity-${Date.now()}`,
@@ -239,6 +253,13 @@ export default function AdminDashboard() {
 
     const handleKYCStatusUpdate = (data: any) => {
       console.log('AdminDashboard: KYC status updated:', data);
+      
+      // Check if data is valid
+      if (!data || !data.userId) {
+        console.warn('AdminDashboard: Invalid KYC status update data:', data);
+        return;
+      }
+      
       // Update user KYC status
       setUsers(prev => prev.map(user => 
         user.id === data.userId 
@@ -259,6 +280,13 @@ export default function AdminDashboard() {
 
     const handleKYCSubmissionCreated = (data: any) => {
       console.log('AdminDashboard: KYC submission created:', data);
+      
+      // Check if data is valid
+      if (!data || !data.userId) {
+        console.warn('AdminDashboard: Invalid KYC submission data:', data);
+        return;
+      }
+      
       // Add to recent activity
       setRecentActivity(prev => [{
         id: `activity-${Date.now()}`,
@@ -278,6 +306,13 @@ export default function AdminDashboard() {
 
     const handleDepositRequest = (data: any) => {
       console.log('AdminDashboard: Deposit request received:', data);
+      
+      // Check if data is valid
+      if (!data || !data.userId) {
+        console.warn('AdminDashboard: Invalid deposit request data:', data);
+        return;
+      }
+      
       // Add to recent activity
       setRecentActivity(prev => [{
         id: `activity-${Date.now()}`,
@@ -298,6 +333,13 @@ export default function AdminDashboard() {
 
     const handleWithdrawalRequest = (data: any) => {
       console.log('AdminDashboard: Withdrawal request received:', data);
+      
+      // Check if data is valid
+      if (!data || !data.userId) {
+        console.warn('AdminDashboard: Invalid withdrawal request data:', data);
+        return;
+      }
+      
       // Add to recent activity
       setRecentActivity(prev => [{
         id: `activity-${Date.now()}`,
@@ -407,42 +449,49 @@ export default function AdminDashboard() {
       );
 
       // Convert users to the expected format
-      const realUsers = uniqueUsers.map(user => ({
-        id: user.id,
-        full_name: user.username || user.firstName + ' ' + user.lastName || user.email,
-        email: user.email,
-        kyc_status: user.kycLevel2?.status || user.kycStatus || 'unverified',
-        account_balance: allUserWallets.find(w => w.userId === user.id)?.fundingWallet?.USDT || 0,
-        is_verified: user.kycLevel1?.status === 'verified' || user.kycStatus === 'verified',
-        created_at: user.createdAt || new Date().toISOString()
-      }));
+      const realUsers = uniqueUsers
+        .filter(user => user && user.id) // Filter out undefined/null users
+        .map(user => ({
+          id: user.id,
+          full_name: user.username || user.firstName + ' ' + user.lastName || user.email,
+          email: user.email,
+          kyc_status: user.kycLevel2?.status || user.kycStatus || 'unverified',
+          account_balance: allUserWallets.find(w => w.userId === user.id)?.fundingWallet?.USDT || 0,
+          is_verified: user.kycLevel1?.status === 'verified' || user.kycStatus === 'verified',
+          created_at: user.createdAt || new Date().toISOString()
+        }));
 
       // Convert deposit transactions to the expected format
-      const realDeposits = depositTransactions.map(tx => ({
-        id: tx.id,
-        amount: tx.amount,
-        currency: tx.asset,
-        status: tx.status,
-        created_at: tx.timestamp,
-        user_id: tx.userId,
-        profiles: { 
-          full_name: tx.username, 
-          email: allUserWallets.find(w => w.userId === tx.userId)?.email || 'unknown@example.com' 
-        }
-      }));
+      const realDeposits = depositTransactions
+        .filter(tx => tx && tx.userId) // Filter out undefined/null transactions
+        .map(tx => ({
+          id: tx.id,
+          amount: tx.amount,
+          currency: tx.asset,
+          status: tx.status,
+          created_at: tx.timestamp,
+          user_id: tx.userId,
+          profiles: { 
+            full_name: tx.username, 
+            email: allUserWallets.find(w => w.userId === tx.userId)?.email || 'unknown@example.com' 
+          }
+        }));
 
       // Convert trade history to the expected format
-      const realTrades = tradeHistory.slice(0, 10).map(trade => ({
-        id: trade.id,
-        amount: trade.amount,
-        trade_type: trade.action,
-        status: trade.status,
-        result: trade.status === 'won' ? 'win' : 'loss',
-        profit_loss: trade.profit || trade.loss || 0,
-        created_at: trade.timestamp.toISOString(),
-        user_id: 'current-user',
-        profiles: { full_name: 'Current User', email: 'user@example.com' }
-      }));
+      const realTrades = tradeHistory
+        .filter(trade => trade && trade.id) // Filter out undefined/null trades
+        .slice(0, 10)
+        .map(trade => ({
+          id: trade.id,
+          amount: trade.amount,
+          trade_type: trade.action,
+          status: trade.status,
+          result: trade.status === 'won' ? 'win' : 'loss',
+          profit_loss: trade.profit || trade.loss || 0,
+          created_at: trade.timestamp.toISOString(),
+          user_id: 'current-user',
+          profiles: { full_name: 'Current User', email: 'user@example.com' }
+        }));
 
       // Calculate real statistics
       const verifiedUsers = realUsers.filter(u => u.is_verified).length;
