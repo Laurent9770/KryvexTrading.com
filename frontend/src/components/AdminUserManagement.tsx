@@ -473,6 +473,10 @@ export default function AdminUserManagement() {
 
   const handleUserStatusChange = async (userId: string, status: string, reason?: string) => {
     try {
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      // Update user status in admin state
       setUsers(prevUsers => {
         const updatedUsers = prevUsers.map(user => 
           user.id === userId ? { 
@@ -487,11 +491,72 @@ export default function AdminUserManagement() {
         return updatedUsers;
       });
 
+      // Update user status in registered users
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const updatedRegisteredUsers = registeredUsers.map((userData: any) => {
+        if (userData.id === userId) {
+          return {
+            ...userData,
+            accountStatus: status,
+            suspensionReason: reason,
+            suspendedUntil: status === 'suspended' ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : undefined
+          };
+        }
+        return userData;
+      });
+      localStorage.setItem('registeredUsers', JSON.stringify(updatedRegisteredUsers));
+
+      // If user is currently logged in, update their session
+      const currentUser = JSON.parse(localStorage.getItem('authUser') || sessionStorage.getItem('authUser') || 'null');
+      if (currentUser && currentUser.id === userId) {
+        const updatedUser = {
+          ...currentUser,
+          accountStatus: status,
+          suspensionReason: reason,
+          suspendedUntil: status === 'suspended' ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : undefined
+        };
+        
+        localStorage.setItem('authUser', JSON.stringify(updatedUser));
+        sessionStorage.setItem('authUser', JSON.stringify(updatedUser));
+      }
+
+      // Log admin action
+      const adminAction = {
+        id: `action-${Date.now()}`,
+        admin_id: 'admin-001',
+        action_type: 'status_change',
+        target_user_id: userId,
+        description: `Changed user status from ${user.accountStatus} to ${status}. Reason: ${reason || 'Admin action'}`,
+        ip_address: '127.0.0.1',
+        created_at: new Date().toISOString(),
+        admin_profile: {
+          full_name: 'Admin Kryvex',
+          email: 'admin@kryvex.com'
+        },
+        target_user_profile: {
+          full_name: `${user.firstName} ${user.lastName}`,
+          email: user.email
+        }
+      };
+
+      // Store admin action for audit trail
+      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      existingActions.push(adminAction);
+      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
+
+      // Send WebSocket notification for real-time update
+      websocketService.performAdminAction('status_change', userId, {
+        status,
+        reason,
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: 'User Status Updated',
         description: `User status changed to ${status}`,
       });
     } catch (error) {
+      console.error('Error updating user status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update user status',
@@ -651,6 +716,31 @@ export default function AdminUserManagement() {
     if (!selectedUser) return;
 
     try {
+      // Create message record
+      const messageRecord = {
+        id: `message-${Date.now()}`,
+        from: 'admin@kryvex.com',
+        to: selectedUser.email,
+        title: messageData.title,
+        message: messageData.message,
+        type: messageData.type,
+        timestamp: new Date().toISOString(),
+        read: false,
+        admin_profile: {
+          full_name: 'Admin Kryvex',
+          email: 'admin@kryvex.com'
+        },
+        user_profile: {
+          full_name: `${selectedUser.firstName} ${selectedUser.lastName}`,
+          email: selectedUser.email
+        }
+      };
+
+      // Store message in localStorage for user to see
+      const existingMessages = JSON.parse(localStorage.getItem('user_messages') || '[]');
+      existingMessages.push(messageRecord);
+      localStorage.setItem('user_messages', JSON.stringify(existingMessages));
+
       // Send message via WebSocket
       websocketService.sendChatMessage(
         messageData.message,
@@ -658,6 +748,30 @@ export default function AdminUserManagement() {
         'Admin',
         'admin_message'
       );
+
+      // Log admin action
+      const adminAction = {
+        id: `action-${Date.now()}`,
+        admin_id: 'admin-001',
+        action_type: 'send_message',
+        target_user_id: selectedUser.id,
+        description: `Sent message to user: ${messageData.title}`,
+        ip_address: '127.0.0.1',
+        created_at: new Date().toISOString(),
+        admin_profile: {
+          full_name: 'Admin Kryvex',
+          email: 'admin@kryvex.com'
+        },
+        target_user_profile: {
+          full_name: `${selectedUser.firstName} ${selectedUser.lastName}`,
+          email: selectedUser.email
+        }
+      };
+
+      // Store admin action for audit trail
+      const existingActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      existingActions.push(adminAction);
+      localStorage.setItem('admin_actions', JSON.stringify(existingActions));
 
       setIsMessageModalOpen(false);
       setMessageData({ title: '', message: '', type: 'info' });
@@ -667,11 +781,66 @@ export default function AdminUserManagement() {
         description: 'Message sent to user successfully',
       });
     } catch (error) {
+      console.error('Error sending message:', error);
       toast({
         title: 'Error',
         description: 'Failed to send message',
         variant: 'destructive'
       });
+    }
+  };
+
+  const loadUserActivities = (userId: string) => {
+    try {
+      // Load user activities from localStorage
+      const allActivities = JSON.parse(localStorage.getItem('user_activities') || '[]');
+      const userActivities = allActivities.filter((activity: any) => activity.userId === userId);
+      
+      // Also load admin actions for this user
+      const adminActions = JSON.parse(localStorage.getItem('admin_actions') || '[]');
+      const userAdminActions = adminActions.filter((action: any) => action.target_user_id === userId);
+      
+      // Load wallet adjustments for this user
+      const walletAdjustments = JSON.parse(localStorage.getItem('wallet_adjustments') || '[]');
+      const userWalletAdjustments = walletAdjustments.filter((adjustment: any) => adjustment.user_id === userId);
+      
+      // Combine all activities
+      const combinedActivities = [
+        ...userActivities,
+        ...userAdminActions.map((action: any) => ({
+          id: action.id,
+          userId: action.target_user_id,
+          activityType: action.action_type as any,
+          description: action.description,
+          timestamp: action.created_at,
+          metadata: {
+            admin: action.admin_profile,
+            type: 'admin_action'
+          }
+        })),
+        ...userWalletAdjustments.map((adjustment: any) => ({
+          id: adjustment.id,
+          userId: adjustment.user_id,
+          activityType: 'wallet_adjustment' as any,
+          description: `${adjustment.adjustment_type === 'add' ? 'Added' : 'Subtracted'} ${adjustment.amount} USDT. Reason: ${adjustment.reason}`,
+          timestamp: adjustment.created_at,
+          metadata: {
+            amount: adjustment.amount,
+            type: adjustment.adjustment_type,
+            reason: adjustment.reason,
+            previous_balance: adjustment.previous_balance,
+            new_balance: adjustment.new_balance
+          }
+        }))
+      ];
+      
+      // Sort by timestamp (newest first)
+      combinedActivities.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      setUserActivities(combinedActivities);
+    } catch (error) {
+      console.error('Error loading user activities:', error);
+      setUserActivities([]);
     }
   };
 
@@ -1029,13 +1198,14 @@ export default function AdminUserManagement() {
                             <MessageSquare className="mr-2 h-4 w-4" />
                             Send Message
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedUser(user);
-                            setIsActivityModalOpen(true);
-                          }}>
-                            <Activity className="mr-2 h-4 w-4" />
-                            View Activity
-                          </DropdownMenuItem>
+                                                     <DropdownMenuItem onClick={() => {
+                             setSelectedUser(user);
+                             loadUserActivities(user.id);
+                             setIsActivityModalOpen(true);
+                           }}>
+                             <Activity className="mr-2 h-4 w-4" />
+                             View Activity
+                           </DropdownMenuItem>
                           {user.accountStatus === 'active' ? (
                             <DropdownMenuItem onClick={() => handleUserStatusChange(user.id, 'suspended', 'Admin action')}>
                               <Lock className="mr-2 h-4 w-4" />
