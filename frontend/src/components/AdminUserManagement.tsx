@@ -184,7 +184,16 @@ export default function AdminUserManagement() {
   const loadUsers = async () => {
     try {
       // Load from user persistence service (existing admin users)
-      const adminUsers = userPersistenceService.getAllUsers();
+      let adminUsers: any[] = [];
+      try {
+        if (userPersistenceService && typeof userPersistenceService.getAllUsers === 'function') {
+          adminUsers = userPersistenceService.getAllUsers();
+        } else {
+          console.warn('userPersistenceService.getAllUsers not available, using empty array');
+        }
+      } catch (error) {
+        console.warn('Error loading admin users:', error);
+      }
       
       // Load registered users from localStorage (new registrations)
       let registeredUsers: any[] = [];
@@ -235,7 +244,15 @@ export default function AdminUserManagement() {
       calculateStats(allUsers);
       
       // Store merged users in persistence for admin access
-      userPersistenceService.storeUsers(allUsers);
+      try {
+        if (userPersistenceService && typeof userPersistenceService.storeUsers === 'function') {
+          userPersistenceService.storeUsers(allUsers);
+        } else {
+          console.warn('userPersistenceService.storeUsers not available');
+        }
+      } catch (error) {
+        console.warn('Error storing users:', error);
+      }
       
       console.log(`Loaded ${allUsers.length} users (${adminUsers.length} admin users + ${convertedRegisteredUsers.length} registered users)`);
       
@@ -586,29 +603,49 @@ export default function AdminUserManagement() {
   };
 
   const exportUserData = () => {
-    const csvContent = userPersistenceService.exportUserData();
-    
-    if (!csvContent) {
+    try {
+      let csvContent = '';
+      if (userPersistenceService && typeof userPersistenceService.exportUserData === 'function') {
+        csvContent = userPersistenceService.exportUserData();
+      } else {
+        console.warn('userPersistenceService.exportUserData not available');
+        toast({
+          title: 'Export Failed',
+          description: 'Export service not available',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      if (!csvContent) {
+        toast({
+          title: 'Export Failed',
+          description: 'No data to export',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Export Successful',
+        description: 'User data exported to CSV with 1-year retention info',
+      });
+    } catch (error) {
+      console.error('Error exporting user data:', error);
       toast({
         title: 'Export Failed',
-        description: 'No data to export',
+        description: 'Failed to export user data',
         variant: 'destructive'
       });
-      return;
     }
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `users_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-
-    toast({
-      title: 'Export Successful',
-      description: 'User data exported to CSV with 1-year retention info',
-    });
   };
 
   const getStatusBadge = (status: string) => {
