@@ -35,7 +35,7 @@ DB_PASSWORD=LRlilbdBuMHFGRYCWJCCINPVqQQcTwhV
 DATABASE_URL=postgresql://postgres:LRlilbdBuMHFGRYCWJCCINPVqQQcTwhV@caboose.proxy.rlwy.net:24641/kryvex_trading
 
 # JWT Configuration
-JWT_SECRET=your_super_secret_jwt_key_here
+JWT_SECRET=25f0cc55a6a97243f0ff4c846a21160f24da042657ad648eeb92fd3fc13f10f1cb9ee11860d5b509b8954e53545a72aa9b943a3cd6480fb95079b97d2dab8535
 JWT_EXPIRES_IN=24h
 JWT_REFRESH_EXPIRES_IN=7d
 
