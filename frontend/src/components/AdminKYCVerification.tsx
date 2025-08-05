@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import kycService from '@/services/kycService';
 import adminDataService, { AdminKYCUser } from '@/services/adminDataService';
@@ -58,17 +58,7 @@ const AdminKYCVerification = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [filterLevel, setFilterLevel] = useState<'all' | 1 | 2 | 3>('all');
 
-  useEffect(() => {
-    loadData();
-    
-    // Listen for KYC updates
-    kycService.on('user_created', loadData);
-    kycService.on('user_updated', loadData);
-    kycService.on('submission_created', loadData);
-    kycService.on('submission_reviewed', loadData);
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     console.log('=== DEBUG: AdminKYCVerification loading data ===');
     
     try {
@@ -133,7 +123,24 @@ const AdminKYCVerification = () => {
     } catch (error) {
       console.error('Error loading KYC data:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    
+    // Listen for KYC updates
+    kycService.on('user_created', loadData);
+    kycService.on('user_updated', loadData);
+    kycService.on('submission_created', loadData);
+    kycService.on('submission_reviewed', loadData);
+
+    return () => {
+      kycService.off('user_created', loadData);
+      kycService.off('user_updated', loadData);
+      kycService.off('submission_created', loadData);
+      kycService.off('submission_reviewed', loadData);
+    };
+  }, [loadData]);
 
   const handleReviewSubmission = async () => {
     if (!selectedSubmission) return;

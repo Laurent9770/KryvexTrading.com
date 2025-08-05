@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -62,9 +62,12 @@ const KYCVerificationPage = () => {
     // Load KYC status
     loadKYCStatus();
 
-    // Listen for KYC updates
-    kycService.on('user_updated', loadKYCStatus);
-    kycService.on('level_verified', (data: any) => {
+    // Create event handlers
+    const handleUserUpdated = () => {
+      loadKYCStatus();
+    };
+
+    const handleLevelVerified = (data: any) => {
       if (data.userId === user.id) {
         toast({
           title: `Level ${data.level} Verified!`,
@@ -72,9 +75,9 @@ const KYCVerificationPage = () => {
         });
         loadKYCStatus();
       }
-    });
+    };
 
-    kycService.on('submission_reviewed', (data: any) => {
+    const handleSubmissionReviewed = (data: any) => {
       if (data.user.id === user.id) {
         loadKYCStatus();
         
@@ -91,16 +94,21 @@ const KYCVerificationPage = () => {
           });
         }
       }
-    });
+    };
+
+    // Listen for KYC updates
+    kycService.on('user_updated', handleUserUpdated);
+    kycService.on('level_verified', handleLevelVerified);
+    kycService.on('submission_reviewed', handleSubmissionReviewed);
 
     return () => {
-      kycService.off('user_updated', loadKYCStatus);
-      kycService.off('level_verified');
-      kycService.off('submission_reviewed');
+      kycService.off('user_updated', handleUserUpdated);
+      kycService.off('level_verified', handleLevelVerified);
+      kycService.off('submission_reviewed', handleSubmissionReviewed);
     };
-  }, [user, isAuthenticated, navigate, toast]);
+  }, [user?.id, isAuthenticated, navigate, toast]);
 
-  const loadKYCStatus = async () => {
+  const loadKYCStatus = useCallback(async () => {
     if (!user?.email) return;
     
     try {
@@ -109,7 +117,7 @@ const KYCVerificationPage = () => {
     } catch (error) {
       console.error('Error loading KYC status:', error);
     }
-  };
+  }, [user?.email]);
 
   const handleLevel1Verification = async () => {
     if (!user?.email) return;

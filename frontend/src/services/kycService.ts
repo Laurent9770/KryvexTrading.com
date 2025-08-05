@@ -42,6 +42,7 @@ export interface KYCStatus {
 
 class KYCService {
   private static instance: KYCService;
+  private eventListeners: Map<string, Function[]> = new Map();
 
   private constructor() {}
 
@@ -118,12 +119,12 @@ class KYCService {
         );
         localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
         
-        // Emit real-time update
-        websocketService.updateKYCStatus(email, {
-          level: 1,
-          status: 'verified',
-          verifiedAt: new Date().toISOString()
-        });
+        // Remove verification code
+        localStorage.removeItem(`verification_${email}`);
+        
+        // Emit event for real-time updates
+        this.emit('level_verified', { userId: email, level: 1 });
+        this.emit('user_updated', { userId: email });
         
         return {
           success: true,
@@ -150,42 +151,32 @@ class KYCService {
       // TODO: Implement real API call to submit identity verification
       console.log('Submitting identity verification:', data);
       
-      // Simulate file upload
-      const frontUrl = data.frontFile ? await this.uploadFile(data.frontFile) : '';
-      const backUrl = data.backFile ? await this.uploadFile(data.backFile) : '';
-      const selfieUrl = data.selfieFile ? await this.uploadFile(data.selfieFile) : '';
-      
-      // Store KYC data
-      const kycData = {
+      // Store submission in localStorage for demo
+      const submission = {
+        id: Date.now().toString(),
         userId: data.fullName, // Using fullName as userId for demo
-        level2: {
-          status: 'pending',
-          submittedAt: new Date().toISOString(),
-          documents: {
-            fullName: data.fullName,
-            dateOfBirth: data.dateOfBirth,
-            country: data.country,
-            idType: data.idType,
-            idNumber: data.idNumber,
-            frontUrl,
-            backUrl,
-            selfieUrl
-          }
+        level: 2,
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+        documents: {
+          fullName: data.fullName,
+          dateOfBirth: data.dateOfBirth,
+          country: data.country,
+          idType: data.idType,
+          idNumber: data.idNumber,
+          frontUrl: data.frontFile ? await this.uploadFile(data.frontFile) : undefined,
+          backUrl: data.backFile ? await this.uploadFile(data.backFile) : undefined,
+          selfieUrl: data.selfieFile ? await this.uploadFile(data.selfieFile) : undefined
         }
       };
       
-      // Store in localStorage for demo
-      const existingKYC = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
-      existingKYC.push(kycData);
-      localStorage.setItem('kyc_submissions', JSON.stringify(existingKYC));
+      const existingSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+      existingSubmissions.push(submission);
+      localStorage.setItem('kyc_submissions', JSON.stringify(existingSubmissions));
       
-      // Emit real-time update
-      websocketService.notifyKYCSubmission(Date.now().toString(), {
-        userId: data.fullName,
-        level: 2,
-        status: 'pending',
-        submittedAt: new Date().toISOString()
-      });
+      // Emit event for real-time updates
+      this.emit('submission_created', { submission });
+      this.emit('user_updated', { userId: data.fullName });
       
       return {
         success: true,
@@ -370,13 +361,35 @@ class KYCService {
 
   // Event emitter methods for real-time updates
   on(event: string, callback: Function) {
-    // TODO: Implement real event emitter
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, []);
+    }
+    this.eventListeners.get(event)!.push(callback);
     console.log('KYC service event listener added:', event);
   }
 
   off(event: string, callback: Function) {
-    // TODO: Implement real event emitter
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
     console.log('KYC service event listener removed:', event);
+  }
+
+  private emit(event: string, data?: any) {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('Error in KYC event listener:', error);
+        }
+      });
+    }
   }
 }
 
