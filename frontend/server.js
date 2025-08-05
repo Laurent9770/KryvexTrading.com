@@ -13,6 +13,8 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Admin dashboard available at: http://localhost:${PORT}/admin`);
+  console.log(`🚀 Frontend server running on port ${PORT}`);
+  console.log(`📊 Admin dashboard: http://localhost:${PORT}/admin`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📁 Serving from: ${path.join(__dirname, 'dist')}`);
 }); 
