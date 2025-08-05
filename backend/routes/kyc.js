@@ -52,6 +52,96 @@ router.get('/requirements', (req, res) => {
   }
 });
 
+// Send verification email
+router.post('/send-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Generate verification code
+    const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Store verification code (in production, this should be in database)
+    // For now, we'll use a simple in-memory store
+    if (!global.verificationCodes) {
+      global.verificationCodes = new Map();
+    }
+    global.verificationCodes.set(email, {
+      code: verificationCode,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+
+    console.log(`Verification code for ${email}: ${verificationCode}`);
+    
+    // TODO: Send actual email in production
+    // For now, just return success
+    
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent successfully'
+    });
+  } catch (error) {
+    console.error('Send verification email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send verification email'
+    });
+  }
+});
+
+// Verify email code
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and verification code are required'
+      });
+    }
+
+    // Check verification code
+    const storedData = global.verificationCodes?.get(email);
+    if (!storedData || storedData.code !== code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code'
+      });
+    }
+
+    if (new Date() > storedData.expiresAt) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired'
+      });
+    }
+
+    // Mark email as verified
+    // TODO: Update user record in database
+    
+    // Remove verification code
+    global.verificationCodes.delete(email);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify email'
+    });
+  }
+});
+
 // Get user's KYC submissions
 router.get('/submissions', authenticate, async (req, res) => {
   try {

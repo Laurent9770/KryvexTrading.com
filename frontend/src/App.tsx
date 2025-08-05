@@ -23,7 +23,7 @@ import LiveChatWidget from "@/components/LiveChatWidget";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-// Simple ProtectedRoute component
+// Simple ProtectedRoute component - Updated for deployment
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   return user ? <>{children}</> : <Navigate to="/auth" />;

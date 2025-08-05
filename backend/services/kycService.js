@@ -51,6 +51,8 @@ class KYCService {
   // Create KYC submission
   async createKYCSubmission(userId, level, documents = []) {
     try {
+      console.log(`Creating KYC submission for user ${userId}, level ${level}`);
+      
       const result = await query(
         `INSERT INTO kyc_submissions (user_id, level, status, documents)
          VALUES ($1, $2, $3, $4)
@@ -58,10 +60,22 @@ class KYCService {
         [userId, level, 'pending', JSON.stringify(documents)]
       );
 
+      console.log('KYC submission created successfully:', result.rows[0]);
       return result.rows[0];
     } catch (error) {
       console.error('Create KYC submission error:', error);
-      throw new Error('Failed to create KYC submission');
+      
+      // Check if it's a database connection issue
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        throw new Error('Database connection failed. Please try again later.');
+      }
+      
+      // Check if it's a constraint violation
+      if (error.code === '23505') {
+        throw new Error('KYC submission already exists for this user and level.');
+      }
+      
+      throw new Error('Failed to create KYC submission. Please try again.');
     }
   }
 

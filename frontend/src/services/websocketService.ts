@@ -20,9 +20,10 @@ class WebSocketService {
   private getWebSocketUrl(): string {
     // Use environment variable in production, fallback to production URL
     if (import.meta.env.PROD) {
-      return import.meta.env.VITE_WS_URL || 'wss://kryvextrading-com.onrender.com';
+      const baseUrl = import.meta.env.VITE_WS_URL || 'wss://kryvextrading-com.onrender.com';
+      return `${baseUrl}/ws`;
     }
-    return getWebSocketUrl();
+    return `${getWebSocketUrl()}/ws`;
   }
 
   private connect() {
@@ -32,11 +33,13 @@ class WebSocketService {
     const wsUrl = this.getWebSocketUrl();
     
     try {
+      console.log('Attempting to connect to WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);
       
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
         this.isConnected = true;
+        this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.emit('connected');
         this.startRealTimeUpdates();
@@ -51,19 +54,26 @@ class WebSocketService {
         }
       };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      this.ws.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
         this.isConnected = false;
+        this.isConnecting = false;
         this.emit('disconnected');
         this.stopRealTimeUpdates();
-        this.attemptReconnect();
+        
+        // Only attempt reconnect if not a normal closure
+        if (event.code !== 1000) {
+          this.attemptReconnect();
+        }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('WebSocket connection error:', error);
+        this.isConnecting = false;
       };
     } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+      console.error('Error creating WebSocket connection:', error);
+      this.isConnecting = false;
       this.attemptReconnect();
     }
   }

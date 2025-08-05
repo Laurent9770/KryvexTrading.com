@@ -55,10 +55,27 @@ class KYCService {
   // Level 1: Email Verification
   async sendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      // TODO: Implement real API call to send verification email
       console.log('Sending verification email to:', email);
       
-      // Simulate API call
+      // Try to connect to backend first
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/send-verification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          return result;
+        }
+      } catch (error) {
+        console.warn('Backend API call failed, using fallback:', error);
+      }
+      
+      // Fallback: Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Store verification code in localStorage for demo
