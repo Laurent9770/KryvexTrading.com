@@ -1,46 +1,30 @@
 services:
   - type: web
-    name: kryvex-trading-backend
+    name: kryvex-frontend
     env: node
-    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: VITE_API_URL
+        value: https://kryvextrading-com.onrender.com
+      - key: VITE_WS_URL
+        value: wss://kryvextrading-com.onrender.com
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: kryvextrading-com
+    env: node
     buildCommand: cd backend && npm install
     startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 3001
       - key: CORS_ORIGIN
         value: https://kryvex-frontend.onrender.com
-      - key: JWT_SECRET
-        generateValue: true
-      - key: DB_HOST
-        fromDatabase:
-          name: kryvex-trading-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: kryvex-trading-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: kryvex-trading-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: kryvex-trading-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: kryvex-trading-db
-          property: password
       - key: DATABASE_URL
-        fromDatabase:
-          name: kryvex-trading-db
-          property: connectionString
-
-databases:
-  - name: kryvex-trading-db
-    databaseName: kryvex_trading
-    user: kryvex_user
-    plan: free 
+        value: postgresql://postgres:LRlilbdBuMHFGRYCWJCCINPVqQQcTwhV@caboose.proxy.rlwy.net:24641/kryvex_trading
+      - key: JWT_SECRET
+        value: 25f0cc55a6a97243f0ff4c846a21160f24da042657ad648eeb92fd3fc13f10f1cb9ee11860d5b509b8954e53545a72aa9b943a3cd6480fb95079b97d2dab8535 
