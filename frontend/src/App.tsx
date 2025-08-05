@@ -13,6 +13,10 @@ import KYCPage from "@/pages/KYCPage";
 import DepositPage from "@/pages/DepositPage";
 import WithdrawPage from "@/pages/WithdrawPage";
 import WithdrawalRequestPage from "@/pages/WithdrawalRequestPage";
+import MarketPage from "@/pages/MarketPage";
+import WalletPage from "@/pages/WalletPage";
+import TradingHistoryPage from "@/pages/TradingHistoryPage";
+import SettingsPage from "@/pages/SettingsPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import LiveChatWidget from "@/components/LiveChatWidget";
@@ -38,6 +42,10 @@ function AppContent() {
             {/* Protected Routes */}
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
+            <Route path="/market" element={<ProtectedRoute><MarketPage /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+            <Route path="/trading-history" element={<ProtectedRoute><TradingHistoryPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
             <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
             <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />

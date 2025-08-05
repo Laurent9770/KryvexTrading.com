@@ -23,6 +23,7 @@ const chatRoutes = require('./routes/chat');
 const marketRoutes = require('./routes/market');
 const stripeRoutes = require('./routes/stripe');
 const requestRoutes = require('./routes/requests');
+const dataManagementRoutes = require('./routes/dataManagement');
 // const binanceRoutes = require('./routes/binance');
 
 // Import WebSocket service
@@ -30,6 +31,9 @@ const websocketService = require('./services/websocketService');
 
 // Import external API service
 const externalApiService = require('./services/externalApiService');
+
+// Import cleanup scheduler
+const cleanupScheduler = require('./services/cleanupScheduler');
 
 // Create Express app
 const app = express();
@@ -104,6 +108,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/data-management', dataManagementRoutes);
 // app.use('/api/binance', binanceRoutes);
 
 // 404 handler
@@ -165,6 +170,9 @@ const startServer = async () => {
       
       // Start external API service cleanup
       externalApiService.startCleanup();
+      
+      // Start automated data cleanup scheduler
+      cleanupScheduler.start();
     });
 
   } catch (error) {
