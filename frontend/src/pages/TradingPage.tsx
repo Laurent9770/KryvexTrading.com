@@ -11,6 +11,7 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, Target, Book
 import TradeHistory from "@/components/TradeHistory";
 import { useCryptoPrices } from "@/hooks/useCryptoPrices";
 import TradingViewChart from "@/components/TradingViewChart";
+import BinanceTrading from "@/components/BinanceTrading";
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -3093,6 +3094,7 @@ const TradingPage = () => {
             <TabsTrigger value="quant" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Quant</TabsTrigger>
             <TabsTrigger value="bots" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Bots</TabsTrigger>
             <TabsTrigger value="staking" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Staking</TabsTrigger>
+        <TabsTrigger value="binance" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Binance</TabsTrigger>
           </TabsList>
 
           {/* Spot Trading Tab */}
@@ -6490,6 +6492,19 @@ const TradingPage = () => {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="binance" className="space-y-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Binance Trading</h2>
+                      <p className="text-slate-400">Real-time trading with Binance API</p>
+                    </div>
+                  </div>
+                  
+                  <BinanceTrading symbol="BTCUSDT" />
                 </div>
               </TabsContent>
             </Tabs>
