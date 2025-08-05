@@ -12,11 +12,12 @@ import TradeHistory from "@/components/TradeHistory";
 import { useCryptoPrices } from "@/hooks/useCryptoPrices";
 import TradingViewChart from "@/components/TradingViewChart";
 import BinanceTrading from "@/components/BinanceTrading";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import { cryptoPriceService } from "@/services/cryptoPriceService";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -74,35 +75,33 @@ const TradingPage = () => {
   const [futuresTriggerPrice, setFuturesTriggerPrice] = useState("");
   const [futuresPendingOrders, setFuturesPendingOrders] = useState<any[]>([]);
 
-  // Futures Data
-  const futuresPairs = [
-    { symbol: "BTCUSDT", name: "Bitcoin", price: 67543.21, change: 2.34, volume: "2.4B", funding: "0.0125%" },
-    { symbol: "ETHUSDT", name: "Ethereum", price: 3234.56, change: 1.23, volume: "1.8B", funding: "0.0089%" },
-    { symbol: "BNBUSDT", name: "BNB", price: 623.45, change: -0.56, volume: "456M", funding: "-0.0034%" },
-    { symbol: "SOLUSDT", name: "Solana", price: 234.67, change: 4.12, volume: "678M", funding: "0.0156%" },
-  ];
+  // Futures Data - Use real crypto prices instead of mock data
+  const [futuresPairs, setFuturesPairs] = useState<any[]>([]);
 
-  const futuresOrderBook = {
-    asks: [
-      { price: 67550, amount: 0.45, total: 0.45 },
-      { price: 67548, amount: 0.32, total: 0.77 },
-      { price: 67545, amount: 0.28, total: 1.05 },
-      { price: 67544, amount: 0.67, total: 1.72 },
-      { price: 67543, amount: 0.89, total: 2.61 },
-    ],
-    bids: [
-      { price: 67542, amount: 0.56, total: 0.56 },
-      { price: 67540, amount: 0.43, total: 0.99 },
-      { price: 67538, amount: 0.39, total: 1.38 },
-      { price: 67535, amount: 0.72, total: 2.10 },
-      { price: 67533, amount: 0.84, total: 2.94 },
-    ]
-  };
+  // Load real futures data from crypto price service
+  useEffect(() => {
+    const loadFuturesData = () => {
+      const cryptoPrices = cryptoPriceService.getPrices();
+      const pairs = Array.from(cryptoPrices.values()).map(crypto => ({
+        symbol: `${crypto.symbol}USDT`,
+        name: crypto.name,
+        price: crypto.rawPrice,
+        change: crypto.rawChange,
+        volume: crypto.volume,
+        funding: `${(Math.random() * 0.02 - 0.01).toFixed(4)}%` // Simulated funding rate
+      }));
+      setFuturesPairs(pairs);
+    };
 
-  const futuresPositions = [
-    { symbol: "BTCUSDT", side: "Long", size: 0.5, entryPrice: 66500, markPrice: 67543, pnl: 521.5, margin: 3350, leverage: "20x" },
-    { symbol: "ETHUSDT", side: "Short", size: 2.0, entryPrice: 3300, markPrice: 3234, pnl: 132.0, margin: 648, leverage: "10x" },
-  ];
+    loadFuturesData();
+    
+    // Subscribe to price updates
+    const unsubscribe = cryptoPriceService.subscribe(() => {
+      loadFuturesData();
+    });
+
+    return unsubscribe;
+  }, []);
 
   // Real-time order book data
   const [orderBook, setOrderBook] = useState({
@@ -3375,7 +3374,7 @@ const TradingPage = () => {
                           </div>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Started: {new Date(position.start_time).toLocaleTimeString()}
+                          Started: {new Date(position.start_time).toLocaleDateString()} {new Date(position.start_time).toLocaleTimeString()}
                         </div>
                         {position.take_profit && (
                           <div className="text-xs text-green-500 mt-1">
@@ -3564,7 +3563,7 @@ const TradingPage = () => {
                           </div>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Started: {new Date(position.start_time).toLocaleTimeString()}
+                          Started: {new Date(position.start_time).toLocaleDateString()} {new Date(position.start_time).toLocaleTimeString()}
                         </div>
                         {position.take_profit && (
                           <div className="text-xs text-green-500 mt-1">
@@ -6204,310 +6203,6 @@ const TradingPage = () => {
                 </TabsContent>
               </Tabs>
             </div>
-          </TabsContent>
-
-          {/* Staking Tab */}
-          <TabsContent value="staking" className="space-y-6">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Staking</h1>
-              <p className="text-muted-foreground">
-                Earn rewards by staking your crypto assets. Flexible and locked staking options available.
-              </p>
-            </div>
-
-            {/* Staking Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card className="border-0">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Staked</p>
-                      <p className="text-xl font-bold text-foreground">{formatCurrency(stakingStats.totalStaked)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-yellow-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Rewards</p>
-                      <p className="text-xl font-bold text-foreground">{formatCurrency(stakingStats.totalRewards)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                      <Percent className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Avg APY</p>
-                      <p className="text-xl font-bold text-foreground">{stakingStats.avgApy}%</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                      <Coins className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Active Stakes</p>
-                      <p className="text-xl font-bold text-foreground">{stakingStats.activeStakes}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Main Content */}
-            <Tabs value={stakingActiveTab} onValueChange={setStakingActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="pools">Staking Pools</TabsTrigger>
-                <TabsTrigger value="my-stakes">My Stakes</TabsTrigger>
-                <TabsTrigger value="calculator">Reward Calculator</TabsTrigger>
-              </TabsList>
-
-              {/* Staking Pools Tab */}
-              <TabsContent value="pools" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {stakingPools.map((pool) => (
-                    <Card key={pool.id} className="border-0 hover:shadow-lg transition-all duration-300">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center">
-                              <span className="text-2xl">{pool.icon}</span>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-lg">{pool.name}</h3>
-                              <p className="text-sm text-muted-foreground">{pool.description}</p>
-                            </div>
-                          </div>
-                          <Badge className={getStatusColor(pool.status)}>
-                            {pool.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">APY</p>
-                            <p className="font-semibold text-green-500">{pool.apy}%</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Min Stake</p>
-                            <p className="font-semibold">{pool.minStake} {pool.token}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Duration</p>
-                            <p className="font-semibold">{pool.duration}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Total Staked</p>
-                            <p className="font-semibold">{formatCurrency(pool.totalStaked)}</p>
-                          </div>
-                        </div>
-                        <Button 
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                          onClick={() => {
-                            console.log('Stake button clicked for:', pool.token);
-                            handleStakeClick(pool);
-                          }}
-                        >
-                          <Lock className="w-4 h-4 mr-2" />
-                          Stake {pool.token}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-
-              {/* My Stakes Tab */}
-              <TabsContent value="my-stakes" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {myStakes.map((stake) => (
-                    <Card key={stake.id} className="border-0">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
-                              <span className="text-lg">{stakingPools.find(p => p.id === stake.poolId)?.icon}</span>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{stake.token} Staking</h3>
-                              <p className="text-sm text-muted-foreground">Started {stake.startDate}</p>
-                            </div>
-                          </div>
-                          <Badge className={getStatusColor(stake.status)}>
-                            {stake.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Staked Amount</p>
-                            <p className="font-semibold">{formatTokenAmount(stake.amount, stake.token)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Current Value</p>
-                            <p className="font-semibold">{formatCurrency(stake.value)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">APY</p>
-                            <p className="font-semibold text-green-500">{stake.apy}%</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Rewards</p>
-                            <p className="font-semibold text-green-500">{formatTokenAmount(stake.rewards, stake.token)}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {stake.canClaim && (
-                            <Button 
-                              size="sm"
-                              className="flex-1 bg-green-600 hover:bg-green-700"
-                              onClick={() => handleClaim(stake)}
-                              disabled={stakingIsExecuting}
-                            >
-                              {stakingIsExecuting ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Award className="w-4 h-4 mr-2" />
-                              )}
-                              Claim Rewards
-                            </Button>
-                          )}
-                          {stake.canUnstake && (
-                            <Button 
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => handleUnstakeClick(stake)}
-                              disabled={stakingIsExecuting}
-                            >
-                              <Unlock className="w-4 h-4 mr-2" />
-                              Unstake
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-
-              {/* Reward Calculator Tab */}
-              <TabsContent value="calculator" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card className="border-0">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calculator className="w-5 h-5" />
-                        Staking Calculator
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label>Token</Label>
-                        <Select value={calculatorToken} onValueChange={setCalculatorToken}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {stakingPools.map(pool => (
-                              <SelectItem key={pool.token} value={pool.token}>
-                                {pool.token} - {pool.apy}% APY
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Amount to Stake</Label>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={calculatorAmount}
-                          onChange={(e) => setCalculatorAmount(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label>Staking Period (Days)</Label>
-                        <Select value={calculatorDuration} onValueChange={setCalculatorDuration}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="30">30 Days</SelectItem>
-                            <SelectItem value="60">60 Days</SelectItem>
-                            <SelectItem value="90">90 Days</SelectItem>
-                            <SelectItem value="180">180 Days</SelectItem>
-                            <SelectItem value="365">365 Days</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0">
-                    <CardHeader>
-                      <CardTitle>Estimated Rewards</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">
-                            Based on {calculatorDuration} days at {stakingPools.find(p => p.token === calculatorToken)?.apy}% APY
-                          </p>
-                          <p className="text-2xl font-bold text-green-500 mt-2">
-                            ~{estimatedRewards.toFixed(4)} {calculatorToken}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            ≈ {formatCurrency(estimatedRewards * getTokenPrice(calculatorToken))}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>• APY: {stakingPools.find(p => p.token === calculatorToken)?.apy}%</p>
-                        <p>• Duration: {calculatorDuration} days</p>
-                        <p>• Compounding: Daily</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="binance" className="space-y-6">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">Binance Trading</h2>
-                      <p className="text-slate-400">Real-time trading with Binance API</p>
-                    </div>
-                  </div>
-                  
-                  <BinanceTrading symbol="BTCUSDT" />
-                </div>
-              </TabsContent>
-            </Tabs>
           </TabsContent>
         </Tabs>
       </div>

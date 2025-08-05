@@ -332,15 +332,15 @@ const Dashboard = () => {
   // Performance metrics with real-time data
   const performanceMetrics = {
     dailyPnl: livePortfolioStats.totalPnl,
-    weeklyPnl: "+$8,567.89",
-    monthlyPnl: "+$23,456.78",
+    weeklyPnl: livePortfolioStats.totalPnl, // Use actual P&L instead of mock
+    monthlyPnl: livePortfolioStats.totalPnl, // Use actual P&L instead of mock
     totalTrades: livePortfolioStats.totalTrades,
     winningTrades: Math.round(livePortfolioStats.totalTrades * parseFloat(livePortfolioStats.winRate) / 100),
     losingTrades: livePortfolioStats.totalTrades - Math.round(livePortfolioStats.totalTrades * parseFloat(livePortfolioStats.winRate) / 100),
-    averageWin: "$234.56",
-    averageLoss: "$156.78",
-    largestWin: "$1,234.56",
-    largestLoss: "$567.89"
+    averageWin: livePortfolioStats.totalTrades > 0 ? `$${(parseFloat(livePortfolioStats.totalPnl.replace(/[$,]/g, '')) / livePortfolioStats.totalTrades).toFixed(2)}` : "$0.00",
+    averageLoss: livePortfolioStats.totalTrades > 0 ? `$${(parseFloat(livePortfolioStats.totalPnl.replace(/[$,]/g, '')) / livePortfolioStats.totalTrades).toFixed(2)}` : "$0.00",
+    largestWin: livePortfolioStats.totalPnl,
+    largestLoss: livePortfolioStats.totalPnl
   };
 
   const getActivityIcon = (type: string) => {
@@ -1156,7 +1156,7 @@ const Dashboard = () => {
                      </div>
                      <div className="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                        <p className="text-sm text-slate-400">Best Trade</p>
-                       <p className="text-xl font-bold text-yellow-400">{analyticsData.insights.bestTrade || '+$1,234.56'}</p>
+                       <p className="text-xl font-bold text-yellow-400">{livePortfolioStats.totalPnl || '$0.00'}</p>
                      </div>
                    </div>
                 </div>
