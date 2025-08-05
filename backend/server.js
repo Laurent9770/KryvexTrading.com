@@ -22,7 +22,7 @@ const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
 const marketRoutes = require('./routes/market');
 const stripeRoutes = require('./routes/stripe');
-const binanceRoutes = require('./routes/binance');
+// const binanceRoutes = require('./routes/binance');
 
 // Import WebSocket service
 const websocketService = require('./services/websocketService');
@@ -94,7 +94,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/stripe', stripeRoutes);
-app.use('/api/binance', binanceRoutes);
+// app.use('/api/binance', binanceRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
