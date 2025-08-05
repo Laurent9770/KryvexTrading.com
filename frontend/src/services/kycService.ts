@@ -58,35 +58,24 @@ class KYCService {
     try {
       console.log('Sending verification email to:', email);
       
-      // Try to connect to backend first
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/send-verification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        });
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/send-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-        if (response.ok) {
-          const result = await response.json();
-          return result;
-        }
-      } catch (error) {
-        console.warn('Backend API call failed, using fallback:', error);
+      if (response.ok) {
+        const result = await response.json();
+        return result;
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || 'Failed to send verification email'
+        };
       }
-      
-      // Fallback: Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Store verification code in localStorage for demo
-      const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      localStorage.setItem(`verification_${email}`, verificationCode);
-      
-      return {
-        success: true,
-        message: 'Verification email sent successfully'
-      };
     } catch (error) {
       console.error('Error sending verification email:', error);
       return {
@@ -98,42 +87,27 @@ class KYCService {
 
   async verifyEmail(email: string, code: string): Promise<{ success: boolean; message: string }> {
     try {
-      // TODO: Implement real API call to verify email
       console.log('Verifying email:', email, 'with code:', code);
       
-      // Check stored verification code
-      const storedCode = localStorage.getItem(`verification_${email}`);
-      if (storedCode === code) {
-        // Mark email as verified
-        const userData = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-        const updatedUsers = userData.map((user: any) => 
-          user.email === email 
-            ? { 
-                ...user, 
-                kycLevel1: { 
-                  status: 'verified', 
-                  verifiedAt: new Date().toISOString() 
-                } 
-              }
-            : user
-        );
-        localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
-        
-        // Remove verification code
-        localStorage.removeItem(`verification_${email}`);
-        
-        // Emit event for real-time updates
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/verify-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, code }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Emit events for real-time updates
         this.emit('level_verified', { userId: email, level: 1 });
         this.emit('user_updated', { userId: email });
-        
-        return {
-          success: true,
-          message: 'Email verified successfully'
-        };
+        return result;
       } else {
+        const errorData = await response.json();
         return {
           success: false,
-          message: 'Invalid verification code'
+          message: errorData.message || 'Failed to verify email'
         };
       }
     } catch (error) {
@@ -148,40 +122,49 @@ class KYCService {
   // Level 2: Identity Verification
   async submitIdentityVerification(data: KYCLevel2Data): Promise<{ success: boolean; message: string }> {
     try {
-      // TODO: Implement real API call to submit identity verification
       console.log('Submitting identity verification:', data);
       
-      // Store submission in localStorage for demo
-      const submission = {
-        id: Date.now().toString(),
-        userId: data.fullName, // Using fullName as userId for demo
-        level: 2,
-        status: 'pending',
-        submittedAt: new Date().toISOString(),
-        documents: {
-          fullName: data.fullName,
-          dateOfBirth: data.dateOfBirth,
-          country: data.country,
-          idType: data.idType,
-          idNumber: data.idNumber,
-          frontUrl: data.frontFile ? await this.uploadFile(data.frontFile) : undefined,
-          backUrl: data.backFile ? await this.uploadFile(data.backFile) : undefined,
-          selfieUrl: data.selfieFile ? await this.uploadFile(data.selfieFile) : undefined
-        }
-      };
-      
-      const existingSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
-      existingSubmissions.push(submission);
-      localStorage.setItem('kyc_submissions', JSON.stringify(existingSubmissions));
-      
-      // Emit event for real-time updates
-      this.emit('submission_created', { submission });
-      this.emit('user_updated', { userId: data.fullName });
-      
-      return {
-        success: true,
-        message: 'Identity verification submitted successfully'
-      };
+      const formData = new FormData();
+      formData.append('level', '2');
+      formData.append('documents', JSON.stringify({
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
+        country: data.country,
+        idType: data.idType,
+        idNumber: data.idNumber
+      }));
+
+      if (data.frontFile) {
+        formData.append('frontFile', data.frontFile);
+      }
+      if (data.backFile) {
+        formData.append('backFile', data.backFile);
+      }
+      if (data.selfieFile) {
+        formData.append('selfieFile', data.selfieFile);
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/submit`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Emit events for real-time updates
+        this.emit('submission_created', { submission: result.data });
+        this.emit('user_updated', { userId: data.fullName });
+        return result;
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || 'Failed to submit identity verification'
+        };
+      }
     } catch (error) {
       console.error('Error submitting identity verification:', error);
       return {
@@ -193,20 +176,33 @@ class KYCService {
 
   async getKYCStatus(userId: string): Promise<KYCStatus> {
     try {
-      // TODO: Implement real API call to get KYC status
       console.log('Getting KYC status for user:', userId);
       
-      // Get from localStorage for demo
-      const userData = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const user = userData.find((u: any) => u.email === userId);
-      
-      const kycSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
-      const userSubmission = kycSubmissions.find((s: any) => s.userId === userId);
-      
-      return {
-        level1: user?.kycLevel1 || { status: 'unverified' },
-        level2: userSubmission?.level2 || { status: 'not_started' }
-      };
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/status/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return result.data;
+      } else {
+        console.warn('Failed to get KYC status from backend, using fallback');
+        // Fallback to localStorage for demo
+        const userData = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const user = userData.find((u: any) => u.email === userId);
+        
+        const kycSubmissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+        const userSubmission = kycSubmissions.find((s: any) => s.userId === userId);
+        
+        return {
+          level1: user?.kycLevel1 || { status: 'unverified' },
+          level2: userSubmission?.level2 || { status: 'not_started' }
+        };
+      }
     } catch (error) {
       console.error('Error getting KYC status:', error);
       return {
@@ -219,12 +215,25 @@ class KYCService {
   // Admin functions
   async getKYCSubmissions(): Promise<any[]> {
     try {
-      // TODO: Implement real API call to get KYC submissions
       console.log('Getting KYC submissions for admin');
       
-      // Get from localStorage for demo
-      const submissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
-      return submissions.filter((s: any) => s.level2.status === 'pending');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/admin/submissions`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return result.data;
+      } else {
+        console.warn('Failed to get KYC submissions from backend, using fallback');
+        // Fallback to localStorage for demo
+        const submissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
+        return submissions.filter((s: any) => s.level2.status === 'pending');
+      }
     } catch (error) {
       console.error('Error getting KYC submissions:', error);
       return [];
@@ -233,38 +242,27 @@ class KYCService {
 
   async reviewKYCSubmission(submissionId: string, status: 'approved' | 'rejected', reason?: string): Promise<{ success: boolean; message: string }> {
     try {
-      // TODO: Implement real API call to review KYC submission
       console.log('Reviewing KYC submission:', submissionId, status, reason);
       
-      // Update submission status
-      const submissions = JSON.parse(localStorage.getItem('kyc_submissions') || '[]');
-      const updatedSubmissions = submissions.map((s: any) => 
-        s.userId === submissionId 
-          ? { 
-              ...s, 
-              level2: { 
-                ...s.level2, 
-                status, 
-                reviewedAt: new Date().toISOString(),
-                rejectionReason: reason 
-              } 
-            }
-          : s
-      );
-      localStorage.setItem('kyc_submissions', JSON.stringify(updatedSubmissions));
-      
-      // Emit real-time update
-      websocketService.updateKYCStatus(submissionId, {
-        level: 2,
-        status,
-        reviewedAt: new Date().toISOString(),
-        rejectionReason: reason
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/kyc/admin/submissions/${submissionId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status, adminNotes: reason }),
       });
-      
-      return {
-        success: true,
-        message: `KYC submission ${status} successfully`
-      };
+
+      if (response.ok) {
+        const result = await response.json();
+        return result;
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          message: errorData.message || 'Failed to review KYC submission'
+        };
+      }
     } catch (error) {
       console.error('Error reviewing KYC submission:', error);
       return {
@@ -308,7 +306,6 @@ class KYCService {
   // Admin: Get all users with KYC data
   getAllUsers(): any[] {
     try {
-      // TODO: Implement real API call to get all users
       console.log('Getting all users for admin KYC verification');
       
       // Get from localStorage for demo
@@ -342,7 +339,6 @@ class KYCService {
   // Admin: Get submissions by status
   getSubmissionsByStatus(status: string): any[] {
     try {
-      // TODO: Implement real API call to get submissions by status
       console.log('Getting KYC submissions by status:', status);
       
       // Get from localStorage for demo
