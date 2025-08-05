@@ -47,6 +47,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import websocketService from '@/services/websocketService';
 import userPersistenceService, { UserData } from '@/services/userPersistenceService';
 import userActivityService, { UserActivity as ActivityData, AdminNotification } from '@/services/userActivityService';
+import adminService from '@/services/adminService';
 
 interface User {
   id: string;
@@ -467,7 +468,54 @@ export default function AdminUserManagement() {
 
   const loadUsers = async () => {
     try {
-      console.log('=== DEBUG: Loading users ===');
+      console.log('=== DEBUG: Loading users from admin service ===');
+      
+      // Try to load users from admin service first
+      try {
+        const adminUsers = await adminService.getAllUsers();
+        console.log('Admin service users loaded:', adminUsers.length);
+        
+        // Convert admin service users to local User format
+        const convertedUsers: User[] = adminUsers.map((adminUser: any) => ({
+          id: adminUser.id,
+          email: adminUser.email,
+          firstName: adminUser.firstName || '',
+          lastName: adminUser.lastName || '',
+          phone: adminUser.phone || '',
+          username: adminUser.username || `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim(),
+          kycLevel: adminUser.kycLevel || 0,
+          kycStatus: adminUser.kycStatus || 'pending',
+          accountStatus: adminUser.accountStatus || 'active',
+          walletBalance: adminUser.walletBalance || 0,
+          tradingBalance: adminUser.tradingBalance || 0,
+          totalTrades: adminUser.totalTrades || 0,
+          winRate: adminUser.winRate || 0,
+          totalProfit: adminUser.totalProfit || 0,
+          lastLogin: adminUser.lastLogin || '',
+          createdAt: adminUser.createdAt || new Date().toISOString(),
+          isVerified: adminUser.isVerified || false,
+          loginAttempts: adminUser.loginAttempts || 0,
+          profilePicture: adminUser.profilePicture || '',
+          country: adminUser.country || '',
+          timezone: adminUser.timezone || '',
+          language: adminUser.language || 'en',
+          twoFactorEnabled: adminUser.twoFactorEnabled || false,
+          emailVerified: adminUser.emailVerified || false,
+          phoneVerified: adminUser.phoneVerified || false
+        }));
+        
+        setUsers(convertedUsers);
+        calculateStats(convertedUsers);
+        
+        console.log(`Successfully loaded ${convertedUsers.length} users from admin service`);
+        return;
+        
+      } catch (adminError) {
+        console.warn('Admin service failed, falling back to local data:', adminError);
+      }
+      
+      // Fallback to local data if admin service fails
+      console.log('=== DEBUG: Loading users from local storage ===');
       
       // Load from user persistence service (existing admin users)
       let adminUsers: any[] = [];
@@ -890,6 +938,46 @@ export default function AdminUserManagement() {
     if (!selectedUser) return;
 
     try {
+      // Try to use admin service first
+      try {
+        if (walletAdjustment.type === 'add') {
+          await adminService.addFundsToUser(
+            selectedUser.id,
+            'USDT',
+            walletAdjustment.amount,
+            walletAdjustment.reason
+          );
+        } else {
+          await adminService.removeFundsFromUser(
+            selectedUser.id,
+            'USDT',
+            walletAdjustment.amount,
+            walletAdjustment.reason
+          );
+        }
+
+        // Reload users to get updated data
+        await loadUsers();
+
+        // Reset form
+        setWalletAdjustment({
+          type: 'add',
+          amount: 0,
+          reason: ''
+        });
+        setIsWalletModalOpen(false);
+
+        toast({
+          title: "Wallet Adjusted",
+          description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} USDT to ${selectedUser.firstName} ${selectedUser.lastName}'s wallet.`,
+        });
+
+        return;
+      } catch (adminError) {
+        console.warn('Admin service failed, using local fallback:', adminError);
+      }
+
+      // Fallback to local implementation
       const adjustment = {
         type: walletAdjustment.type,
         amount: walletAdjustment.amount,

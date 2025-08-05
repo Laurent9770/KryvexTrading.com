@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import kycService from '@/services/kycService';
 import adminDataService, { AdminKYCUser } from '@/services/adminDataService';
+import adminService from '@/services/adminService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,37 +68,113 @@ const AdminKYCVerification = () => {
     kycService.on('submission_reviewed', loadData);
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     console.log('=== DEBUG: AdminKYCVerification loading data ===');
     
-    // Use adminDataService to get real user data
-    const kycUsers = adminDataService.getKYCUsers();
-    console.log('KYC Users loaded:', kycUsers.length);
-    console.log('KYC Users data:', kycUsers);
-    
-    const allSubmissions = kycService.getSubmissionsByStatus('pending');
-    console.log('KYC Submissions loaded:', allSubmissions.length);
-    console.log('KYC Submissions data:', allSubmissions);
-    
-    setUsers(kycUsers);
-    setSubmissions(allSubmissions);
-    
-    console.log('=== DEBUG: AdminKYCVerification data loading complete ===');
+    try {
+      // Try to load from admin service first
+      try {
+        const adminSubmissions = await adminService.getAllKYCSubmissions();
+        console.log('Admin service KYC submissions loaded:', adminSubmissions.length);
+        
+        // Convert admin service submissions to local format
+        const convertedSubmissions: KYCSubmission[] = adminSubmissions.map((submission: any) => ({
+          id: submission.id,
+          userId: submission.userId,
+          level: submission.level,
+          status: submission.status,
+          submittedAt: submission.submittedAt,
+          reviewedAt: submission.reviewedAt,
+          rejectionReason: submission.rejectionReason,
+          documents: submission.documents,
+          personalInfo: submission.personalInfo
+        }));
+        
+        setSubmissions(convertedSubmissions);
+        
+        // Get users from admin service
+        const adminUsers = await adminService.getAllUsers();
+        const kycUsers: AdminKYCUser[] = adminUsers.map((user: any) => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          kycLevel: user.kycLevel || 0,
+          kycStatus: user.kycStatus || 'pending',
+          submittedAt: user.createdAt,
+          documents: {},
+          submissions: []
+        }));
+        
+        setUsers(kycUsers);
+        
+        console.log('=== DEBUG: AdminKYCVerification admin service data loading complete ===');
+        return;
+        
+      } catch (adminError) {
+        console.warn('Admin service failed, falling back to local data:', adminError);
+      }
+      
+      // Fallback to local data
+      // Use adminDataService to get real user data
+      const kycUsers = adminDataService.getKYCUsers();
+      console.log('KYC Users loaded:', kycUsers.length);
+      console.log('KYC Users data:', kycUsers);
+      
+      const allSubmissions = kycService.getSubmissionsByStatus('pending');
+      console.log('KYC Submissions loaded:', allSubmissions.length);
+      console.log('KYC Submissions data:', allSubmissions);
+      
+      setUsers(kycUsers);
+      setSubmissions(allSubmissions);
+      
+      console.log('=== DEBUG: AdminKYCVerification local data loading complete ===');
+      
+    } catch (error) {
+      console.error('Error loading KYC data:', error);
+    }
   };
 
   const handleReviewSubmission = async () => {
     if (!selectedSubmission) return;
 
     try {
-      const success = await kycService.reviewSubmission(
-        selectedSubmission.id,
-        reviewStatus,
-        reviewStatus === 'rejected' ? rejectionReason : undefined
-      );
+              // Try to use admin service first
+        try {
+          if (reviewStatus === 'approved') {
+            await adminService.approveKYC(selectedSubmission.id, 'Admin approval');
+          } else {
+            await adminService.rejectKYC(selectedSubmission.id, rejectionReason || 'Admin rejection');
+          }
 
-      if (success) {
-        toast({
-          title: `Submission ${reviewStatus === 'approved' ? 'Approved' : 'Rejected'}`,
+          // Reload data to get updated status
+          await loadData();
+
+          toast({
+            title: `Submission ${reviewStatus === 'approved' ? 'Approved' : 'Rejected'}`,
+            description: `KYC submission has been ${reviewStatus}`,
+          });
+
+          setShowReviewDialog(false);
+          setSelectedSubmission(null);
+          setReviewStatus('approved');
+          setRejectionReason('');
+
+          return;
+        } catch (adminError) {
+          console.warn('Admin service failed, using local fallback:', adminError);
+        }
+
+        // Fallback to local service
+        const success = await kycService.reviewSubmission(
+          selectedSubmission.id,
+          reviewStatus,
+          reviewStatus === 'rejected' ? rejectionReason : undefined
+        );
+
+        if (success) {
+          toast({
+            title: `Submission ${reviewStatus === 'approved' ? 'Approved' : 'Rejected'}`,
           description: `Level ${selectedSubmission.level} verification has been ${reviewStatus}.`,
         });
         setShowReviewDialog(false);
