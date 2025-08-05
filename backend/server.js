@@ -34,6 +34,9 @@ const externalApiService = require('./services/externalApiService');
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy for rate limiting behind Render
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {

@@ -54,18 +54,52 @@ const authenticate = async (req, res, next) => {
 // Admin authentication middleware
 const authenticateAdmin = async (req, res, next) => {
   try {
-    // First authenticate the user
-    await authenticate(req, res, (err) => {
-      if (err) return next(err);
-    });
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'No token provided'
+      });
+    }
+
+    // Verify token
+    const decoded = authService.verifyToken(token);
+    
+    // Get user from database
+    const user = await authService.getUserById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'User not found'
+      });
+    }
+
+    if (!user.is_active) {
+      return res.status(401).json({
+        error: 'Account deactivated',
+        message: 'Your account has been deactivated'
+      });
+    }
 
     // Check if user is admin
-    if (!req.user.isAdmin) {
+    if (!user.is_admin) {
       return res.status(403).json({
         error: 'Access denied',
         message: 'Admin privileges required'
       });
     }
+
+    // Add user to request
+    req.user = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      isAdmin: user.is_admin,
+      isVerified: user.is_verified
+    };
 
     next();
   } catch (error) {
