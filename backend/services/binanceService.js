@@ -1,18 +1,36 @@
 const crypto = require('crypto');
 const axios = require('axios');
+const BinanceSettings = require('../models/BinanceSettings');
+const binanceAdminService = require('./binanceAdminService');
 
 class BinanceService {
   constructor() {
-    this.apiKey = process.env.BINANCE_API_KEY;
-    this.secretKey = process.env.BINANCE_SECRET_KEY;
     this.baseUrl = 'https://api.binance.com';
     this.testnetUrl = 'https://testnet.binance.vision';
   }
 
+  // Get API keys from admin settings
+  async getApiKeys() {
+    try {
+      const settings = await BinanceSettings.findOne();
+      if (!settings || !settings.apiKey || !settings.secretKey) {
+        throw new Error('API keys not configured');
+      }
+      return {
+        apiKey: settings.apiKey,
+        secretKey: settings.secretKey
+      };
+    } catch (error) {
+      console.error('Error getting API keys:', error);
+      throw error;
+    }
+  }
+
   // Generate signature for authenticated requests
-  generateSignature(queryString) {
+  async generateSignature(queryString) {
+    const { secretKey } = await this.getApiKeys();
     return crypto
-      .createHmac('sha256', this.secretKey)
+      .createHmac('sha256', secretKey)
       .update(queryString)
       .digest('hex');
   }
@@ -62,9 +80,10 @@ class BinanceService {
   // Get account information (requires authentication)
   async getAccountInfo() {
     try {
+      const { apiKey } = await this.getApiKeys();
       const timestamp = Date.now();
       const queryString = `timestamp=${timestamp}`;
-      const signature = this.generateSignature(queryString);
+      const signature = await this.generateSignature(queryString);
 
       const response = await axios.get(`${this.baseUrl}/api/v3/account`, {
         params: {
@@ -72,7 +91,7 @@ class BinanceService {
           signature
         },
         headers: {
-          'X-MBX-APIKEY': this.apiKey
+          'X-MBX-APIKEY': apiKey
         }
       });
       return response.data;
@@ -85,12 +104,13 @@ class BinanceService {
   // Get open orders
   async getOpenOrders(symbol = null) {
     try {
+      const { apiKey } = await this.getApiKeys();
       const timestamp = Date.now();
       let queryString = `timestamp=${timestamp}`;
       if (symbol) {
         queryString += `&symbol=${symbol.toUpperCase()}`;
       }
-      const signature = this.generateSignature(queryString);
+      const signature = await this.generateSignature(queryString);
 
       const response = await axios.get(`${this.baseUrl}/api/v3/openOrders`, {
         params: {
@@ -99,7 +119,7 @@ class BinanceService {
           ...(symbol && { symbol: symbol.toUpperCase() })
         },
         headers: {
-          'X-MBX-APIKEY': this.apiKey
+          'X-MBX-APIKEY': apiKey
         }
       });
       return response.data;
@@ -110,8 +130,17 @@ class BinanceService {
   }
 
   // Place a new order
-  async placeOrder(symbol, side, type, quantity, price = null) {
+  async placeOrder(symbol, side, type, quantity, price = null, userId = null) {
     try {
+      // Admin validation if userId provided
+      if (userId) {
+        const validation = await binanceAdminService.validateOrder(userId, symbol, quantity, price, type);
+        if (!validation.valid) {
+          throw new Error(validation.reason);
+        }
+      }
+
+      const { apiKey } = await this.getApiKeys();
       const timestamp = Date.now();
       let queryString = `symbol=${symbol.toUpperCase()}&side=${side.toUpperCase()}&type=${type.toUpperCase()}&quantity=${quantity}&timestamp=${timestamp}`;
       
@@ -119,7 +148,7 @@ class BinanceService {
         queryString += `&price=${price}`;
       }
 
-      const signature = this.generateSignature(queryString);
+      const signature = await this.generateSignature(queryString);
 
       const response = await axios.post(`${this.baseUrl}/api/v3/order`, null, {
         params: {
@@ -132,7 +161,7 @@ class BinanceService {
           ...(price && type !== 'MARKET' && { price })
         },
         headers: {
-          'X-MBX-APIKEY': this.apiKey
+          'X-MBX-APIKEY': apiKey
         }
       });
       return response.data;
@@ -145,9 +174,10 @@ class BinanceService {
   // Cancel an order
   async cancelOrder(symbol, orderId) {
     try {
+      const { apiKey } = await this.getApiKeys();
       const timestamp = Date.now();
       const queryString = `symbol=${symbol.toUpperCase()}&orderId=${orderId}&timestamp=${timestamp}`;
-      const signature = this.generateSignature(queryString);
+      const signature = await this.generateSignature(queryString);
 
       const response = await axios.delete(`${this.baseUrl}/api/v3/order`, {
         params: {
@@ -157,7 +187,7 @@ class BinanceService {
           signature
         },
         headers: {
-          'X-MBX-APIKEY': this.apiKey
+          'X-MBX-APIKEY': apiKey
         }
       });
       return response.data;
@@ -170,9 +200,10 @@ class BinanceService {
   // Get order status
   async getOrderStatus(symbol, orderId) {
     try {
+      const { apiKey } = await this.getApiKeys();
       const timestamp = Date.now();
       const queryString = `symbol=${symbol.toUpperCase()}&orderId=${orderId}&timestamp=${timestamp}`;
-      const signature = this.generateSignature(queryString);
+      const signature = await this.generateSignature(queryString);
 
       const response = await axios.get(`${this.baseUrl}/api/v3/order`, {
         params: {
@@ -182,7 +213,7 @@ class BinanceService {
           signature
         },
         headers: {
-          'X-MBX-APIKEY': this.apiKey
+          'X-MBX-APIKEY': apiKey
         }
       });
       return response.data;

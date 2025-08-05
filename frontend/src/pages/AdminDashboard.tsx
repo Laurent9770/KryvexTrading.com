@@ -50,6 +50,7 @@ import AdminTradingControl from '@/components/AdminTradingControl';
 import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
 import AdminWalletManager from '@/components/AdminWalletManager';
 import { AdminRoomManagement } from '@/components/AdminRoomManagement';
+import AdminBinanceControl from '@/components/AdminBinanceControl';
 import tradingEngine from "@/services/tradingEngine";
 import websocketService from "@/services/websocketService";
 
@@ -1043,7 +1044,7 @@ export default function AdminDashboard() {
         {/* Admin Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-1">
-            <TabsList className="w-full bg-transparent grid grid-cols-8">
+            <TabsList className="w-full bg-transparent grid grid-cols-9">
               <TabsTrigger 
                 value="users" 
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-400"
@@ -1100,6 +1101,13 @@ export default function AdminDashboard() {
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Rooms
               </TabsTrigger>
+              <TabsTrigger 
+                value="binance" 
+                className="data-[state=active]:bg-yellow-600 data-[state=active]:text-white text-slate-400"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Binance
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1134,6 +1142,10 @@ export default function AdminDashboard() {
           
           <TabsContent value="audit">
             <AdminAuditTrail />
+          </TabsContent>
+
+          <TabsContent value="binance">
+            <AdminBinanceControl />
           </TabsContent>
 
 

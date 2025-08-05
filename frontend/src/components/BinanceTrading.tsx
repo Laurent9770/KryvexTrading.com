@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import binanceService, { BinanceStats, BinanceOrder, BinanceTrade } from '@/services/binanceService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BinanceTradingProps {
   symbol?: string;
@@ -22,7 +23,26 @@ export const BinanceTrading: React.FC<BinanceTradingProps> = ({ symbol = 'BTCUSD
   const [stats, setStats] = useState<BinanceStats | null>(null);
   const [openOrders, setOpenOrders] = useState<BinanceOrder[]>([]);
   const [recentTrades, setRecentTrades] = useState<BinanceTrade[]>([]);
+  const [permissions, setPermissions] = useState<any>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Check user permissions
+  const checkPermissions = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://kryvextrading-com.onrender.com'}/api/binance/admin/user-permissions/${user?.id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPermissions(data);
+      }
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+    }
+  };
 
   // Fetch market data
   const fetchMarketData = async () => {
@@ -130,6 +150,7 @@ export const BinanceTrading: React.FC<BinanceTradingProps> = ({ symbol = 'BTCUSD
 
   // Auto-refresh data
   useEffect(() => {
+    checkPermissions();
     fetchMarketData();
     fetchOpenOrders();
     fetchRecentTrades();
@@ -141,6 +162,30 @@ export const BinanceTrading: React.FC<BinanceTradingProps> = ({ symbol = 'BTCUSD
 
     return () => clearInterval(interval);
   }, [selectedSymbol]);
+
+  // Check if user has access
+  if (!permissions?.hasAccess) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white">Access Restricted</CardTitle>
+            <CardDescription className="text-slate-400">
+              {permissions?.reason || 'You do not have permission to access Binance trading'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">🔒</div>
+              <p className="text-slate-400">
+                Binance trading is currently restricted. Please contact an administrator for access.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
