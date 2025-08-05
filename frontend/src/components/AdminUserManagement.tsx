@@ -896,7 +896,7 @@ export default function AdminUserManagement() {
         action_type: 'status_change',
         target_user_id: userId,
         description: `Changed user status from ${user.accountStatus} to ${status}. Reason: ${reason || 'Admin action'}`,
-        ip_address: '127.0.0.1',
+        ip_address: 'production',
         created_at: new Date().toISOString(),
         admin_profile: {
           full_name: 'Admin Kryvex',
@@ -977,14 +977,14 @@ export default function AdminUserManagement() {
         console.warn('Admin service failed, using local fallback:', adminError);
       }
 
-      // Fallback to local implementation
+      // Fallback to local implementation (original code)
       const adjustment = {
         type: walletAdjustment.type,
         amount: walletAdjustment.amount,
         reason: walletAdjustment.reason,
         timestamp: new Date().toISOString(),
         adminId: 'admin-001', // TODO: Get from auth context
-        userId: selectedUser.id
+        userId: selectedUser.id,
       };
 
       // Calculate new balance
@@ -1064,7 +1064,7 @@ export default function AdminUserManagement() {
         action_type: 'wallet_adjustment',
         target_user_id: selectedUser.id,
         description: `${walletAdjustment.type === 'add' ? 'Added' : 'Subtracted'} ${walletAdjustment.amount} USDT to user wallet. Reason: ${walletAdjustment.reason}`,
-        ip_address: '127.0.0.1',
+        ip_address: 'production',
         created_at: new Date().toISOString(),
         admin_profile: {
           full_name: 'Admin Kryvex',
@@ -1160,7 +1160,7 @@ export default function AdminUserManagement() {
         action_type: 'send_message',
         target_user_id: selectedUser.id,
         description: `Sent message to user: ${messageData.title}`,
-        ip_address: '127.0.0.1',
+        ip_address: 'production',
         created_at: new Date().toISOString(),
         admin_profile: {
           full_name: 'Admin Kryvex',

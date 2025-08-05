@@ -618,7 +618,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Create user session for tracking
           const sessionToken = mockToken;
-          const ipAddress = '127.0.0.1'; // In real app, get from request
+          const ipAddress = 'production'; // In real app, get from request
           const userAgent = navigator.userAgent;
           userSessionService.createSession(
             sessionUser.id,

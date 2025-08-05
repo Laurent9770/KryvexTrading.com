@@ -1,7 +1,7 @@
 // Admin Dashboard Test Script
 // This script tests all admin dashboard tabs to ensure they're properly connected to the backend
 
-const API_BASE_URL = process.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.VITE_API_URL || 'https://kryvextrading-com.onrender.com';
 const ADMIN_TOKEN = 'your-admin-jwt-token-here'; // Replace with actual admin token
 
 class AdminDashboardTester {

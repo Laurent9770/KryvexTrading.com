@@ -431,7 +431,7 @@ const Dashboard = () => {
 
   // WebSocket real-time updates
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3001');
+    const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'wss://kryvextrading-com.onrender.com');
     
     ws.onopen = () => {
       console.log('WebSocket connected for Dashboard');

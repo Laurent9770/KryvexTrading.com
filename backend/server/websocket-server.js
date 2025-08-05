@@ -443,6 +443,6 @@ app.put('/api/kyc-applications/:id', (req, res) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`WebSocket server running on port ${PORT}`);
-  console.log(`HTTP API available at http://localhost:${PORT}`);
+  console.log(`HTTP API available at https://kryvextrading-com.onrender.com`);
   console.log('✅ WebSocket server initialized with clean state - no mock data');
 }); 

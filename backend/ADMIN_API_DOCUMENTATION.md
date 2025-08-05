@@ -1,4 +1,10 @@
-# Kryvex Trading Platform - Admin API Documentation
+# Admin API Documentation
+
+## 🌍 **Production Endpoints**
+
+### **Base URL**: `https://kryvextrading-com.onrender.com/api/admin`
+
+### **WebSocket**: `wss://kryvextrading-com.onrender.com`
 
 ## Overview
 

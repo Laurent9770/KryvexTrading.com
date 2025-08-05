@@ -15,6 +15,16 @@ This implementation provides **complete admin control** over the Kryvex Trading 
 
 ## 🚀 Quick Start
 
+### **Production URLs**
+- **Backend API**: `https://kryvextrading-com.onrender.com`
+- **WebSocket**: `wss://kryvextrading-com.onrender.com`
+- **Admin Dashboard**: `https://kryvex-frontend.onrender.com/admin`
+
+### **Development URLs**
+- **Backend API**: `http://localhost:3001`
+- **WebSocket**: `ws://localhost:3002`
+- **Admin Dashboard**: `http://localhost:8080/admin`
+
 ### 1. Database Setup
 
 Run the migration script to add admin functionality:
