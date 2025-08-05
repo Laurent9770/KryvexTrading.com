@@ -21,6 +21,7 @@ const kycRoutes = require('./routes/kyc');
 const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
 const marketRoutes = require('./routes/market');
+const stripeRoutes = require('./routes/stripe');
 
 // Import WebSocket handler
 const websocketHandler = require('./websocket/websocketHandler');
@@ -91,6 +92,7 @@ app.use('/api/kyc', kycRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/market', marketRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

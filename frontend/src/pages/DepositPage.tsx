@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import StripePayment from "@/components/StripePayment";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -346,9 +347,20 @@ const DepositPage = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Deposit Section */}
-          <div className="lg:col-span-2 space-y-6">
+        <Tabs defaultValue="crypto" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-slate-800 border-slate-700">
+            <TabsTrigger value="crypto" className="text-slate-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Crypto Deposit
+            </TabsTrigger>
+            <TabsTrigger value="stripe" className="text-slate-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Card Payment
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="crypto" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Deposit Section */}
+              <div className="lg:col-span-2 space-y-6">
             {/* Crypto Selection */}
             <Card className="bg-slate-800/50 border-slate-700 p-6">
               <h2 className="text-xl font-bold mb-4 text-white">Select Cryptocurrency</h2>
@@ -702,8 +714,57 @@ const DepositPage = () => {
                 </Button>
               </div>
             </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="stripe" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <StripePayment 
+                  type="deposit"
+                  onSuccess={() => {
+                    toast({
+                      title: "Payment Successful",
+                      description: "Your deposit has been processed successfully.",
+                    });
+                  }}
+                  onCancel={() => {
+                    toast({
+                      title: "Payment Cancelled",
+                      description: "Your payment was cancelled.",
+                    });
+                  }}
+                />
+              </div>
+              
+              {/* Sidebar for Stripe */}
+              <div className="space-y-6">
+                <Card className="bg-slate-800/50 border-slate-700 p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-white">Card Payment Benefits</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm text-slate-300">Instant processing</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm text-slate-300">Secure payment processing</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm text-slate-300">Multiple currency support</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm text-slate-300">24/7 customer support</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

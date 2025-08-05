@@ -40,11 +40,13 @@ import {
   Settings,
   Trash2,
   Archive,
-  RefreshCw
+  RefreshCw,
+  Bell
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import websocketService from '@/services/websocketService';
 import userPersistenceService, { UserData } from '@/services/userPersistenceService';
+import userActivityService, { UserActivity as ActivityData, AdminNotification } from '@/services/userActivityService';
 
 interface User {
   id: string;
@@ -147,6 +149,44 @@ export default function AdminUserManagement() {
     type: 'info'
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    title: string;
+    message: string;
+    timestamp: string;
+    userId?: string;
+  }>>([]);
+  const [liveActivity, setLiveActivity] = useState<Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    action: string;
+    details: string;
+    timestamp: string;
+  }>>([]);
+
+  // Handler functions for userActivityService
+  const handleActivityUpdate = (activity: ActivityData) => {
+    console.log('AdminUserManagement: Received activity update:', activity);
+    
+    // Update live activity feed
+    setLiveActivity(prev => [{
+      id: activity.id,
+      userId: activity.userId,
+      userName: activity.userName,
+      action: activity.action,
+      details: activity.details,
+      timestamp: activity.timestamp
+    }, ...prev.slice(0, 19)]); // Keep last 20 activities
+  };
+
+  const handleNotificationUpdate = (notification: AdminNotification) => {
+    console.log('AdminUserManagement: Received notification update:', notification);
+    
+    // Update notifications
+    setNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep last 10 notifications
+  };
 
   // Debug function to add test users
   const addTestUsers = () => {
@@ -212,24 +252,39 @@ export default function AdminUserManagement() {
 
   useEffect(() => {
     loadUsers();
-    setupWebSocketListeners();
+    
+    // Subscribe to userActivityService events
+    userActivityService.on('activity', handleActivityUpdate);
+    userActivityService.on('notification', handleNotificationUpdate);
     
     // Set up periodic refresh
     const interval = setInterval(loadUsers, 30000); // Refresh every 30 seconds
     
     return () => {
       clearInterval(interval);
-      // Clean up WebSocket listeners
-      websocketService.off('user_registered', handleNewUserRegistration);
-      websocketService.off('user_updated', handleUserUpdate);
-      websocketService.off('kyc_status_updated', handleKYCUpdate);
-      websocketService.off('wallet_updated', handleWalletUpdate);
+      userActivityService.off('activity', handleActivityUpdate);
+      userActivityService.off('notification', handleNotificationUpdate);
     };
   }, []);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, statusFilter, kycFilter, dateFilter]);
+
+  // Load initial data from userActivityService
+  useEffect(() => {
+    const activities = userActivityService.getActivities();
+    const notifications = userActivityService.getNotifications();
+    setLiveActivity(activities.map(activity => ({
+      id: activity.id,
+      userId: activity.userId,
+      userName: activity.userName,
+      action: activity.action,
+      details: activity.details,
+      timestamp: activity.timestamp
+    })));
+    setNotifications(notifications);
+  }, []);
 
   const setupWebSocketListeners = () => {
     // Listen for new user registrations
@@ -243,6 +298,171 @@ export default function AdminUserManagement() {
     
     // Listen for wallet updates
     websocketService.on('wallet_updated', handleWalletUpdate);
+    
+    // Listen for trade updates
+    websocketService.on('trade_completed', handleTradeUpdate);
+    
+    // Listen for deposit/withdrawal updates
+    websocketService.on('deposit_status_updated', handleDepositUpdate);
+    websocketService.on('withdrawal_status_updated', handleWithdrawalUpdate);
+    
+    // Listen for user activity updates
+    websocketService.on('user_activity', handleUserActivity);
+    
+    // Listen for login/logout events
+    websocketService.on('user_login', handleUserLogin);
+    websocketService.on('user_logout', handleUserLogout);
+  };
+
+  const handleTradeUpdate = (data: any) => {
+    console.log('AdminUserManagement: Received trade update:', data);
+    
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => {
+        if (user.id === data.userId) {
+          return {
+            ...user,
+            totalTrades: (user.totalTrades || 0) + 1,
+            totalProfit: (user.totalProfit || 0) + (data.profit || 0),
+            winRate: data.winRate || user.winRate
+          };
+        }
+        return user;
+      });
+      userPersistenceService.storeUsers(updatedUsers);
+      calculateStats(updatedUsers);
+      return updatedUsers;
+    });
+  };
+
+  const handleDepositUpdate = (data: any) => {
+    console.log('AdminUserManagement: Received deposit update:', data);
+    
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => {
+        if (user.id === data.userId) {
+          return {
+            ...user,
+            walletBalance: data.newBalance || user.walletBalance
+          };
+        }
+        return user;
+      });
+      userPersistenceService.storeUsers(updatedUsers);
+      calculateStats(updatedUsers);
+      return updatedUsers;
+    });
+  };
+
+  const handleWithdrawalUpdate = (data: any) => {
+    console.log('AdminUserManagement: Received withdrawal update:', data);
+    
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => {
+        if (user.id === data.userId) {
+          return {
+            ...user,
+            walletBalance: data.newBalance || user.walletBalance
+          };
+        }
+        return user;
+      });
+      userPersistenceService.storeUsers(updatedUsers);
+      calculateStats(updatedUsers);
+      return updatedUsers;
+    });
+  };
+
+  const handleUserActivity = (data: any) => {
+    console.log('AdminUserManagement: Received user activity:', data);
+    
+    // Store activity for audit trail
+    const activity = {
+      id: `activity-${Date.now()}`,
+      userId: data.userId,
+      activityType: data.type,
+      description: data.description,
+      timestamp: data.timestamp || new Date().toISOString(),
+      metadata: data.metadata || {}
+    };
+
+    const existingActivities = JSON.parse(localStorage.getItem('user_activities') || '[]');
+    existingActivities.push(activity);
+    localStorage.setItem('user_activities', JSON.stringify(existingActivities));
+  };
+
+  const handleUserLogin = (data: any) => {
+    console.log('AdminUserManagement: User logged in:', data);
+    
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => {
+        if (user.id === data.userId) {
+          return {
+            ...user,
+            lastLogin: data.timestamp || new Date().toISOString()
+          };
+        }
+        return user;
+      });
+      userPersistenceService.storeUsers(updatedUsers);
+      return updatedUsers;
+    });
+  };
+
+  const handleUserLogout = (data: any) => {
+    console.log('AdminUserManagement: User logged out:', data);
+    
+    // Update user's last activity
+    const activity = {
+      id: `activity-${Date.now()}`,
+      userId: data.userId,
+      activityType: 'logout',
+      description: 'User logged out',
+      timestamp: data.timestamp || new Date().toISOString(),
+      metadata: { sessionDuration: data.sessionDuration }
+    };
+
+    const existingActivities = JSON.parse(localStorage.getItem('user_activities') || '[]');
+    existingActivities.push(activity);
+    localStorage.setItem('user_activities', JSON.stringify(existingActivities));
+  };
+
+  // Add notification to the list
+  const addNotification = (type: 'info' | 'success' | 'warning' | 'error', title: string, message: string, userId?: string) => {
+    const notification = {
+      id: `notification-${Date.now()}`,
+      type,
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      userId
+    };
+
+    setNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep last 10 notifications
+
+    // Auto-remove notification after 10 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    }, 10000);
+  };
+
+  // Add live activity
+  const addLiveActivity = (userId: string, userName: string, action: string, details: string) => {
+    const activity = {
+      id: `activity-${Date.now()}`,
+      userId,
+      userName,
+      action,
+      details,
+      timestamp: new Date().toISOString()
+    };
+
+    setLiveActivity(prev => [activity, ...prev.slice(0, 19)]); // Keep last 20 activities
+
+    // Auto-remove activity after 30 seconds
+    setTimeout(() => {
+      setLiveActivity(prev => prev.filter(a => a.id !== activity.id));
+    }, 30000);
   };
 
   const loadUsers = async () => {
@@ -422,6 +642,11 @@ export default function AdminUserManagement() {
       return updatedUsers;
     });
 
+    // Add notification and live activity
+    const userName = `${newUser.firstName} ${newUser.lastName}`;
+    addNotification('success', 'New User Registered', `${userName} (${newUser.email}) has joined the platform.`, newUser.id);
+    addLiveActivity(newUser.id, userName, 'Registration', 'New user account created');
+
     toast({
       title: 'New User Registered',
       description: `${newUser.firstName} ${newUser.lastName} (${newUser.email}) has joined the platform.`,
@@ -429,44 +654,69 @@ export default function AdminUserManagement() {
   };
 
   const handleUserUpdate = (data: any) => {
-          setUsers(prevUsers => {
-        const updatedUsers = prevUsers.map(user => 
-          user.id === data.userId ? { ...user, ...data.updates } : user
-        );
-        userPersistenceService.storeUsers(updatedUsers);
-        calculateStats(updatedUsers);
-        return updatedUsers;
-      });
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => 
+        user.id === data.userId ? { ...user, ...data.updates } : user
+      );
+      userPersistenceService.storeUsers(updatedUsers);
+      calculateStats(updatedUsers);
+      return updatedUsers;
+    });
+
+    // Add notification for profile updates
+    const user = users.find(u => u.id === data.userId);
+    if (user) {
+      const userName = `${user.firstName} ${user.lastName}`;
+      addNotification('info', 'User Profile Updated', `${userName} updated their profile.`, data.userId);
+      addLiveActivity(data.userId, userName, 'Profile Update', 'User updated profile information');
+    }
   };
 
   const handleKYCUpdate = (data: any) => {
-          setUsers(prevUsers => {
-        const updatedUsers = prevUsers.map(user => 
-          user.id === data.userId ? { 
-            ...user, 
-            kycLevel: data.level,
-            kycStatus: data.status 
-          } : user
-        );
-        userPersistenceService.storeUsers(updatedUsers);
-        calculateStats(updatedUsers);
-        return updatedUsers;
-      });
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => 
+        user.id === data.userId ? { 
+          ...user, 
+          kycLevel: data.level,
+          kycStatus: data.status 
+        } : user
+      );
+      userPersistenceService.storeUsers(updatedUsers);
+      calculateStats(updatedUsers);
+      return updatedUsers;
+    });
+
+    // Add notification for KYC updates
+    const user = users.find(u => u.id === data.userId);
+    if (user) {
+      const userName = `${user.firstName} ${user.lastName}`;
+      const statusText = data.status === 'verified' ? 'approved' : data.status;
+      addNotification('success', 'KYC Status Updated', `${userName}'s KYC has been ${statusText}.`, data.userId);
+      addLiveActivity(data.userId, userName, 'KYC Update', `KYC status changed to ${data.status} (Level ${data.level})`);
+    }
   };
 
   const handleWalletUpdate = (data: any) => {
-          setUsers(prevUsers => {
-        const updatedUsers = prevUsers.map(user => 
-          user.id === data.userId ? { 
-            ...user, 
-            walletBalance: data.walletBalance,
-            tradingBalance: data.tradingBalance 
-          } : user
-        );
-        userPersistenceService.storeUsers(updatedUsers);
-        calculateStats(updatedUsers);
-        return updatedUsers;
-      });
+    setUsers(prevUsers => {
+      const updatedUsers = prevUsers.map(user => 
+        user.id === data.userId ? { 
+          ...user, 
+          walletBalance: data.walletBalance,
+          tradingBalance: data.tradingBalance 
+        } : user
+      );
+      userPersistenceService.storeUsers(updatedUsers);
+      calculateStats(updatedUsers);
+      return updatedUsers;
+    });
+
+    // Add notification for wallet updates
+    const user = users.find(u => u.id === data.userId);
+    if (user) {
+      const userName = `${user.firstName} ${user.lastName}`;
+      addNotification('info', 'Wallet Updated', `${userName}'s wallet balance has been updated.`, data.userId);
+      addLiveActivity(data.userId, userName, 'Wallet Update', `Wallet balance updated to $${data.walletBalance}`);
+    }
   };
 
   const calculateStats = (userList: User[]) => {
@@ -1104,6 +1354,105 @@ export default function AdminUserManagement() {
             <p className="text-xs text-muted-foreground">
               {userStats.totalTrades} total trades
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Real-time Notifications and Live Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Real-time Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Live Notifications
+            </CardTitle>
+            <CardDescription>
+              Real-time updates from user activities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No notifications yet</p>
+                  <p className="text-xs">User activities will appear here</p>
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-3 rounded-lg border-l-4 ${
+                      notification.type === 'success' ? 'border-l-green-500 bg-green-50' :
+                      notification.type === 'warning' ? 'border-l-yellow-500 bg-yellow-50' :
+                      notification.type === 'error' ? 'border-l-red-500 bg-red-50' :
+                      'border-l-blue-500 bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{notification.title}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDate(notification.timestamp)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}
+                        className="h-6 w-6 p-0"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Live Activity Feed */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Live Activity Feed
+            </CardTitle>
+            <CardDescription>
+              Real-time user activity monitoring
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {liveActivity.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No live activity</p>
+                  <p className="text-xs">User actions will appear here</p>
+                </div>
+              ) : (
+                liveActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border">
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{activity.userName}</span>
+                        <Badge variant="outline" className="text-xs">{activity.action}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{activity.details}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDate(activity.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
