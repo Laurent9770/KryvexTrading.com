@@ -24,8 +24,8 @@ const marketRoutes = require('./routes/market');
 const stripeRoutes = require('./routes/stripe');
 const binanceRoutes = require('./routes/binance');
 
-// Import WebSocket handler
-const websocketHandler = require('./websocket/websocketHandler');
+// Import WebSocket service
+const websocketService = require('./services/websocketService');
 
 // Import external API service
 const externalApiService = require('./services/externalApiService');
@@ -129,8 +129,7 @@ app.use((error, req, res, next) => {
 });
 
 // Setup WebSocket server
-const wss = new WebSocket.Server({ server });
-websocketHandler.setupWebSocket(wss);
+websocketService.initialize(server);
 
 // Start server
 const PORT = process.env.PORT || 3001;

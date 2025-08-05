@@ -16,6 +16,7 @@ CREATE TABLE users (
     is_admin BOOLEAN DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
+    force_mode VARCHAR(10) DEFAULT NULL, -- 'win', 'lose', NULL for normal trading
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -205,11 +206,34 @@ CREATE TABLE admin_actions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Admin fund actions table (for tracking manual fund changes)
+CREATE TABLE admin_fund_actions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    admin_id UUID REFERENCES users(id),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    asset VARCHAR(10) NOT NULL,
+    amount DECIMAL(20, 8) NOT NULL,
+    action_type VARCHAR(20) NOT NULL, -- 'add', 'remove'
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Audit logs table (for comprehensive admin action tracking)
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    admin_id UUID REFERENCES users(id),
+    action_type VARCHAR(50) NOT NULL, -- 'fund_add', 'fund_remove', 'kyc_approve', 'kyc_reject', 'deposit_approve', 'deposit_reject', 'withdrawal_approve', 'withdrawal_reject', 'trade_override', 'notification_send'
+    target_user_id UUID REFERENCES users(id),
+    details JSONB,
+    ip_address INET,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Notifications table
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(50) NOT NULL, -- 'trade', 'deposit', 'withdrawal', 'kyc', 'system'
+    type VARCHAR(50) NOT NULL, -- 'trade', 'deposit', 'withdrawal', 'kyc', 'system', 'admin'
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
@@ -230,6 +254,7 @@ CREATE TABLE system_settings (
 -- Create indexes for better performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_admin ON users(is_admin);
+CREATE INDEX idx_users_force_mode ON users(force_mode);
 CREATE INDEX idx_wallets_user_asset ON wallets(user_id, asset);
 CREATE INDEX idx_transactions_user_type ON transactions(user_id, type);
 CREATE INDEX idx_trades_user_symbol ON trades(user_id, symbol);
@@ -239,6 +264,11 @@ CREATE INDEX idx_kyc_submissions_status ON kyc_submissions(status);
 CREATE INDEX idx_chat_messages_room ON chat_messages(room_id);
 CREATE INDEX idx_notifications_user_read ON notifications(user_id, is_read);
 CREATE INDEX idx_admin_actions_admin ON admin_actions(admin_id);
+CREATE INDEX idx_admin_fund_actions_user ON admin_fund_actions(user_id);
+CREATE INDEX idx_admin_fund_actions_admin ON admin_fund_actions(admin_id);
+CREATE INDEX idx_audit_logs_admin ON audit_logs(admin_id);
+CREATE INDEX idx_audit_logs_target_user ON audit_logs(target_user_id);
+CREATE INDEX idx_audit_logs_action_type ON audit_logs(action_type);
 CREATE INDEX idx_user_sessions_token ON user_sessions(session_token);
 
 -- Insert default system settings

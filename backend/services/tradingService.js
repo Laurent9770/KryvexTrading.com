@@ -106,22 +106,55 @@ class TradingService {
           throw new Error('Trade is not in pending status');
         }
 
-        // Get current market price
-        const marketData = await externalApiService.getTradingPairData(trade.symbol);
-        const currentPrice = marketData.price;
+        // Get user's force mode
+        const userResult = await client.query(
+          'SELECT force_mode FROM users WHERE id = $1',
+          [trade.user_id]
+        );
 
-        // Calculate execution price (with slight variation for realism)
-        const priceVariation = (Math.random() - 0.5) * 0.002; // ±0.1% variation
-        const executionPrice = currentPrice * (1 + priceVariation);
+        const user = userResult.rows[0];
+        let tradeResultValue, profitLoss, executionPrice;
 
-        // Determine if trade is profitable (for demo purposes)
-        const isProfitable = trade.side === 'buy' ? 
-          executionPrice > trade.price : 
-          executionPrice < trade.price;
+        // Check if user has force mode enabled
+        if (user.force_mode === 'win') {
+          // Force win - calculate positive profit
+          executionPrice = trade.side === 'buy' ? 
+            trade.price * 1.01 : // 1% higher for buy
+            trade.price * 0.99;  // 1% lower for sell
+          
+          tradeResultValue = 'win';
+          profitLoss = trade.side === 'buy' ? 
+            (executionPrice - trade.price) * trade.amount :
+            (trade.price - executionPrice) * trade.amount;
+        } else if (user.force_mode === 'lose') {
+          // Force lose - calculate negative profit
+          executionPrice = trade.side === 'buy' ? 
+            trade.price * 0.99 : // 1% lower for buy
+            trade.price * 1.01;  // 1% higher for sell
+          
+          tradeResultValue = 'loss';
+          profitLoss = trade.side === 'buy' ? 
+            (executionPrice - trade.price) * trade.amount :
+            (trade.price - executionPrice) * trade.amount;
+        } else {
+          // Normal trading - use market simulation
+          const marketData = await externalApiService.getTradingPairData(trade.symbol);
+          const currentPrice = marketData.price;
 
-        const profitLoss = trade.side === 'buy' ? 
-          (executionPrice - trade.price) * trade.amount :
-          (trade.price - executionPrice) * trade.amount;
+          // Calculate execution price (with slight variation for realism)
+          const priceVariation = (Math.random() - 0.5) * 0.002; // ±0.1% variation
+          executionPrice = currentPrice * (1 + priceVariation);
+
+          // Determine if trade is profitable (for demo purposes)
+          const isProfitable = trade.side === 'buy' ? 
+            executionPrice > trade.price : 
+            executionPrice < trade.price;
+
+          tradeResultValue = isProfitable ? 'win' : 'loss';
+          profitLoss = trade.side === 'buy' ? 
+            (executionPrice - trade.price) * trade.amount :
+            (trade.price - executionPrice) * trade.amount;
+        }
 
         // Update trade with execution details
         const updateResult = await client.query(
@@ -130,7 +163,7 @@ class TradingService {
                result = $2, profit_loss = $3
            WHERE id = $1
            RETURNING *`,
-          [tradeId, isProfitable ? 'win' : 'loss', profitLoss]
+          [tradeId, tradeResultValue, profitLoss]
         );
 
         const executedTrade = updateResult.rows[0];
@@ -170,7 +203,8 @@ class TradingService {
           [tradeId, 'executed', JSON.stringify({
             executionPrice,
             profitLoss,
-            result: executedTrade.result
+            result: executedTrade.result,
+            forceMode: user.force_mode
           })]
         );
 
