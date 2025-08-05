@@ -230,88 +230,66 @@ class AdminDataService {
     }));
   }
 
-  // Get deposit requests (mock data for now, but using real users)
+  // Get deposit requests (real data only - no mock generation)
   getDepositRequests(): AdminDepositRequest[] {
-    const allUsers = this.getAllUsers();
-    // Create mock deposit requests for users with wallet balances
-    return allUsers
-      .filter(user => user.walletBalance > 0)
-      .map((user, index) => ({
-        id: `deposit-${user.id}-${index}`,
-        userId: user.id,
-        userEmail: user.email,
-        amount: (user.walletBalance * 0.1).toFixed(2), // 10% of wallet balance
-        network: 'TRC20',
-        transactionHash: `tx_${user.id}_${Date.now()}`,
-        notes: `Deposit request for ${user.firstName} ${user.lastName}`,
-        status: 'pending' as const,
-        createdAt: new Date(Date.now() - index * 86400000).toISOString(), // Spread over days
-        processedAt: undefined,
-        processedBy: undefined
-      }));
+    // Return empty array - no mock data generation
+    // Real deposit requests should come from backend API
+    return [];
   }
 
-  // Get withdrawal requests (mock data for now, but using real users)
+  // Get withdrawal requests (real data only - no mock generation)
   getWithdrawalRequests(): AdminWithdrawalRequest[] {
-    const allUsers = this.getAllUsers();
-    // Create mock withdrawal requests for users with wallet balances
-    return allUsers
-      .filter(user => user.walletBalance > 0)
-      .map((user, index) => ({
-        id: `withdrawal-${user.id}-${index}`,
-        userId: user.id,
-        username: user.username || user.email,
-        userEmail: user.email,
-        amount: user.walletBalance * 0.05, // 5% of wallet balance
-        asset: 'USDT',
-        blockchain: 'TRC20',
-        walletAddress: `T${user.id}${Date.now()}`,
-        status: 'pending' as const,
-        requestDate: new Date(Date.now() - index * 86400000).toISOString(),
-        remarks: `Withdrawal request for ${user.firstName} ${user.lastName}`
-      }));
+    // Return empty array - no mock data generation
+    // Real withdrawal requests should come from backend API
+    return [];
   }
 
-  // Get wallet data (mock data for now, but using real users)
+  // Get wallet data (real data only - no mock generation)
   getWalletData(): AdminWalletData[] {
     const allUsers = this.getAllUsers();
-    return allUsers.map(user => ({
-      userId: user.id,
-      username: user.username || user.email,
-      email: user.email,
-      fundingWallet: {
-        USDT: user.walletBalance,
-        BTC: user.walletBalance * 0.001,
-        ETH: user.walletBalance * 0.01
-      },
-      tradingWallet: {
-        USDT: user.tradingBalance || user.walletBalance * 0.8,
-        BTC: (user.tradingBalance || user.walletBalance * 0.8) * 0.001,
-        ETH: (user.tradingBalance || user.walletBalance * 0.8) * 0.01
-      },
-      lastUpdated: new Date().toISOString()
-    }));
+    // Only return real wallet data for users who actually have wallets
+    return allUsers
+      .filter(user => user.walletBalance > 0 || user.tradingBalance > 0)
+      .map(user => ({
+        userId: user.id,
+        username: user.username || user.email,
+        email: user.email,
+        fundingWallet: {
+          USDT: user.walletBalance || 0,
+          BTC: 0, // Only show if user actually has BTC
+          ETH: 0  // Only show if user actually has ETH
+        },
+        tradingWallet: {
+          USDT: user.tradingBalance || 0,
+          BTC: 0, // Only show if user actually has BTC
+          ETH: 0  // Only show if user actually has ETH
+        },
+        lastUpdated: new Date().toISOString()
+      }));
   }
 
-  // Get trade summaries (mock data for now, but using real users)
+  // Get trade summaries (real data only - no mock generation)
   getTradeSummaries(): AdminTradeSummary[] {
     const allUsers = this.getAllUsers();
-    return allUsers.map(user => ({
-      userId: user.id,
-      username: user.username || user.email,
-      email: user.email,
-      activeTrades: {
-        spot: Math.floor(Math.random() * 5),
-        futures: Math.floor(Math.random() * 3),
-        options: Math.floor(Math.random() * 2),
-        binary: Math.floor(Math.random() * 4),
-        quant: Math.floor(Math.random() * 2),
-        bots: Math.floor(Math.random() * 3),
-        staking: Math.floor(Math.random() * 2)
-      },
-      totalActive: Math.floor(Math.random() * 10) + 1,
-      lastActivity: new Date(Date.now() - Math.random() * 86400000).toISOString()
-    }));
+    // Only return trade summaries for users who actually have trades
+    return allUsers
+      .filter(user => user.totalTrades > 0)
+      .map(user => ({
+        userId: user.id,
+        username: user.username || user.email,
+        email: user.email,
+        activeTrades: {
+          spot: 0, // Only show real active trades
+          futures: 0,
+          options: 0,
+          binary: 0,
+          quant: 0,
+          bots: 0,
+          staking: 0
+        },
+        totalActive: 0, // Only show real active trades
+        lastActivity: user.lastLogin || user.createdAt
+      }));
   }
 
   // Get user by ID

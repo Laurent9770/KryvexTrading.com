@@ -18,72 +18,12 @@ const wss = new WebSocketServer({ server });
 const clients = new Map();
 const rooms = new Map();
 
-// Mock data storage
-const mockData = {
-  users: [
-    {
-      id: 'admin-001',
-      email: 'admin@kryvex.com',
-      full_name: 'Admin User',
-      is_admin: true,
-      is_verified: true,
-      kyc_status: 'approved'
-    },
-    {
-      id: 'trader-001',
-      email: 'trader1@example.com',
-      full_name: 'John Trader',
-      is_admin: false,
-      is_verified: true,
-      kyc_status: 'approved'
-    }
-  ],
-  trades: [
-    {
-      id: 'trade-001',
-      user_id: 'trader-001',
-      trading_pair: 'BTC/USDT',
-      trade_type: 'buy',
-      order_type: 'market',
-      amount: 0.1,
-      price: 45000,
-      total_value: 4500,
-      status: 'completed',
-      outcome: 'win',
-      profit_loss: 250,
-      created_at: new Date().toISOString()
-    }
-  ],
-  wallets: [
-    {
-      id: 'wallet-001',
-      user_id: 'trader-001',
-      currency: 'USDT',
-      balance: 25000,
-      locked_balance: 0
-    },
-    {
-      id: 'wallet-002',
-      user_id: 'trader-001',
-      currency: 'BTC',
-      balance: 1.2,
-      locked_balance: 0
-    }
-  ],
-  kycApplications: [
-    {
-      id: '1',
-      user_id: 'user-001',
-      full_name: 'John Trader',
-      email: 'trader1@example.com',
-      phone: '+1234567891',
-      document_type: 'Passport',
-      document_number: 'CA123456789',
-      verification_level: 'basic',
-      status: 'pending',
-      submitted_at: '2024-01-15T10:30:00Z'
-    }
-  ]
+// Initialize with empty state - no mock data
+const userData = {
+  users: [], // Empty array - no mock users
+  trades: [], // Empty array - no mock trades
+  wallets: [], // Empty array - no mock wallets
+  kycApplications: [] // Empty array - no mock KYC applications
 };
 
 // WebSocket connection handler
@@ -99,39 +39,48 @@ wss.on('connection', (ws, req) => {
   
   // Send initial connection confirmation
   ws.send(JSON.stringify({
-    type: 'connection',
+    type: 'connection_established',
     clientId: clientId,
-    message: 'Connected to Kryvex Trading Platform'
+    timestamp: new Date().toISOString()
   }));
-  
+
   // Handle incoming messages
-  ws.on('message', (message) => {
+  ws.on('message', (data) => {
     try {
-      const data = JSON.parse(message);
-      handleMessage(ws, data);
+      const message = JSON.parse(data);
+      handleMessage(ws, message);
     } catch (error) {
       console.error('Error parsing message:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid message format'
+      }));
     }
   });
-  
+
   // Handle client disconnect
   ws.on('close', () => {
     console.log('Client disconnected:', clientId);
     clients.delete(clientId);
     
-    // Remove from rooms
-    for (const [roomId, room] of rooms.entries()) {
-      if (room.clients.has(clientId)) {
-        room.clients.delete(clientId);
+    // Remove from all rooms
+    rooms.forEach((room, roomId) => {
+      if (room.clients.has(ws)) {
+        room.clients.delete(ws);
         if (room.clients.size === 0) {
           rooms.delete(roomId);
         }
       }
-    }
+    });
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+    clients.delete(clientId);
   });
 });
 
-// Handle different message types
 function handleMessage(ws, data) {
   switch (data.type) {
     case 'auth':
@@ -159,36 +108,51 @@ function handleMessage(ws, data) {
       handleChatMessage(ws, data);
       break;
     default:
-      console.log('Unknown message type:', data.type);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Unknown message type'
+      }));
   }
 }
 
-// Authentication handler
 function handleAuth(ws, data) {
-  const { email, password } = data;
+  const { email, password, isAdmin } = data;
   
-  // Mock authentication
+  // For now, use simple authentication
+  // In production, this should validate against the database
   let user = null;
-  if (email === 'admin@kryvex.com' && password === 'admin123') {
-    user = mockData.users.find(u => u.email === email);
-    ws.isAdmin = true;
-  } else if (email === 'trader1@example.com' && password === 'trader123') {
-    user = mockData.users.find(u => u.email === email);
-    ws.isAdmin = false;
-  }
   
+  if (isAdmin) {
+    // Admin authentication - check against database or environment
+    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+      user = {
+        id: 'admin-001',
+        email: email,
+        full_name: 'Admin User',
+        is_admin: true,
+        is_verified: true,
+        kyc_status: 'approved'
+      };
+    }
+  } else {
+    // User authentication - should check against database
+    // For now, return empty user data
+    user = null;
+  }
+
   if (user) {
     ws.userId = user.id;
+    ws.isAdmin = user.is_admin;
+    
     ws.send(JSON.stringify({
       type: 'auth_success',
       user: user
     }));
     
-    // Join user's personal room
-    handleJoinRoom(ws, { room: `user_${user.id}` });
-    
-    // Send initial data
-    sendUserData(ws, user.id);
+    // Send user data if available
+    if (!user.is_admin) {
+      sendUserData(ws, user.id);
+    }
   } else {
     ws.send(JSON.stringify({
       type: 'auth_error',
@@ -197,141 +161,156 @@ function handleAuth(ws, data) {
   }
 }
 
-// Join room handler
 function handleJoinRoom(ws, data) {
-  const { room } = data;
+  const { roomId } = data;
   
-  if (!rooms.has(room)) {
-    rooms.set(room, { clients: new Map() });
+  if (!rooms.has(roomId)) {
+    rooms.set(roomId, {
+      id: roomId,
+      clients: new Set()
+    });
   }
   
-  const roomObj = rooms.get(room);
-  roomObj.clients.set(ws.clientId, ws);
+  const room = rooms.get(roomId);
+  room.clients.add(ws);
   
   ws.send(JSON.stringify({
     type: 'room_joined',
-    room: room
+    roomId: roomId
   }));
-  
-  console.log(`Client ${ws.clientId} joined room: ${room}`);
 }
 
-// Leave room handler
 function handleLeaveRoom(ws, data) {
-  const { room } = data;
+  const { roomId } = data;
+  const room = rooms.get(roomId);
   
-  if (rooms.has(room)) {
-    const roomObj = rooms.get(room);
-    roomObj.clients.delete(ws.clientId);
-    
-    if (roomObj.clients.size === 0) {
-      rooms.delete(room);
+  if (room && room.clients.has(ws)) {
+    room.clients.delete(ws);
+    if (room.clients.size === 0) {
+      rooms.delete(roomId);
     }
   }
   
   ws.send(JSON.stringify({
     type: 'room_left',
-    room: room
+    roomId: roomId
   }));
 }
 
-// Trade handler
 function handleTrade(ws, data) {
-  const { trade } = data;
+  const { userId, tradingPair, tradeType, orderType, amount, price } = data;
   
-  // Add trade to mock data
+  // Create new trade with real data
   const newTrade = {
     id: `trade-${Date.now()}`,
-    ...trade,
+    user_id: userId,
+    trading_pair: tradingPair,
+    trade_type: tradeType,
+    order_type: orderType,
+    amount: amount,
+    price: price,
+    total_value: amount * price,
+    status: 'pending',
     created_at: new Date().toISOString()
   };
   
-  mockData.trades.push(newTrade);
+  // Add to user data (empty array for new users)
+  userData.trades.push(newTrade);
   
-  // Broadcast to all clients
+  // Broadcast trade to all clients
   broadcastToAll({
-    type: 'trade_created',
+    type: 'new_trade',
     trade: newTrade
   });
   
   // Update user's wallet
-  updateWallet(ws.userId, trade);
+  updateWallet(userId, newTrade);
 }
 
-// Admin action handler
 function handleAdminAction(ws, data) {
   if (!ws.isAdmin) {
     ws.send(JSON.stringify({
       type: 'error',
-      message: 'Unauthorized admin action'
+      message: 'Admin privileges required'
     }));
     return;
   }
   
   const { action, targetUserId, details } = data;
   
-  // Log admin action
-  console.log(`Admin action: ${action} by ${ws.userId} on ${targetUserId}`);
+  // Handle admin actions
+  switch (action) {
+    case 'fund_user':
+      // Update user wallet
+      const wallet = userData.wallets.find(w => w.user_id === targetUserId && w.currency === 'USDT');
+      if (wallet) {
+        wallet.balance += details.amount;
+      }
+      break;
+      
+    case 'approve_kyc':
+      // Update KYC status
+      const application = userData.kycApplications.find(app => app.id === details.applicationId);
+      if (application) {
+        application.status = 'approved';
+      }
+      break;
+  }
   
   // Broadcast admin action
   broadcastToAdmins({
     type: 'admin_action',
     action: action,
-    adminId: ws.userId,
     targetUserId: targetUserId,
-    details: details,
-    timestamp: new Date().toISOString()
+    details: details
   });
 }
 
-// KYC review handler
 function handleKYCReview(ws, data) {
   if (!ws.isAdmin) {
     ws.send(JSON.stringify({
       type: 'error',
-      message: 'Unauthorized KYC review'
+      message: 'Admin privileges required'
     }));
     return;
   }
   
-  const { applicationId, status, verificationLevel, notes } = data;
+  const { applicationId, status, reason } = data;
   
-  // Update KYC application
-  const application = mockData.kycApplications.find(app => app.id === applicationId);
+  // Update KYC application status
+  const application = userData.kycApplications.find(app => app.id === applicationId);
   if (application) {
     application.status = status;
-    application.verification_level = verificationLevel;
     application.reviewed_at = new Date().toISOString();
-    application.reviewed_by = ws.userId;
-    application.kyc_notes = notes;
+    application.review_reason = reason;
   }
   
   // Broadcast KYC update
   broadcastToAll({
     type: 'kyc_updated',
-    application: application
+    applicationId: applicationId,
+    status: status,
+    reason: reason
   });
 }
 
-// Wallet update handler
 function handleWalletUpdate(ws, data) {
   const { userId, currency, amount, type } = data;
   
   // Find or create wallet
-  let wallet = mockData.wallets.find(w => w.user_id === userId && w.currency === currency);
-  
+  let wallet = userData.wallets.find(w => w.user_id === userId && w.currency === currency);
   if (!wallet) {
     wallet = {
-      id: `wallet-${Date.now()}`,
+      id: `wallet-${userId}-${currency}`,
       user_id: userId,
       currency: currency,
       balance: 0,
       locked_balance: 0
     };
-    mockData.wallets.push(wallet);
+    userData.wallets.push(wallet);
   }
   
-  // Update balance
+  // Update balance based on type
   if (type === 'add') {
     wallet.balance += amount;
   } else if (type === 'subtract') {
@@ -345,28 +324,28 @@ function handleWalletUpdate(ws, data) {
   });
 }
 
-// Chat message handler
 function handleChatMessage(ws, data) {
-  const { message, room } = data;
+  const { roomId, message, userId } = data;
   
   const chatMessage = {
     id: `msg-${Date.now()}`,
-    userId: ws.userId,
+    roomId: roomId,
+    userId: userId,
     message: message,
     timestamp: new Date().toISOString()
   };
   
   // Broadcast to room
-  broadcastToRoom(room, {
+  broadcastToRoom(roomId, {
     type: 'chat_message',
     message: chatMessage
   });
 }
 
-// Helper functions
 function sendUserData(ws, userId) {
-  const userTrades = mockData.trades.filter(t => t.user_id === userId);
-  const userWallets = mockData.wallets.filter(w => w.user_id === userId);
+  // Get user-specific data (empty for new users)
+  const userTrades = userData.trades.filter(t => t.user_id === userId);
+  const userWallets = userData.wallets.filter(w => w.user_id === userId);
   
   ws.send(JSON.stringify({
     type: 'user_data',
@@ -376,8 +355,8 @@ function sendUserData(ws, userId) {
 }
 
 function updateWallet(userId, trade) {
-  // Mock wallet update logic
-  const wallet = mockData.wallets.find(w => w.user_id === userId && w.currency === 'USDT');
+  // Update wallet based on trade
+  const wallet = userData.wallets.find(w => w.user_id === userId && w.currency === 'USDT');
   if (wallet) {
     wallet.balance -= trade.total_value;
   }
@@ -422,21 +401,21 @@ function broadcastToRoom(roomId, message) {
   }
 }
 
-// REST API endpoints
+// REST API endpoints - return empty arrays for new users
 app.get('/api/users', (req, res) => {
-  res.json(mockData.users);
+  res.json(userData.users); // Empty array
 });
 
 app.get('/api/trades', (req, res) => {
-  res.json(mockData.trades);
+  res.json(userData.trades); // Empty array
 });
 
 app.get('/api/wallets', (req, res) => {
-  res.json(mockData.wallets);
+  res.json(userData.wallets); // Empty array
 });
 
 app.get('/api/kyc-applications', (req, res) => {
-  res.json(mockData.kycApplications);
+  res.json(userData.kycApplications); // Empty array
 });
 
 app.post('/api/trades', (req, res) => {
@@ -445,13 +424,13 @@ app.post('/api/trades', (req, res) => {
     ...req.body,
     created_at: new Date().toISOString()
   };
-  mockData.trades.push(trade);
+  userData.trades.push(trade);
   res.json(trade);
 });
 
 app.put('/api/kyc-applications/:id', (req, res) => {
   const { id } = req.params;
-  const application = mockData.kycApplications.find(app => app.id === id);
+  const application = userData.kycApplications.find(app => app.id === id);
   if (application) {
     Object.assign(application, req.body);
     res.json(application);
@@ -465,4 +444,5 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`WebSocket server running on port ${PORT}`);
   console.log(`HTTP API available at http://localhost:${PORT}`);
+  console.log('✅ WebSocket server initialized with clean state - no mock data');
 }); 
