@@ -28,7 +28,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify password
-    const isValidPassword = await authService.verifyPassword(password, user.password);
+    const isValidPassword = await authService.verifyPassword(password, user.password_hash);
     
     if (!isValidPassword) {
       return res.status(401).json({

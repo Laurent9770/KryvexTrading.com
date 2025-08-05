@@ -295,17 +295,31 @@ class AuthService {
 
   // Get user by email
   async getUserByEmail(email) {
-    const result = await query(
-      `SELECT id, email, first_name, last_name, phone, country, is_admin, is_verified, is_active, created_at
-       FROM users WHERE email = $1`,
-      [email]
-    );
-
-    if (result.rows.length === 0) {
-      return null;
+    try {
+      const result = await query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      throw error;
     }
+  }
 
-    return result.rows[0];
+  // Verify password
+  async verifyPassword(password, passwordHash) {
+    try {
+      return await this.comparePassword(password, passwordHash);
+    } catch (error) {
+      console.error('Error verifying password:', error);
+      return false;
+    }
   }
 
   // Update user profile

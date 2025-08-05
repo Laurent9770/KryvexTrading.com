@@ -251,6 +251,42 @@ CREATE TABLE system_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Admin requests table for user requests to admin
+CREATE TABLE IF NOT EXISTS admin_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    request_type VARCHAR(50) NOT NULL CHECK (request_type IN ('registration', 'wallet_change', 'account_modification', 'kyc_approval', 'deposit_approval', 'withdrawal_approval')),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    request_data JSONB,
+    admin_response TEXT,
+    admin_id UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP
+);
+
+-- Index for faster queries
+CREATE INDEX IF NOT EXISTS idx_admin_requests_user_id ON admin_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_admin_requests_status ON admin_requests(status);
+CREATE INDEX IF NOT EXISTS idx_admin_requests_type ON admin_requests(request_type);
+CREATE INDEX IF NOT EXISTS idx_admin_requests_created_at ON admin_requests(created_at);
+
+-- Trigger to update updated_at
+CREATE OR REPLACE FUNCTION update_admin_requests_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_admin_requests_updated_at
+    BEFORE UPDATE ON admin_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION update_admin_requests_updated_at();
+
 -- Create indexes for better performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_admin ON users(is_admin);

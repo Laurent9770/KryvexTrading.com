@@ -13,23 +13,30 @@ class WebSocketService {
   initialize(server) {
     this.wss = new WebSocket.Server({ 
       server,
-      path: '/ws'
+      path: '/ws',
+      clientTracking: true
     });
 
     this.wss.on('connection', (ws, req) => {
       this.handleConnection(ws, req);
     });
 
-    console.log('WebSocket server initialized on port 3002');
+    this.wss.on('error', (error) => {
+      console.error('WebSocket server error:', error);
+    });
+
+    console.log('WebSocket server initialized on /ws path');
   }
 
   // Handle new WebSocket connection
   async handleConnection(ws, req) {
     try {
       // Extract token from query parameters or headers
-      const token = req.url.split('token=')[1] || req.headers.authorization?.replace('Bearer ', '');
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const token = url.searchParams.get('token') || req.headers.authorization?.replace('Bearer ', '');
       
       if (!token) {
+        console.log('WebSocket connection rejected: No token provided');
         ws.close(1008, 'Authentication required');
         return;
       }
@@ -39,6 +46,7 @@ class WebSocketService {
       const user = await authService.getUserById(decoded.id);
       
       if (!user || !user.is_active) {
+        console.log('WebSocket connection rejected: Invalid or inactive user');
         ws.close(1008, 'Invalid or inactive user');
         return;
       }
@@ -67,21 +75,26 @@ class WebSocketService {
 
       // Handle client messages
       ws.on('message', (data) => {
-        this.handleMessage(user.id, data);
+        try {
+          this.handleMessage(user.id, data);
+        } catch (error) {
+          console.error('Error handling WebSocket message:', error);
+        }
       });
 
       // Handle client disconnect
-      ws.on('close', () => {
+      ws.on('close', (code, reason) => {
+        console.log(`WebSocket client disconnected: ${user.email} (${code}: ${reason})`);
         this.handleDisconnect(user.id);
       });
 
       // Handle errors
       ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
+        console.error('WebSocket client error:', error);
         this.handleDisconnect(user.id);
       });
 
-      console.log(`Client connected: ${user.email} (${user.is_admin ? 'Admin' : 'User'})`);
+      console.log(`✅ WebSocket client connected: ${user.email} (${user.is_admin ? 'Admin' : 'User'})`);
 
     } catch (error) {
       console.error('WebSocket authentication error:', error);

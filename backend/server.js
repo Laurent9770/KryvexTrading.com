@@ -22,6 +22,7 @@ const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
 const marketRoutes = require('./routes/market');
 const stripeRoutes = require('./routes/stripe');
+const requestRoutes = require('./routes/requests');
 // const binanceRoutes = require('./routes/binance');
 
 // Import WebSocket service
@@ -102,6 +103,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/requests', requestRoutes);
 // app.use('/api/binance', binanceRoutes);
 
 // 404 handler
@@ -141,7 +143,6 @@ websocketService.initialize(server);
 
 // Start server
 const PORT = process.env.PORT || 3001;
-const WS_PORT = process.env.WS_PORT || 3002;
 
 const startServer = async () => {
   try {
@@ -158,8 +159,9 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🔌 WebSocket server ready on port ${WS_PORT}`);
+      console.log(`🔌 WebSocket server ready on port ${PORT}/ws`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 Production URL: https://kryvextrading-com.onrender.com`);
       
       // Start external API service cleanup
       externalApiService.startCleanup();
