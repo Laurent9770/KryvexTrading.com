@@ -13,7 +13,7 @@
     "start": "node server.js",
     "deploy:vercel": "vercel --prod",
     "deploy:netlify": "netlify deploy --prod --dir=dist",
-    "postinstall": "echo 'Installed esbuild version:' && npm list esbuild"
+    "postinstall": "echo 'Build environment ready'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
