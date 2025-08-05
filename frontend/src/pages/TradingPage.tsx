@@ -78,6 +78,12 @@ const TradingPage = () => {
   // Futures Data - Use real crypto prices instead of mock data
   const [futuresPairs, setFuturesPairs] = useState<any[]>([]);
 
+  // Dynamic futures order book based on selected pair
+  const [futuresOrderBook, setFuturesOrderBook] = useState({
+    asks: [],
+    bids: []
+  });
+
   // Load real futures data from crypto price service
   useEffect(() => {
     const loadFuturesData = () => {
@@ -91,6 +97,37 @@ const TradingPage = () => {
         funding: `${(Math.random() * 0.02 - 0.01).toFixed(4)}%` // Simulated funding rate
       }));
       setFuturesPairs(pairs);
+      
+      // Generate dynamic order book for selected pair
+      const selectedPairData = pairs.find(p => p.symbol === selectedPair) || pairs[0];
+      if (selectedPairData) {
+        const basePrice = selectedPairData.price;
+        const spread = basePrice * 0.001; // 0.1% spread
+        
+        const newBids = Array.from({ length: 5 }, (_, i) => {
+          const price = basePrice - (spread * (i + 1));
+          const amount = (Math.random() * 0.5 + 0.05).toFixed(5);
+          const total = (parseFloat(amount) * price).toFixed(2);
+          return {
+            price: price,
+            amount: parseFloat(amount),
+            total: parseFloat(total)
+          };
+        });
+
+        const newAsks = Array.from({ length: 5 }, (_, i) => {
+          const price = basePrice + (spread * (i + 1));
+          const amount = (Math.random() * 0.5 + 0.05).toFixed(5);
+          const total = (parseFloat(amount) * price).toFixed(2);
+          return {
+            price: price,
+            amount: parseFloat(amount),
+            total: parseFloat(total)
+          };
+        });
+
+        setFuturesOrderBook({ bids: newBids, asks: newAsks });
+      }
     };
 
     loadFuturesData();
@@ -101,7 +138,7 @@ const TradingPage = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [selectedPair]);
 
   // Real-time order book data
   const [orderBook, setOrderBook] = useState({
