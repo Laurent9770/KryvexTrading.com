@@ -127,10 +127,40 @@ interface SystemStats {
 }
 
 class AdminService {
+  // Admin Authentication
+  async login(email: string, password: string): Promise<any> {
+    try {
+      const response: any = await apiService.post('/api/admin/login', { email, password });
+      
+      if (response.success && response.data?.token) {
+        // Store the admin token
+        localStorage.setItem('adminToken', response.data.token);
+        localStorage.setItem('authToken', response.data.token); // Also store as regular token
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Admin login failed:', error);
+      throw error;
+    }
+  }
+
+  // Check if admin is logged in
+  isLoggedIn(): boolean {
+    const token = localStorage.getItem('adminToken') || localStorage.getItem('authToken');
+    return !!token;
+  }
+
+  // Logout admin
+  logout(): void {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('authToken');
+  }
+
   // Users Management
   async getAllUsers(): Promise<AdminUser[]> {
     try {
-      const response = await apiService.get('/api/admin/users');
+      const response: any = await apiService.get('/api/admin/users');
       return response.data || [];
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -140,7 +170,7 @@ class AdminService {
 
   async getUserDetails(userId: string): Promise<AdminUser> {
     try {
-      const response = await apiService.get(`/api/admin/users/${userId}`);
+      const response: any = await apiService.get(`/api/admin/users/${userId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -179,7 +209,7 @@ class AdminService {
   // KYC Management
   async getAllKYCSubmissions(): Promise<KYCSubmission[]> {
     try {
-      const response = await apiService.get('/api/admin/kyc');
+      const response: any = await apiService.get('/api/admin/kyc');
       return response.data || [];
     } catch (error) {
       console.error('Error fetching KYC submissions:', error);
@@ -189,7 +219,7 @@ class AdminService {
 
   async approveKYC(submissionId: string, reason?: string): Promise<any> {
     try {
-      const response = await apiService.post(`/api/admin/kyc/${submissionId}/approve`, {
+      const response: any = await apiService.post(`/api/admin/kyc/${submissionId}/approve`, {
         reason
       });
       return response;
@@ -201,7 +231,7 @@ class AdminService {
 
   async rejectKYC(submissionId: string, reason: string): Promise<any> {
     try {
-      const response = await apiService.post(`/api/admin/kyc/${submissionId}/reject`, {
+      const response: any = await apiService.post(`/api/admin/kyc/${submissionId}/reject`, {
         reason
       });
       return response;
@@ -214,7 +244,7 @@ class AdminService {
   // Deposits Management
   async getAllDeposits(): Promise<Deposit[]> {
     try {
-      const response = await apiService.get('/api/admin/deposits');
+      const response: any = await apiService.get('/api/admin/deposits');
       return response.data || [];
     } catch (error) {
       console.error('Error fetching deposits:', error);

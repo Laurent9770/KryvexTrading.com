@@ -3,8 +3,71 @@ const router = express.Router();
 const { authenticateAdmin } = require('../middleware/auth');
 const adminService = require('../services/adminService');
 const tradingService = require('../services/tradingService');
+const authService = require('../services/authService');
 
-// Apply admin authentication to all routes
+// Admin login endpoint (no authentication required)
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Check if user exists and is admin
+    const user = await authService.getUserByEmail(email);
+    
+    if (!user || !user.is_admin) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials or insufficient privileges'
+      });
+    }
+
+    // Verify password
+    const isValidPassword = await authService.verifyPassword(password, user.password);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Generate JWT token
+    const token = authService.generateToken({
+      id: user.id,
+      email: user.email,
+      admin: true
+    });
+
+    res.json({
+      success: true,
+      message: 'Admin login successful',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          isAdmin: true
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Apply admin authentication to all other routes
 router.use(authenticateAdmin);
 
 // ==================== USERS TAB ====================

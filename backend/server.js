@@ -51,10 +51,15 @@ app.use(compression());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+  origin: [
+    process.env.CORS_ORIGIN || 'http://localhost:8080',
+    'https://kryvex-frontend.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept']
 }));
 
 // Body parsing middleware
