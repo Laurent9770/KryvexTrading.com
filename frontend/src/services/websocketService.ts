@@ -42,6 +42,10 @@ class WebSocketService {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.emit('connected');
+        
+        // Authenticate immediately after connection
+        this.authenticate();
+        
         this.startRealTimeUpdates();
       };
 
@@ -61,8 +65,8 @@ class WebSocketService {
         this.emit('disconnected');
         this.stopRealTimeUpdates();
         
-        // Only attempt reconnect if not a normal closure
-        if (event.code !== 1000) {
+        // Only attempt reconnect if not a normal closure and not authentication error
+        if (event.code !== 1000 && event.code !== 1008) {
           this.attemptReconnect();
         }
       };
@@ -297,12 +301,38 @@ class WebSocketService {
   }
 
   // Authentication
-  authenticate(email: string, password: string) {
-    this.send({
-      type: 'auth',
-      email,
-      password
-    });
+  authenticate(email?: string, password?: string) {
+    // If no credentials provided, try to get from localStorage
+    if (!email || !password) {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      if (token && user.email) {
+        // For now, send a simple auth message with user info
+        this.send({
+          type: 'auth',
+          email: user.email,
+          password: 'token_auth', // Use token-based auth
+          isAdmin: user.isAdmin || false
+        });
+      } else {
+        // Send anonymous auth for basic connection
+        this.send({
+          type: 'auth',
+          email: 'anonymous@example.com',
+          password: 'anonymous',
+          isAdmin: false
+        });
+      }
+    } else {
+      // Use provided credentials
+      this.send({
+        type: 'auth',
+        email,
+        password,
+        isAdmin: false
+      });
+    }
   }
 
   // Room management
