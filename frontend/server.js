@@ -11,6 +11,7 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Handle all routes by serving index.html (SPA routing)
+// This ensures all client-side routes work properly
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
@@ -22,4 +23,5 @@ app.listen(PORT, () => {
   console.log(`📊 Admin dashboard: http://localhost:${PORT}/admin`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📁 Serving from: ${path.join(__dirname, 'dist')}`);
+  console.log(`✅ SPA routing enabled - all routes will serve index.html`);
 }); 
