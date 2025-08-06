@@ -47,7 +47,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import websocketService from '@/services/websocketService';
 import userPersistenceService, { UserData } from '@/services/userPersistenceService';
 import userActivityService, { UserActivity as ActivityData, AdminNotification } from '@/services/userActivityService';
-import adminService from '@/services/adminService';
+import supabaseAdminService from '@/services/supabaseAdminService';
 
 interface User {
   id: string;
@@ -907,14 +907,14 @@ export default function AdminUserManagement() {
       // Try to use admin service first
       try {
         if (walletAdjustment.type === 'add') {
-          await adminService.addFundsToUser(
+          await supabaseAdminService.addFundsToUser(
             selectedUser.id,
             'USDT',
             walletAdjustment.amount,
             walletAdjustment.reason
           );
         } else {
-          await adminService.removeFundsFromUser(
+          await supabaseAdminService.removeFundsFromUser(
             selectedUser.id,
             'USDT',
             walletAdjustment.amount,
