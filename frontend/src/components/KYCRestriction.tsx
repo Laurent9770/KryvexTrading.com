@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import kycService from '@/services/kycService';
+import supabaseKYCService from '@/services/supabaseKYCService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ const KYCRestriction = ({
     return <div>Please log in to access this feature.</div>;
   }
 
-  const kycUser = kycService.getUser(user.id);
+      const kycUser = supabaseKYCService.getUser(user.id);
   if (!kycUser) {
     return <div>Loading KYC status...</div>;
   }

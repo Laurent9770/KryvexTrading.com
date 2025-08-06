@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import kycService from '@/services/kycService';
+import supabaseKYCService from '@/services/supabaseKYCService';
 import { 
   Shield, 
   AlertCircle, 
@@ -38,7 +38,7 @@ const KYCSubmissionForm: React.FC<KYCSubmissionFormProps> = ({ onSubmissionCompl
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const countries = kycService.getCountries();
+  const countries = supabaseKYCService.getCountries();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,16 +98,18 @@ const KYCSubmissionForm: React.FC<KYCSubmissionFormProps> = ({ onSubmissionCompl
         proofOfAddress: '/placeholder-documents/address-proof.pdf'
       };
 
-      const submission = kycService.createKYCSubmission(
+      const submission = await supabaseKYCService.createKYCSubmission(
         user.id,
-        user.username || user.email.split('@')[0],
-        user.email,
-        formData.fullName.trim(),
-        formData.country,
-        formData.dateOfBirth,
-        formData.documentType,
-        documents,
-        formData.remarks.trim() || undefined
+        2, // KYC level
+        {
+          fullName: formData.fullName.trim(),
+          email: user.email,
+          country: formData.country,
+          dateOfBirth: formData.dateOfBirth,
+          documentType: formData.documentType,
+          documents: documents,
+          remarks: formData.remarks.trim() || undefined
+        }
       );
 
       toast({

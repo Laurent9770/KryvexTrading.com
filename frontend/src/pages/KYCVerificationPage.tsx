@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import kycService, { KYCStatus } from '@/services/kycService';
+import supabaseKYCService, { KYCStatus } from '@/services/supabaseKYCService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,14 +97,14 @@ const KYCVerificationPage = () => {
     };
 
     // Listen for KYC updates
-    kycService.on('user_updated', handleUserUpdated);
-    kycService.on('level_verified', handleLevelVerified);
-    kycService.on('submission_reviewed', handleSubmissionReviewed);
+    supabaseKYCService.on('user_updated', handleUserUpdated);
+    supabaseKYCService.on('level_verified', handleLevelVerified);
+    supabaseKYCService.on('submission_reviewed', handleSubmissionReviewed);
 
     return () => {
-      kycService.off('user_updated', handleUserUpdated);
-      kycService.off('level_verified', handleLevelVerified);
-      kycService.off('submission_reviewed', handleSubmissionReviewed);
+              supabaseKYCService.off('user_updated', handleUserUpdated);
+        supabaseKYCService.off('level_verified', handleLevelVerified);
+        supabaseKYCService.off('submission_reviewed', handleSubmissionReviewed);
     };
   }, [user?.id, isAuthenticated, navigate, toast]);
 

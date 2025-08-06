@@ -352,16 +352,16 @@ const TradingPage = () => {
     setIsExecuting(true);
     try {
       const tradeRequest: TradeRequest = {
-        type: 'spot',
-        action: tradeType,
+        type: 'market',
+        side: tradeType,
         symbol: selectedPair.split('/')[0],
-        amount: tradeAmount,
+        quantity: tradeAmount,
         price: orderPrice,
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.placeSpotTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "spot" as const,
           action: tradeType.toUpperCase(),
@@ -369,7 +369,7 @@ const TradingPage = () => {
           symbol: selectedPair,
           amount: `${amount} ${selectedPair.split('/')[0]}`,
           price: `$${orderPrice.toLocaleString()}`,
-          pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
+          pnl: '0', // Will be calculated when trade completes
           status: "completed" as const,
           time: "Just now",
           icon: tradeType === 'buy' ? "📈" : "📉"
@@ -380,7 +380,7 @@ const TradingPage = () => {
           type: tradeType,
           amount: amount,
           price: `$${orderPrice.toLocaleString()}`,
-          pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
+          pnl: '0', // Will be calculated when trade completes
           status: "completed"
         });
 
@@ -392,7 +392,7 @@ const TradingPage = () => {
         toast({
           variant: "destructive",
           title: "Order Failed",
-          description: result.message || "Unknown error occurred."
+          description: "Unknown error occurred."
         });
       }
     } catch (error) {

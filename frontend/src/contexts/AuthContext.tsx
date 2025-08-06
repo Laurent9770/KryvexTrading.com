@@ -3,7 +3,7 @@ import { ActivityItem } from '@/services/activityService';
 import activityService from '@/services/activityService';
 
 import { useToast } from '@/hooks/use-toast';
-import kycService from '../services/kycService';
+import supabaseKYCService from '../services/supabaseKYCService';
 import userSessionService from '../services/userSessionService';
 import supabaseAuthService, { AuthUser, LoginCredentials, RegisterData, ProfileUpdateData } from '@/services/supabaseAuthService';
 import supabaseTradingService from '@/services/supabaseTradingService';

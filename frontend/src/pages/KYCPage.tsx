@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import kycService, { KYCLevel1Data, KYCLevel2Data, KYCStatus } from '@/services/kycService';
+import supabaseKYCService, { KYCLevel1Data, KYCLevel2Data, KYCStatus } from '@/services/supabaseKYCService';
 
 const KYCPage = () => {
   const navigate = useNavigate();

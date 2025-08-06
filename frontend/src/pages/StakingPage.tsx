@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import supabaseTradingService from "@/services/supabaseTradingService";
-import stakingService, { StakingPool, StakingPosition, StakingStats } from "@/services/stakingService";
+import supabaseStakingService, { StakingPool, StakingPosition, StakingStats } from "@/services/supabaseStakingService";
 
 const StakingPage = () => {
   const navigate = useNavigate();
@@ -52,13 +52,13 @@ const StakingPage = () => {
   useEffect(() => {
     loadStakingData();
     // Start reward calculation
-    stakingService.startRewardCalculation();
+    supabaseStakingService.startRewardCalculation();
   }, []);
 
-  const loadStakingData = () => {
-    const pools = stakingService.getStakingPools();
-    const positions = stakingService.getStakingPositions();
-    const stats = stakingService.getStakingStats();
+  const loadStakingData = async () => {
+    const pools = await supabaseStakingService.getStakingPools();
+    const positions = await supabaseStakingService.getStakingPositions();
+    const stats = await supabaseStakingService.getStakingStats();
     
     setStakingPools(pools);
     setMyStakes(positions);
