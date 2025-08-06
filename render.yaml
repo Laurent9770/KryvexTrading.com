@@ -1,23 +1,8 @@
 services:
   - type: web
-    name: kryvex-frontend
-    env: node
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
-    envVars:
-      - key: VITE_API_URL
-        value: https://kryvextrading-com.onrender.com
-      - key: VITE_WS_URL
-        value: wss://kryvextrading-com.onrender.com
-      - key: NODE_ENV
-        value: production
-    healthCheckPath: /
-    autoDeploy: true
-
-  - type: web
     name: kryvextrading-com
     env: node
-    buildCommand: cd backend && npm install
+    buildCommand: cd backend && npm install && cd ../frontend && npm install && npm run build
     startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
@@ -25,10 +10,14 @@ services:
       - key: PORT
         value: 3001
       - key: CORS_ORIGIN
-        value: https://kryvex-frontend.onrender.com
+        value: https://kryvextrading-com.onrender.com
       - key: DATABASE_URL
         value: postgresql://postgres:LRlilbdBuMHFGRYCWJCCINPVqQQcTwhV@caboose.proxy.rlwy.net:24641/kryvex_trading
       - key: JWT_SECRET
         value: 25f0cc55a6a97243f0ff4c846a21160f24da042657ad648eeb92fd3fc13f10f1cb9ee11860d5b509b8954e53545a72aa9b943a3cd6480fb95079b97d2dab8535
+      - key: VITE_API_URL
+        value: https://kryvextrading-com.onrender.com
+      - key: VITE_WS_URL
+        value: wss://kryvextrading-com.onrender.com
     healthCheckPath: /api/health
     autoDeploy: true 

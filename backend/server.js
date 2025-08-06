@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const WebSocket = require('ws');
 const http = require('http');
+const path = require('path');
 require('dotenv').config();
 
 // Import database connection
@@ -111,13 +112,28 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/data-management', dataManagementRoutes);
 // app.use('/api/binance', binanceRoutes);
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Not found',
-    message: `Route ${req.originalUrl} not found`
+// Serve frontend files in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the frontend build
+  const frontendPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendPath));
+  
+  // Handle all other routes by serving index.html (SPA routing)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
-});
+  
+  console.log(`📁 Serving frontend from: ${frontendPath}`);
+  console.log(`✅ SPA routing enabled for production`);
+} else {
+  // Development: 404 handler for API routes only
+  app.use('*', (req, res) => {
+    res.status(404).json({
+      error: 'Not found',
+      message: `Route ${req.originalUrl} not found`
+    });
+  });
+}
 
 // Error handling middleware
 app.use((error, req, res, next) => {
