@@ -9,11 +9,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Initialize Supabase client with error handling
+let supabase;
+try {
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+  );
+  console.log('✅ Supabase client initialized');
+} catch (error) {
+  console.error('❌ Failed to initialize Supabase client:', error.message);
+  supabase = null;
+}
 
 // Security middleware
 app.use(helmet({
@@ -39,7 +46,12 @@ app.use(limiter);
 // Middleware
 app.use(compression());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'https://kryvex-frontend.onrender.com',
+  origin: [
+    process.env.CORS_ORIGIN || 'https://kryvex-frontend.onrender.com',
+    'https://kryvextrading-com.onrender.com',
+    'http://localhost:8080',
+    'http://localhost:3000'
+  ],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -51,8 +63,40 @@ app.get('/api/health', (req, res) => {
     status: 'healthy', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    supabase: process.env.SUPABASE_URL ? 'configured' : 'not configured'
+    supabase: process.env.SUPABASE_URL ? 'configured' : 'not configured',
+    cors_origin: process.env.CORS_ORIGIN,
+    port: PORT
   });
+});
+
+// Test Supabase connection
+app.get('/api/test-supabase', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ 
+      error: 'Supabase not configured',
+      message: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set'
+    });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
+
+    if (error) throw error;
+    
+    res.json({ 
+      status: 'connected',
+      message: 'Supabase connection successful',
+      data: data
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Supabase connection failed',
+      message: error.message
+    });
+  }
 });
 
 // Admin authentication middleware
@@ -77,6 +121,10 @@ const authenticateAdmin = async (req, res, next) => {
 
 // Admin API endpoints
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -91,6 +139,10 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
 });
 
 app.get('/api/admin/trades', authenticateAdmin, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
   try {
     const { data, error } = await supabase
       .from('trades')
@@ -105,6 +157,10 @@ app.get('/api/admin/trades', authenticateAdmin, async (req, res) => {
 });
 
 app.get('/api/admin/withdrawals', authenticateAdmin, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
   try {
     const { data, error } = await supabase
       .from('withdrawal_requests')
@@ -119,6 +175,10 @@ app.get('/api/admin/withdrawals', authenticateAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/withdrawals/:id/approve', authenticateAdmin, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
   try {
     const { id } = req.params;
     const { data, error } = await supabase
@@ -138,6 +198,10 @@ app.post('/api/admin/withdrawals/:id/approve', authenticateAdmin, async (req, re
 });
 
 app.post('/api/admin/withdrawals/:id/reject', authenticateAdmin, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
   try {
     const { id } = req.params;
     const { data, error } = await supabase
@@ -158,6 +222,10 @@ app.post('/api/admin/withdrawals/:id/reject', authenticateAdmin, async (req, res
 
 // Public API endpoints
 app.get('/api/stats', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
   try {
     // Get basic stats from Supabase
     const { data: users } = await supabase
@@ -188,7 +256,15 @@ app.get('*', (req, res) => {
   res.json({ 
     message: 'Kryvex Trading API',
     status: 'running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      test_supabase: '/api/test-supabase',
+      stats: '/api/stats',
+      admin_users: '/api/admin/users',
+      admin_trades: '/api/admin/trades',
+      admin_withdrawals: '/api/admin/withdrawals'
+    }
   });
 });
 
@@ -207,6 +283,7 @@ app.listen(PORT, () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔗 Supabase: ${process.env.SUPABASE_URL ? 'Configured' : 'Not configured'}`);
   console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN}`);
+  console.log(`🔑 Service Role Key: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set'}`);
 });
 
 module.exports = app; 
