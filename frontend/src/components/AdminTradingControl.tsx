@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import adminDataService, { AdminTradeSummary } from '@/services/adminDataService';
+import supabaseAdminDataService, { AdminTradeSummary } from '@/services/supabaseAdminDataService';
 import { 
   Users, 
   Search, 
@@ -79,8 +79,8 @@ const AdminTradingControl: React.FC = () => {
     try {
       console.log('=== DEBUG: AdminTradingControl loading users with active trades ===');
       
-      // Use adminDataService to get real trade summaries based on actual users
-      const tradeSummaries = adminDataService.getTradeSummaries();
+          // Use supabaseAdminDataService to get real trade summaries based on actual users
+    const tradeSummaries = await supabaseAdminDataService.getTradeSummaries();
       console.log('Users with active trades loaded:', tradeSummaries.length);
       console.log('Users with active trades data:', tradeSummaries);
       

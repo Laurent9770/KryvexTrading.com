@@ -19,6 +19,8 @@ export interface AdminUser {
 export interface AdminTradeSummary {
   userId: string;
   userEmail: string;
+  username: string;
+  email: string;
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
@@ -26,11 +28,17 @@ export interface AdminTradeSummary {
   totalProfit: number;
   averageTradeSize: number;
   lastTradeDate: string;
+  activeTrades: number;
+  totalActive: number;
+  lastActivity: string;
 }
 
 export interface AdminWalletData {
   userId: string;
   userEmail: string;
+  username: string;
+  fundingWallet: number;
+  tradingWallet: number;
   balance: number;
   totalDeposits: number;
   totalWithdrawals: number;
@@ -61,6 +69,10 @@ export interface AdminDepositRequest {
   requestedAt: string;
   processedAt?: string;
   remarks?: string;
+  network?: string;
+  transactionHash?: string;
+  notes?: string;
+  createdAt?: string;
 }
 
 export interface AdminKYCUser {

@@ -18,7 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import supabaseWalletService from '@/services/supabaseWalletService';
-import adminDataService, { AdminDepositRequest } from '@/services/adminDataService';
+import supabaseAdminDataService, { AdminDepositRequest } from '@/services/supabaseAdminDataService';
 
 const AdminDepositManager = () => {
   const { toast } = useToast();
@@ -36,8 +36,8 @@ const AdminDepositManager = () => {
       try {
         console.log('=== DEBUG: AdminDepositManager loading deposit requests ===');
         
-        // Use adminDataService to get real deposit requests based on actual users
-        const requests = adminDataService.getDepositRequests();
+            // Use supabaseAdminDataService to get real deposit requests based on actual users
+    const requests = await supabaseAdminDataService.getDepositRequests();
         console.log('Deposit requests loaded:', requests.length);
         console.log('Deposit requests data:', requests);
         

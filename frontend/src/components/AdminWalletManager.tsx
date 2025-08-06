@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import supabaseWalletService from '@/services/supabaseWalletService';
-import adminDataService, { AdminWalletData } from '@/services/adminDataService';
+import supabaseAdminDataService, { AdminWalletData } from '@/services/supabaseAdminDataService';
 import { 
   Plus, 
   Minus, 
@@ -100,8 +100,8 @@ const AdminWalletManager: React.FC = () => {
   const loadData = async () => {
     console.log('=== DEBUG: AdminWalletManager loading data ===');
     
-    // Use adminDataService to get real wallet data based on actual users
-    const wallets = adminDataService.getWalletData();
+    // Use supabaseAdminDataService to get real wallet data based on actual users
+    const wallets = await supabaseAdminDataService.getWalletData();
     console.log('User wallets loaded:', wallets.length);
     console.log('User wallets data:', wallets);
     

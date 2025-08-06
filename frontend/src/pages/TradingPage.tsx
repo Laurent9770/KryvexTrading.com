@@ -1314,9 +1314,9 @@ const TradingPage = () => {
         price: strikePrice,
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "options_trade",
           action: `${strategy.toUpperCase()} ${optionType.toUpperCase()}`,
@@ -2018,9 +2018,9 @@ const TradingPage = () => {
         payout: parseFloat(selectedAssetData?.payout?.replace('%', '') || '80')
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "binary_trade",
           action: `BINARY ${binaryPrediction.toUpperCase()}`,
@@ -2094,9 +2094,9 @@ const TradingPage = () => {
         direction: 'up' // Quant trading is generally bullish
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "trade",
           action: "ARBITRAGE PURCHASE",

@@ -75,7 +75,7 @@ const KYCPage = () => {
   }>({});
 
   // Get countries list
-  const countries = kycService.getCountries();
+      const countries = supabaseKYCService.getCountries();
 
   // Load KYC status on component mount
   useEffect(() => {
@@ -88,7 +88,7 @@ const KYCPage = () => {
     if (!user?.email) return;
     
     try {
-      const status = await kycService.getKYCStatus(user.email);
+      const status = await supabaseKYCService.getKYCStatus(user.email);
       setKycStatus(status);
     } catch (error) {
       console.error('Error loading KYC status:', error);
@@ -101,7 +101,7 @@ const KYCPage = () => {
     
     setIsSendingCode(true);
     try {
-      const result = await kycService.sendVerificationEmail(user.email);
+      const result = await supabaseKYCService.sendVerificationEmail(user.email);
       
       if (result.success) {
         toast({
