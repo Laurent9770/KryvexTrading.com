@@ -132,7 +132,7 @@ const KYCPage = () => {
     
     setIsVerifyingCode(true);
     try {
-      const result = await kycService.verifyEmail(user.email, emailVerificationCode);
+              const result = await supabaseKYCService.verifyEmail(user.email, emailVerificationCode);
       
       if (result.success) {
         toast({
@@ -210,7 +210,7 @@ const KYCPage = () => {
     
     setIsLoading(true);
     try {
-      const result = await kycService.submitIdentityVerification(identityData);
+              const result = await supabaseKYCService.submitIdentityVerification(identityData);
       
       if (result.success) {
         toast({

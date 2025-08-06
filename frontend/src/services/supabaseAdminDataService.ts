@@ -148,7 +148,7 @@ class SupabaseAdminDataService {
           amount,
           profit_loss,
           created_at,
-          profiles!inner(email)
+          profiles(email)
         `)
         .order('created_at', { ascending: false });
 
@@ -168,13 +168,18 @@ class SupabaseAdminDataService {
           userTradeMap.set(userId, {
             userId,
             userEmail,
+            username: userEmail.split('@')[0], // Use email prefix as username
+            email: userEmail,
             totalTrades: 0,
             winningTrades: 0,
             losingTrades: 0,
             totalVolume: 0,
             totalProfit: 0,
             averageTradeSize: 0,
-            lastTradeDate: trade.created_at
+            lastTradeDate: trade.created_at,
+            activeTrades: 0,
+            totalActive: 0,
+            lastActivity: trade.created_at
           });
         }
 
@@ -240,11 +245,14 @@ class SupabaseAdminDataService {
       return data.map(user => ({
         userId: user.id,
         userEmail: user.email,
+        username: user.email.split('@')[0], // Use email prefix as username
+        fundingWallet: 0, // Default value for now
+        tradingWallet: user.trading_balance || 0,
         balance: user.trading_balance || 0,
         totalDeposits: user.total_deposits || 0,
         totalWithdrawals: user.total_withdrawals || 0,
         pendingWithdrawals: pendingCounts.get(user.id) || 0,
-        lastTransaction: user.last_transaction || user.created_at
+        lastTransaction: user.last_transaction || new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error getting wallet data:', error);

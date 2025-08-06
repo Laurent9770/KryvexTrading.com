@@ -2219,9 +2219,9 @@ const TradingPage = () => {
         price: bot.price,
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         // Deduct from trading account
         updateTradingBalance('USDT', bot.price, 'subtract');
 
@@ -2231,7 +2231,7 @@ const TradingPage = () => {
           symbol: bot.name,
           amount: `$${bot.price}`,
           price: `${bot.category} Bot`,
-          pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
+          pnl: '0', // Bot subscriptions don't have immediate PnL
           status: "completed",
           time: "Just now",
           icon: "🤖"
@@ -2242,7 +2242,7 @@ const TradingPage = () => {
           type: 'bot',
           amount: bot.price.toString(),
           price: `${bot.category} Bot`,
-          pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
+          pnl: '0', // Bot subscriptions don't have immediate PnL
           status: "completed"
         });
 
@@ -2254,7 +2254,7 @@ const TradingPage = () => {
         toast({
           variant: "destructive",
           title: "Subscription Failed",
-          description: result.message || "Unknown error occurred."
+          description: "Failed to subscribe to bot."
         });
       }
     } catch (error) {
@@ -2357,16 +2357,16 @@ const TradingPage = () => {
         price: capital,
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "trade",
           action: "STRATEGY DEPLOYMENT",
           symbol: deployName,
           amount: `$${capital}`,
           price: `Custom Strategy`,
-          pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
+          pnl: '0', // Strategy deployment doesn't have immediate PnL
           status: "completed",
           time: "Just now",
           icon: "🤖"
@@ -2377,7 +2377,7 @@ const TradingPage = () => {
           type: 'strategy',
           amount: capital.toString(),
           price: `Custom Strategy`,
-          pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
+          pnl: '0', // Strategy deployment doesn't have immediate PnL
           status: "completed"
         });
 
@@ -2401,7 +2401,7 @@ const TradingPage = () => {
         toast({
           variant: "destructive",
           title: "Deployment Failed",
-          description: result.message || "Unknown error occurred."
+          description: "Failed to deploy strategy."
         });
       }
     } catch (error) {
@@ -2621,9 +2621,9 @@ const TradingPage = () => {
         direction: 'up' // Bot trading is generally bullish
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "trade",
           action: "BOT STARTED",
@@ -2656,7 +2656,7 @@ const TradingPage = () => {
         toast({
           variant: "destructive",
           title: "Bot Start Failed",
-          description: result.message || "Unknown error occurred."
+          description: "Failed to start bot."
         });
       }
     } catch (error) {
@@ -2832,9 +2832,9 @@ const TradingPage = () => {
         poolId: stake.poolId
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         // Update trading balance with unstaked amount
         updateTradingBalance('USDT', stake.value, 'add');
 
@@ -2875,7 +2875,7 @@ const TradingPage = () => {
         toast({
           variant: "destructive",
           title: "Unstake Failed",
-          description: result.message || "Unknown error occurred."
+          description: "Failed to initiate unstaking."
         });
       }
     } catch (error) {
@@ -2926,9 +2926,9 @@ const TradingPage = () => {
         poolId: pool.id
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         // Create new stake
         const newStake = {
           id: `stake-${Date.now()}`,
@@ -2950,7 +2950,7 @@ const TradingPage = () => {
         toast({
           variant: "destructive",
           title: "Stake Failed",
-          description: result.message || "Failed to initiate stake."
+          description: "Failed to initiate stake."
         });
         return;
       }
