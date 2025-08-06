@@ -22,7 +22,7 @@ import {
   Copy,
   ExternalLink
 } from 'lucide-react';
-import websocketService from '@/services/websocketService';
+
 
 const AdminWithdrawalManager: React.FC = () => {
   const [withdrawalRequests, setWithdrawalRequests] = useState<AdminWithdrawalRequest[]>([]);
@@ -66,14 +66,14 @@ const AdminWithdrawalManager: React.FC = () => {
     };
     
     // Subscribe to WebSocket events
-    websocketService.on('withdrawal_request', handleNewWithdrawalRequest);
+    // WebSocket functionality replaced with Supabase real-time subscriptions
     
     // Set up periodic refresh
     const interval = setInterval(loadWithdrawalRequests, 30000);
     
     return () => {
       clearInterval(interval);
-      websocketService.off('withdrawal_request', handleNewWithdrawalRequest);
+      // WebSocket functionality replaced with Supabase real-time subscriptions
     };
   }, []);
 

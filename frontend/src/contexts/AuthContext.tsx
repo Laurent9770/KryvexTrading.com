@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { ActivityItem } from '@/services/activityService';
 import activityService from '@/services/activityService';
-import tradingEngine from '@/services/tradingEngine';
-import websocketService from '@/services/websocketService';
+
 import { useToast } from '@/hooks/use-toast';
 import kycService from '../services/kycService';
 import userSessionService from '../services/userSessionService';

@@ -24,7 +24,7 @@ import {
   TrendingUp,
   TrendingDown
 } from 'lucide-react';
-import websocketService from '@/services/websocketService';
+
 
 const AdminWalletManager: React.FC = () => {
   const [userWallets, setUserWallets] = useState<AdminWalletData[]>([]);
@@ -86,14 +86,14 @@ const AdminWalletManager: React.FC = () => {
     };
     
     // Subscribe to WebSocket events
-    websocketService.on('wallet_updated', handleWalletUpdate);
+    // WebSocket functionality replaced with Supabase real-time subscriptions
     
     // Set up periodic refresh
     const interval = setInterval(loadData, 30000);
     
     return () => {
       clearInterval(interval);
-      websocketService.off('wallet_updated', handleWalletUpdate);
+      // WebSocket functionality replaced with Supabase real-time subscriptions
     };
   }, []);
 

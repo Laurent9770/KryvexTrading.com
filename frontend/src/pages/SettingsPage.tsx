@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import websocketService from "@/services/websocketService";
+
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCountries } from '@/utils/countries';
 
@@ -264,16 +264,7 @@ const SettingsPage = () => {
         bio: settingsData.bio
       }));
       
-      // Emit real-time update to admin
-      websocketService.updateProfile('current-user', {
-        firstName: settingsData.firstName,
-        lastName: settingsData.lastName,
-        email: settingsData.email,
-        phone: settingsData.phone,
-        country: settingsData.country,
-        bio: settingsData.bio,
-        updatedAt: new Date().toISOString()
-      });
+      // Profile updates now handled by Supabase auth service
       
       toast({
         title: "Settings Updated",
@@ -355,11 +346,7 @@ const SettingsPage = () => {
         twoFactorEnabled: newTwoFactorEnabled
       }));
       
-      // Emit real-time update to admin
-      websocketService.updateSecuritySettings('current-user', {
-        twoFactorEnabled: newTwoFactorEnabled,
-        updatedAt: new Date().toISOString()
-      });
+      // Security settings updates now handled by Supabase
       
       toast({
         title: newTwoFactorEnabled ? "2FA Enabled" : "2FA Disabled",
@@ -387,11 +374,7 @@ const SettingsPage = () => {
       // Persist to localStorage
       localStorage.setItem('notificationPreferences', JSON.stringify(notificationPrefs));
       
-      // Emit real-time update to admin
-      websocketService.updateNotificationPreferences('current-user', {
-        ...notificationPrefs,
-        updatedAt: new Date().toISOString()
-      });
+      // Notification preferences updates now handled by Supabase
       
       toast({
         title: "Settings Saved",
@@ -417,11 +400,7 @@ const SettingsPage = () => {
       // Persist to localStorage
       localStorage.setItem('displayPreferences', JSON.stringify(displayPrefs));
       
-      // Emit real-time update to admin
-      websocketService.updateDisplayPreferences('current-user', {
-        ...displayPrefs,
-        updatedAt: new Date().toISOString()
-      });
+      // Display preferences updates now handled by Supabase
       
       toast({
         title: "Preferences Saved",
@@ -536,11 +515,7 @@ const SettingsPage = () => {
         avatar: profilePicturePreview
       }));
       
-      // Emit real-time update to admin
-      websocketService.updateProfile('current-user', {
-        avatar: profilePicturePreview,
-        updatedAt: new Date().toISOString()
-      });
+      // Profile picture updates now handled by Supabase
       
       setShowProfilePictureDialog(false);
       

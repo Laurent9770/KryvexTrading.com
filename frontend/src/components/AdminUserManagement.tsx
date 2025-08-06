@@ -44,7 +44,7 @@ import {
   Bell
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import websocketService from '@/services/websocketService';
+
 import userPersistenceService, { UserData } from '@/services/userPersistenceService';
 import userActivityService, { UserActivity as ActivityData, AdminNotification } from '@/services/userActivityService';
 import supabaseAdminService from '@/services/supabaseAdminService';
