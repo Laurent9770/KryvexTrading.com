@@ -22,6 +22,8 @@ import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import LiveChatWidget from "@/components/LiveChatWidget";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { logEnvironmentStatus } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 // Simple ProtectedRoute component - Updated for deployment
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -30,6 +32,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function AppContent() {
+  useEffect(() => {
+    // Log environment status on app load
+    console.log('🚀 Kryvex Trading App Starting...')
+    logEnvironmentStatus()
+    
+    // Log all environment variables for debugging
+    console.log('🔧 Environment Variables:', {
+      VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
+      VITE_API_URL: import.meta.env.VITE_API_URL,
+      MODE: import.meta.env.MODE,
+      DEV: import.meta.env.DEV,
+      PROD: import.meta.env.PROD
+    })
+  }, [])
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
