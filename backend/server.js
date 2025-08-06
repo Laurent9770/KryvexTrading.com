@@ -114,17 +114,52 @@ app.use('/api/data-management', dataManagementRoutes);
 
 // Serve frontend files in production
 if (process.env.NODE_ENV === 'production') {
-  // Serve static files from the frontend build
-  const frontendPath = path.join(__dirname, '../frontend/dist');
-  app.use(express.static(frontendPath));
+  // Try multiple possible frontend paths
+  const possiblePaths = [
+    path.join(__dirname, '../frontend/dist'),
+    path.join(__dirname, '../../frontend/dist'),
+    path.join(__dirname, 'frontend/dist'),
+    path.join(process.cwd(), 'frontend/dist'),
+    path.join(process.cwd(), '../frontend/dist')
+  ];
   
-  // Handle all other routes by serving index.html (SPA routing)
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
-  });
+  let frontendPath = null;
+  for (const testPath of possiblePaths) {
+    try {
+      const indexPath = path.join(testPath, 'index.html');
+      if (require('fs').existsSync(indexPath)) {
+        frontendPath = testPath;
+        console.log(`✅ Found frontend at: ${frontendPath}`);
+        break;
+      }
+    } catch (error) {
+      console.log(`❌ Path not found: ${testPath}`);
+    }
+  }
   
-  console.log(`📁 Serving frontend from: ${frontendPath}`);
-  console.log(`✅ SPA routing enabled for production`);
+  if (frontendPath) {
+    // Serve static files from the frontend build
+    app.use(express.static(frontendPath));
+    
+    // Handle all other routes by serving index.html (SPA routing)
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    });
+    
+    console.log(`📁 Serving frontend from: ${frontendPath}`);
+    console.log(`✅ SPA routing enabled for production`);
+  } else {
+    console.error('❌ Frontend build not found. Available paths checked:');
+    possiblePaths.forEach(p => console.log(`  - ${p}`));
+    
+    // Fallback: serve API only
+    app.use('*', (req, res) => {
+      res.status(404).json({
+        error: 'Not found',
+        message: `Route ${req.originalUrl} not found. Frontend build not available.`
+      });
+    });
+  }
 } else {
   // Development: 404 handler for API routes only
   app.use('*', (req, res) => {
