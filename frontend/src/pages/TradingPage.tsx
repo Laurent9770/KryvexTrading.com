@@ -855,9 +855,9 @@ const TradingPage = () => {
         takeProfit: futuresTakeProfit ? parseFloat(futuresTakeProfit) : undefined
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         // Handle different order types
         if (futuresOrderType === 'market') {
           // Market order - execute immediately
@@ -946,9 +946,9 @@ const TradingPage = () => {
       duration: trade.duration
     };
     
-    const result = await tradingEngine.executeTrade(tradeRequest);
+    const result = await supabaseTradingPageService.executeTrade(tradeRequest);
     
-    if (!result.success) {
+    if (!result) {
       toast({
         variant: "destructive",
         title: "Trade Failed",
@@ -1112,7 +1112,7 @@ const TradingPage = () => {
     }
 
     // Complete the futures trade in the trading engine
-    await tradingEngine.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, trade.profit_percentage);
+    await supabaseTradingPageService.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, trade.profit_percentage);
 
     const tradeActivity = {
       type: "futures_trade",

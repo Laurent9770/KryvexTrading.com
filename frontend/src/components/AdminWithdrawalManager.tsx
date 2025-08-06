@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import supabaseWalletService from '@/services/supabaseWalletService';
-import adminDataService, { AdminWithdrawalRequest } from '@/services/adminDataService';
+import supabaseAdminDataService, { AdminWithdrawalRequest } from '@/services/supabaseAdminDataService';
 import { 
   Clock, 
   CheckCircle, 
@@ -77,11 +77,11 @@ const AdminWithdrawalManager: React.FC = () => {
     };
   }, []);
 
-  const loadWithdrawalRequests = () => {
+  const loadWithdrawalRequests = async () => {
     console.log('=== DEBUG: AdminWithdrawalManager loading withdrawal requests ===');
     
-    // Use adminDataService to get real withdrawal requests based on actual users
-    const requests = adminDataService.getWithdrawalRequests();
+    // Use supabaseAdminDataService to get real withdrawal requests based on actual users
+    const requests = await supabaseAdminDataService.getWithdrawalRequests();
     console.log('Withdrawal requests loaded:', requests.length);
     console.log('Withdrawal requests data:', requests);
     

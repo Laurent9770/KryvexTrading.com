@@ -32,8 +32,13 @@ const KYCVerificationPage = () => {
   const navigate = useNavigate();
   
   const [kycStatus, setKycStatus] = useState<KYCStatus>({
-    level1: { status: 'unverified' },
-    level2: { status: 'not_started' }
+    level: 0,
+    status: 'unverified',
+    emailVerified: false,
+    identityVerified: false,
+    addressVerified: false,
+    documentsSubmitted: false,
+    lastUpdated: new Date().toISOString()
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showLevel2Dialog, setShowLevel2Dialog] = useState(false);
@@ -112,7 +117,7 @@ const KYCVerificationPage = () => {
     if (!user?.email) return;
     
     try {
-      const status = await kycService.getKYCStatus(user.email);
+      const status = await supabaseKYCService.getKYCStatus(user.email);
       setKycStatus(status);
     } catch (error) {
       console.error('Error loading KYC status:', error);
@@ -124,7 +129,7 @@ const KYCVerificationPage = () => {
     
     setIsLoading(true);
     try {
-      const result = await kycService.sendVerificationEmail(user.email);
+      const result = await supabaseKYCService.sendVerificationEmail(user.email);
       
       if (result.success) {
         toast({
@@ -166,7 +171,7 @@ const KYCVerificationPage = () => {
         selfieFile: level2Data.selfie
       };
 
-      const result = await kycService.submitIdentityVerification(identityData);
+      const result = await supabaseKYCService.submitIdentityVerification(identityData);
       
       if (result.success) {
         toast({

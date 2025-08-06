@@ -43,9 +43,8 @@ const StakingPage = () => {
   const [stakingStats, setStakingStats] = useState<StakingStats>({
     totalStaked: 0,
     totalRewards: 0,
-    avgApy: 0,
-    activeStakes: 0,
-    totalValue: 0
+    activePositions: 0,
+    averageApy: 0
   });
 
   // Load staking data on component mount
@@ -92,7 +91,7 @@ const StakingPage = () => {
     console.log('Claim button clicked for stake:', stake);
     setIsExecuting(true);
     try {
-      const result = await stakingService.claimRewards(stake.id);
+      const result = await supabaseStakingService.claimRewards(stake.id);
       
       if (result.success) {
         // Update trading balance with claimed rewards
@@ -150,7 +149,7 @@ const StakingPage = () => {
   const handleUnstake = async (stake: StakingPosition) => {
     setIsExecuting(true);
     try {
-      const result = await stakingService.unstakeTokens(stake.id);
+      const result = await supabaseStakingService.unstakeTokens(stake.id);
       
       if (result.success) {
         // Update trading balance with unstaked amount
@@ -207,7 +206,7 @@ const StakingPage = () => {
   const handleStake = async (amount: number, pool: StakingPool) => {
     setIsExecuting(true);
     try {
-      const result = await stakingService.stakeTokens(pool.id, amount, pool.token);
+      const result = await supabaseStakingService.stakeTokens(pool.id, amount, pool.token);
       
       if (result.success) {
         // Update trading balance (deduct staked amount)
