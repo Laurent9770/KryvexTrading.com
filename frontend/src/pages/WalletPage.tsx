@@ -22,7 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 
 const WalletPage = () => {
   const navigate = useNavigate();

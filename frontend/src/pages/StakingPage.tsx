@@ -11,7 +11,7 @@ import { Coins, TrendingUp, Clock, Percent, DollarSign, Lock, Unlock, Award, Act
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 import stakingService, { StakingPool, StakingPosition, StakingStats } from "@/services/stakingService";
 
 const StakingPage = () => {

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 
 const TransferPage = () => {
   const navigate = useNavigate();

@@ -18,12 +18,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 
 const ConvertPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addActivity, realTimePrices, tradingAccount } = useAuth();
+  const { user, addActivity, realTimePrices, tradingAccount } = useAuth();
   const [fromAsset, setFromAsset] = useState("BTC");
   const [toAsset, setToAsset] = useState("USDT");
   const [amount, setAmount] = useState("");
@@ -113,28 +113,12 @@ const ConvertPage = () => {
       const rate = getExchangeRate();
       const convertedValue = numAmount * rate;
 
-      // Create a conversion trade through the unified trading engine
-      const tradeRequest: TradeRequest = {
-        type: 'spot',
-        action: 'sell', // Selling the from asset
-        symbol: fromAsset,
-        amount: numAmount,
-        price: rate,
-      };
-
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      // Create a conversion trade through Supabase
+      const result = await supabaseTradingService.simulateTrade(user?.id || '', fromAsset, numAmount, 'sell');
 
       if (result.success) {
         // Create a second trade to buy the to asset
-        const buyRequest: TradeRequest = {
-          type: 'spot',
-          action: 'buy',
-          symbol: toAsset,
-          amount: convertedValue / getExchangeRate(),
-          price: getExchangeRate(),
-        };
-
-        const buyResult = await tradingEngine.executeTrade(buyRequest);
+        const buyResult = await supabaseTradingService.simulateTrade(user?.id || '', toAsset, convertedValue / getExchangeRate(), 'buy');
 
         if (buyResult.success) {
           const conversionActivity = {

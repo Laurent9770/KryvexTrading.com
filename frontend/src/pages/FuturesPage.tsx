@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 
 const FuturesPage = () => {
   const [selectedPair, setSelectedPair] = useState("BTCUSDT");
@@ -39,7 +39,7 @@ const FuturesPage = () => {
   const [reduceOnly, setReduceOnly] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const { toast } = useToast();
-  const { addActivity, addTrade } = useAuth();
+  const { user, addActivity, addTrade } = useAuth();
 
   const futuresPairs = [
     { symbol: "BTCUSDT", name: "Bitcoin", price: 67543.21, change: 2.34, volume: "2.4B", funding: "0.0125%" },
@@ -82,7 +82,7 @@ const FuturesPage = () => {
 
     setIsExecuting(true);
     try {
-      const tradeRequest: TradeRequest = {
+      const tradeRequest = {
         type: 'futures',
         action: position === 'long' ? 'buy' : 'sell',
         symbol: selectedPair.split('USDT')[0],
@@ -91,7 +91,7 @@ const FuturesPage = () => {
         leverage: leverage[0],
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingService.simulateTrade(user?.id || '', tradeRequest.symbol, tradeRequest.amount, tradeRequest.action as 'buy' | 'sell');
 
       if (result.success) {
         const tradeActivity = {

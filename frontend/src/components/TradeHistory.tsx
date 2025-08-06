@@ -14,7 +14,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import tradingEngine from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 
 interface Trade {
   id: string;
@@ -38,23 +38,33 @@ const TradeHistory = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get real trade history from trading engine
-  const loadTradeHistory = () => {
-    const tradeHistory = tradingEngine.getTradeHistory();
-    const formattedTrades = tradeHistory.map(trade => ({
-      id: trade.id,
-      type: trade.type,
-      action: trade.action,
-      symbol: trade.symbol,
-      amount: trade.amount,
-      price: trade.price,
-      profit: trade.profit,
-      loss: trade.loss,
-      timestamp: new Date(trade.timestamp),
-      status: trade.status
-    }));
-    setTrades(formattedTrades);
-    setFilteredTrades(formattedTrades);
+  // Get real trade history from Supabase
+  const loadTradeHistory = async () => {
+    try {
+      const { user } = useAuth();
+      if (!user?.id) return;
+      
+      const tradeHistoryResponse = await supabaseTradingService.getTradeHistory(user.id, 1, 100);
+      
+      if (tradeHistoryResponse.success && tradeHistoryResponse.trades) {
+        const formattedTrades = tradeHistoryResponse.trades.map(trade => ({
+          id: trade.id,
+          type: 'spot', // Default type since we don't have it in the trade data
+          action: trade.trade_type,
+          symbol: trade.trading_pair_id,
+          amount: trade.amount,
+          price: trade.price,
+          profit: trade.profit_loss > 0 ? trade.profit_loss : undefined,
+          loss: trade.profit_loss < 0 ? Math.abs(trade.profit_loss) : undefined,
+          timestamp: new Date(trade.created_at),
+          status: trade.status
+        }));
+        setTrades(formattedTrades);
+        setFilteredTrades(formattedTrades);
+      }
+    } catch (error) {
+      console.error('Error loading trade history:', error);
+    }
   };
 
   useEffect(() => {

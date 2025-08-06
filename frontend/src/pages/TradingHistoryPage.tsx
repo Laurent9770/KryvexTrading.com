@@ -21,7 +21,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingService from "@/services/supabaseTradingService";
 
 const TradingHistoryPage = () => {
   const { user } = useAuth();
@@ -41,12 +41,33 @@ const TradingHistoryPage = () => {
 
   // Load trade history and statistics
   useEffect(() => {
-    const history = tradingEngine.getTradeHistory();
-    const stats = tradingEngine.getTradeStatistics();
+    const loadTradeHistory = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const historyResponse = await supabaseTradingService.getTradeHistory(user.id, 1, 100);
+        const statsResponse = await supabaseTradingService.getTradingStats(user.id);
+        
+        if (historyResponse.success) {
+          setTradeHistory(historyResponse.trades || []);
+        }
+        
+        if (statsResponse.success && statsResponse.stats) {
+          setStatistics({
+            totalTrades: statsResponse.stats.totalTrades,
+            wins: statsResponse.stats.winningTrades,
+            losses: statsResponse.stats.losingTrades,
+            netProfit: statsResponse.stats.netProfit,
+            winRate: statsResponse.stats.winRate
+          });
+        }
+      } catch (error) {
+        console.error('Error loading trade history:', error);
+      }
+    };
     
-    setTradeHistory(history);
-    setStatistics(stats);
-  }, []);
+    loadTradeHistory();
+  }, [user?.id]);
 
   // Filter trade history
   useEffect(() => {
