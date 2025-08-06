@@ -6,9 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kryvex Trading</title>
     
-    <!-- Meta refresh redirect for old domain -->
-    <meta http-equiv="refresh" content="0;url=https://kryvextrading-com.onrender.com" id="redirect-meta">
-    
     <!-- Redirect to unified domain if accessed from old frontend URL -->
     <script>
       // Immediate redirect for old domain
@@ -18,20 +15,15 @@
         window.location.replace(newUrl);
       }
       
-      // Also redirect if we're on the wrong domain
+      // Also redirect if we're on the wrong domain (but not localhost)
       if (window.location.hostname !== 'kryvextrading-com.onrender.com' && 
           window.location.hostname !== 'localhost' && 
-          window.location.hostname !== '127.0.0.1') {
+          window.location.hostname !== '127.0.0.1' &&
+          !window.location.hostname.includes('localhost')) {
         const newUrl = 'https://kryvextrading-com.onrender.com' + window.location.pathname + window.location.search;
         console.log('🔄 Redirecting to correct domain:', newUrl);
         window.location.replace(newUrl);
       }
-      
-      // Remove meta refresh after redirect
-      setTimeout(() => {
-        const meta = document.getElementById('redirect-meta');
-        if (meta) meta.remove();
-      }, 1000);
     </script>
   </head>
   <body>
