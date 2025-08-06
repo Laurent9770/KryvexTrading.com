@@ -7,577 +7,542 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "12.2.12 (cd3cf9e)"
-  }
   public: {
     Tables: {
-      admin_actions: {
-        Row: {
-          action_type: string
-          admin_id: string
-          created_at: string
-          description: string
-          id: string
-          ip_address: unknown | null
-          new_values: Json | null
-          old_values: Json | null
-          target_id: string | null
-          target_table: string | null
-          target_user_id: string | null
-        }
-        Insert: {
-          action_type: string
-          admin_id: string
-          created_at?: string
-          description: string
-          id?: string
-          ip_address?: unknown | null
-          new_values?: Json | null
-          old_values?: Json | null
-          target_id?: string | null
-          target_table?: string | null
-          target_user_id?: string | null
-        }
-        Update: {
-          action_type?: string
-          admin_id?: string
-          created_at?: string
-          description?: string
-          id?: string
-          ip_address?: unknown | null
-          new_values?: Json | null
-          old_values?: Json | null
-          target_id?: string | null
-          target_table?: string | null
-          target_user_id?: string | null
-        }
-        Relationships: []
-      }
-      admin_notifications: {
-        Row: {
-          admin_id: string
-          created_at: string
-          id: string
-          is_broadcast: boolean | null
-          is_read: boolean | null
-          message: string
-          notification_type: string | null
-          target_user_id: string | null
-          title: string
-        }
-        Insert: {
-          admin_id: string
-          created_at?: string
-          id?: string
-          is_broadcast?: boolean | null
-          is_read?: boolean | null
-          message: string
-          notification_type?: string | null
-          target_user_id?: string | null
-          title: string
-        }
-        Update: {
-          admin_id?: string
-          created_at?: string
-          id?: string
-          is_broadcast?: boolean | null
-          is_read?: boolean | null
-          message?: string
-          notification_type?: string | null
-          target_user_id?: string | null
-          title?: string
-        }
-        Relationships: []
-      }
-      deposits: {
-        Row: {
-          admin_notes: string | null
-          amount: number
-          created_at: string
-          currency: string
-          deposit_address: string
-          id: string
-          network: string
-          processed_at: string | null
-          processed_by: string | null
-          proof_image_url: string
-          status: string
-          transaction_hash: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          amount: number
-          created_at?: string
-          currency: string
-          deposit_address: string
-          id?: string
-          network: string
-          processed_at?: string | null
-          processed_by?: string | null
-          proof_image_url: string
-          status?: string
-          transaction_hash?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          admin_notes?: string | null
-          amount?: number
-          created_at?: string
-          currency?: string
-          deposit_address?: string
-          id?: string
-          network?: string
-          processed_at?: string | null
-          processed_by?: string | null
-          proof_image_url?: string
-          status?: string
-          transaction_hash?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      kyc_documents: {
-        Row: {
-          admin_notes: string | null
-          document_back_url: string | null
-          document_front_url: string
-          document_type: string
-          id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          selfie_url: string
-          status: string | null
-          submitted_at: string
-          user_id: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          document_back_url?: string | null
-          document_front_url: string
-          document_type: string
-          id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          selfie_url: string
-          status?: string | null
-          submitted_at?: string
-          user_id: string
-        }
-        Update: {
-          admin_notes?: string | null
-          document_back_url?: string | null
-          document_front_url?: string
-          document_type?: string
-          id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          selfie_url?: string
-          status?: string | null
-          submitted_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      notifications: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          is_read: boolean | null
-          message: string
-          title: string
-          type: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_read?: boolean | null
-          message: string
-          title: string
-          type?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_read?: boolean | null
-          message?: string
-          title?: string
-          type?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
-          account_balance: number | null
-          account_status: string | null
-          avatar_url: string | null
-          country: string | null
-          created_at: string
-          date_of_birth: string | null
+          id: string
+          user_id: string
           email: string
           full_name: string | null
-          id: string
-          is_verified: boolean | null
-          kyc_status: string | null
-          last_login: string | null
-          login_attempts: number | null
+          avatar_url: string | null
           phone: string | null
-          suspended_until: string | null
-          suspension_reason: string | null
+          country: string | null
+          date_of_birth: string | null
+          account_balance: number
+          is_verified: boolean
+          kyc_status: 'pending' | 'approved' | 'rejected'
+          created_at: string
           updated_at: string
-          user_id: string
+          account_status: 'active' | 'suspended' | 'blocked'
+          suspension_reason: string | null
+          suspended_until: string | null
+          last_login: string | null
+          login_attempts: number
+          trade_outcome_mode: 'default' | 'force_win' | 'force_loss'
+          trade_outcome_applies_to: 'all_trades' | 'new_trades'
+          trade_outcome_reason: string | null
+          trade_outcome_enabled_at: string | null
+          trade_outcome_enabled_by: string | null
         }
         Insert: {
-          account_balance?: number | null
-          account_status?: string | null
-          avatar_url?: string | null
-          country?: string | null
-          created_at?: string
-          date_of_birth?: string | null
+          id?: string
+          user_id: string
           email: string
           full_name?: string | null
-          id?: string
-          is_verified?: boolean | null
-          kyc_status?: string | null
-          last_login?: string | null
-          login_attempts?: number | null
+          avatar_url?: string | null
           phone?: string | null
-          suspended_until?: string | null
-          suspension_reason?: string | null
+          country?: string | null
+          date_of_birth?: string | null
+          account_balance?: number
+          is_verified?: boolean
+          kyc_status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
           updated_at?: string
-          user_id: string
+          account_status?: 'active' | 'suspended' | 'blocked'
+          suspension_reason?: string | null
+          suspended_until?: string | null
+          last_login?: string | null
+          login_attempts?: number
+          trade_outcome_mode?: 'default' | 'force_win' | 'force_loss'
+          trade_outcome_applies_to?: 'all_trades' | 'new_trades'
+          trade_outcome_reason?: string | null
+          trade_outcome_enabled_at?: string | null
+          trade_outcome_enabled_by?: string | null
         }
         Update: {
-          account_balance?: number | null
-          account_status?: string | null
-          avatar_url?: string | null
-          country?: string | null
-          created_at?: string
-          date_of_birth?: string | null
+          id?: string
+          user_id?: string
           email?: string
           full_name?: string | null
-          id?: string
-          is_verified?: boolean | null
-          kyc_status?: string | null
-          last_login?: string | null
-          login_attempts?: number | null
+          avatar_url?: string | null
           phone?: string | null
-          suspended_until?: string | null
+          country?: string | null
+          date_of_birth?: string | null
+          account_balance?: number
+          is_verified?: boolean
+          kyc_status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+          updated_at?: string
+          account_status?: 'active' | 'suspended' | 'blocked'
           suspension_reason?: string | null
-          updated_at?: string
-          user_id?: string
+          suspended_until?: string | null
+          last_login?: string | null
+          login_attempts?: number
+          trade_outcome_mode?: 'default' | 'force_win' | 'force_loss'
+          trade_outcome_applies_to?: 'all_trades' | 'new_trades'
+          trade_outcome_reason?: string | null
+          trade_outcome_enabled_at?: string | null
+          trade_outcome_enabled_by?: string | null
         }
-        Relationships: []
-      }
-      support_messages: {
-        Row: {
-          attachments: Json | null
-          created_at: string
-          id: string
-          is_admin: boolean | null
-          message: string
-          sender_id: string
-          ticket_id: string
-        }
-        Insert: {
-          attachments?: Json | null
-          created_at?: string
-          id?: string
-          is_admin?: boolean | null
-          message: string
-          sender_id: string
-          ticket_id: string
-        }
-        Update: {
-          attachments?: Json | null
-          created_at?: string
-          id?: string
-          is_admin?: boolean | null
-          message?: string
-          sender_id?: string
-          ticket_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "support_messages_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "support_tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      support_tickets: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          id: string
-          priority: string | null
-          status: string | null
-          subject: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          id?: string
-          priority?: string | null
-          status?: string | null
-          subject: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          id?: string
-          priority?: string | null
-          status?: string | null
-          subject?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      trades: {
-        Row: {
-          amount: number
-          completed_at: string | null
-          created_at: string
-          id: string
-          price: number
-          profit_loss: number | null
-          result: string | null
-          status: string | null
-          total_value: number
-          trade_type: string
-          trading_pair_id: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          price: number
-          profit_loss?: number | null
-          result?: string | null
-          status?: string | null
-          total_value: number
-          trade_type: string
-          trading_pair_id: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          price?: number
-          profit_loss?: number | null
-          result?: string | null
-          status?: string | null
-          total_value?: number
-          trade_type?: string
-          trading_pair_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "trades_trading_pair_id_fkey"
-            columns: ["trading_pair_id"]
-            isOneToOne: false
-            referencedRelation: "trading_pairs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      trading_pairs: {
-        Row: {
-          base_currency: string
-          created_at: string
-          current_price: number
-          id: string
-          is_active: boolean | null
-          price_change_24h: number | null
-          quote_currency: string
-          symbol: string
-          volume_24h: number | null
-        }
-        Insert: {
-          base_currency: string
-          created_at?: string
-          current_price?: number
-          id?: string
-          is_active?: boolean | null
-          price_change_24h?: number | null
-          quote_currency: string
-          symbol: string
-          volume_24h?: number | null
-        }
-        Update: {
-          base_currency?: string
-          created_at?: string
-          current_price?: number
-          id?: string
-          is_active?: boolean | null
-          price_change_24h?: number | null
-          quote_currency?: string
-          symbol?: string
-          volume_24h?: number | null
-        }
-        Relationships: []
-      }
-      transactions: {
-        Row: {
-          admin_notes: string | null
-          amount: number
-          created_at: string
-          currency: string
-          id: string
-          payment_method: string | null
-          processed_at: string | null
-          processed_by: string | null
-          status: string | null
-          transaction_hash: string | null
-          transaction_type: string
-          user_id: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          amount: number
-          created_at?: string
-          currency?: string
-          id?: string
-          payment_method?: string | null
-          processed_at?: string | null
-          processed_by?: string | null
-          status?: string | null
-          transaction_hash?: string | null
-          transaction_type: string
-          user_id: string
-        }
-        Update: {
-          admin_notes?: string | null
-          amount?: number
-          created_at?: string
-          currency?: string
-          id?: string
-          payment_method?: string | null
-          processed_at?: string | null
-          processed_by?: string | null
-          status?: string | null
-          transaction_hash?: string | null
-          transaction_type?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       user_roles: {
         Row: {
           id: string
-          role: Database["public"]["Enums"]["app_role"]
           user_id: string
+          role: 'admin' | 'user'
         }
         Insert: {
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
+          role?: 'admin' | 'user'
         }
         Update: {
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+          role?: 'admin' | 'user'
         }
-        Relationships: []
+      }
+      kyc_documents: {
+        Row: {
+          id: string
+          user_id: string
+          document_type: 'passport' | 'drivers_license' | 'national_id'
+          document_front_url: string
+          document_back_url: string | null
+          selfie_url: string
+          status: 'pending' | 'approved' | 'rejected'
+          admin_notes: string | null
+          submitted_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          document_type: 'passport' | 'drivers_license' | 'national_id'
+          document_front_url: string
+          document_back_url?: string | null
+          selfie_url: string
+          status?: 'pending' | 'approved' | 'rejected'
+          admin_notes?: string | null
+          submitted_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          document_type?: 'passport' | 'drivers_license' | 'national_id'
+          document_front_url?: string
+          document_back_url?: string | null
+          selfie_url?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          admin_notes?: string | null
+          submitted_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+      }
+      trading_pairs: {
+        Row: {
+          id: string
+          symbol: string
+          base_currency: string
+          quote_currency: string
+          current_price: number
+          price_change_24h: number
+          volume_24h: number
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          symbol: string
+          base_currency: string
+          quote_currency: string
+          current_price: number
+          price_change_24h?: number
+          volume_24h?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          symbol?: string
+          base_currency?: string
+          quote_currency?: string
+          current_price?: number
+          price_change_24h?: number
+          volume_24h?: number
+          is_active?: boolean
+          created_at?: string
+        }
+      }
+      trades: {
+        Row: {
+          id: string
+          user_id: string
+          trading_pair_id: string
+          trade_type: 'buy' | 'sell'
+          amount: number
+          price: number
+          total_value: number
+          status: 'pending' | 'completed' | 'cancelled'
+          result: 'win' | 'loss' | 'pending' | null
+          profit_loss: number
+          created_at: string
+          completed_at: string | null
+          forced_outcome: boolean
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          trading_pair_id: string
+          trade_type: 'buy' | 'sell'
+          amount: number
+          price: number
+          total_value: number
+          status?: 'pending' | 'completed' | 'cancelled'
+          result?: 'win' | 'loss' | 'pending' | null
+          profit_loss?: number
+          created_at?: string
+          completed_at?: string | null
+          forced_outcome?: boolean
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          trading_pair_id?: string
+          trade_type?: 'buy' | 'sell'
+          amount?: number
+          price?: number
+          total_value?: number
+          status?: 'pending' | 'completed' | 'cancelled'
+          result?: 'win' | 'loss' | 'pending' | null
+          profit_loss?: number
+          created_at?: string
+          completed_at?: string | null
+          forced_outcome?: boolean
+        }
+      }
+      transactions: {
+        Row: {
+          id: string
+          user_id: string
+          transaction_type: 'deposit' | 'withdrawal' | 'trade_profit' | 'trade_loss'
+          amount: number
+          currency: string
+          status: 'pending' | 'completed' | 'failed' | 'cancelled'
+          payment_method: string | null
+          transaction_hash: string | null
+          admin_notes: string | null
+          processed_by: string | null
+          created_at: string
+          processed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          transaction_type: 'deposit' | 'withdrawal' | 'trade_profit' | 'trade_loss'
+          amount: number
+          currency?: string
+          status?: 'pending' | 'completed' | 'failed' | 'cancelled'
+          payment_method?: string | null
+          transaction_hash?: string | null
+          admin_notes?: string | null
+          processed_by?: string | null
+          created_at?: string
+          processed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          transaction_type?: 'deposit' | 'withdrawal' | 'trade_profit' | 'trade_loss'
+          amount?: number
+          currency?: string
+          status?: 'pending' | 'completed' | 'failed' | 'cancelled'
+          payment_method?: string | null
+          transaction_hash?: string | null
+          admin_notes?: string | null
+          processed_by?: string | null
+          created_at?: string
+          processed_at?: string | null
+        }
+      }
+      support_tickets: {
+        Row: {
+          id: string
+          user_id: string
+          subject: string
+          status: 'open' | 'in_progress' | 'closed'
+          priority: 'low' | 'medium' | 'high' | 'urgent'
+          assigned_to: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject: string
+          status?: 'open' | 'in_progress' | 'closed'
+          priority?: 'low' | 'medium' | 'high' | 'urgent'
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject?: string
+          status?: 'open' | 'in_progress' | 'closed'
+          priority?: 'low' | 'medium' | 'high' | 'urgent'
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      support_messages: {
+        Row: {
+          id: string
+          ticket_id: string
+          sender_id: string
+          message: string
+          attachments: Json
+          is_admin: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          sender_id: string
+          message: string
+          attachments?: Json
+          is_admin?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          sender_id?: string
+          message?: string
+          attachments?: Json
+          is_admin?: boolean
+          created_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          message: string
+          type: 'info' | 'success' | 'warning' | 'error'
+          is_read: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          message: string
+          type?: 'info' | 'success' | 'warning' | 'error'
+          is_read?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          message?: string
+          type?: 'info' | 'success' | 'warning' | 'error'
+          is_read?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+      }
+      admin_actions: {
+        Row: {
+          id: string
+          admin_id: string
+          action_type: string
+          target_user_id: string | null
+          target_table: string | null
+          target_id: string | null
+          old_values: Json | null
+          new_values: Json | null
+          description: string
+          ip_address: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          action_type: string
+          target_user_id?: string | null
+          target_table?: string | null
+          target_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          description: string
+          ip_address?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          action_type?: string
+          target_user_id?: string | null
+          target_table?: string | null
+          target_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          description?: string
+          ip_address?: string | null
+          created_at?: string
+        }
+      }
+      admin_notifications: {
+        Row: {
+          id: string
+          admin_id: string
+          target_user_id: string | null
+          title: string
+          message: string
+          notification_type: 'info' | 'warning' | 'success' | 'error'
+          is_broadcast: boolean
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          target_user_id?: string | null
+          title: string
+          message: string
+          notification_type?: 'info' | 'warning' | 'success' | 'error'
+          is_broadcast?: boolean
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          target_user_id?: string | null
+          title?: string
+          message?: string
+          notification_type?: 'info' | 'warning' | 'success' | 'error'
+          is_broadcast?: boolean
+          is_read?: boolean
+          created_at?: string
+        }
+      }
+      wallet_adjustments: {
+        Row: {
+          id: string
+          user_id: string
+          admin_id: string
+          adjustment_type: 'add' | 'subtract'
+          amount: number
+          currency: string
+          reason: string
+          previous_balance: number
+          new_balance: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          admin_id: string
+          adjustment_type: 'add' | 'subtract'
+          amount: number
+          currency?: string
+          reason: string
+          previous_balance: number
+          new_balance: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          admin_id?: string
+          adjustment_type?: 'add' | 'subtract'
+          amount?: number
+          currency?: string
+          reason?: string
+          previous_balance?: number
+          new_balance?: number
+          created_at?: string
+        }
       }
       user_sessions: {
         Row: {
           id: string
-          ip_address: unknown | null
-          is_active: boolean | null
-          last_activity: string | null
-          login_at: string
-          logout_at: string | null
+          user_id: string
           session_token: string | null
+          ip_address: string | null
           user_agent: string | null
-          user_id: string
+          is_active: boolean
+          login_at: string
+          last_activity: string | null
+          logout_at: string | null
         }
         Insert: {
           id?: string
-          ip_address?: unknown | null
-          is_active?: boolean | null
-          last_activity?: string | null
-          login_at?: string
-          logout_at?: string | null
-          session_token?: string | null
-          user_agent?: string | null
           user_id: string
+          session_token?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          is_active?: boolean
+          login_at?: string
+          last_activity?: string | null
+          logout_at?: string | null
         }
         Update: {
           id?: string
-          ip_address?: unknown | null
-          is_active?: boolean | null
-          last_activity?: string | null
-          login_at?: string
-          logout_at?: string | null
-          session_token?: string | null
-          user_agent?: string | null
           user_id?: string
+          session_token?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          is_active?: boolean
+          login_at?: string
+          last_activity?: string | null
+          logout_at?: string | null
         }
-        Relationships: []
       }
-      wallet_adjustments: {
+      trade_outcome_logs: {
         Row: {
-          adjustment_type: string
-          admin_id: string
-          amount: number
-          created_at: string
-          currency: string
           id: string
-          new_balance: number
-          previous_balance: number
-          reason: string
+          admin_id: string
           user_id: string
+          previous_mode: string
+          new_mode: string
+          applies_to: 'all_trades' | 'new_trades'
+          reason: string | null
+          created_at: string
         }
         Insert: {
-          adjustment_type: string
-          admin_id: string
-          amount: number
-          created_at?: string
-          currency?: string
           id?: string
-          new_balance: number
-          previous_balance: number
-          reason: string
+          admin_id: string
           user_id: string
+          previous_mode: string
+          new_mode: string
+          applies_to: 'all_trades' | 'new_trades'
+          reason?: string | null
+          created_at?: string
         }
         Update: {
-          adjustment_type?: string
-          admin_id?: string
-          amount?: number
-          created_at?: string
-          currency?: string
           id?: string
-          new_balance?: number
-          previous_balance?: number
-          reason?: string
+          admin_id?: string
           user_id?: string
+          previous_mode?: string
+          new_mode?: string
+          applies_to?: 'all_trades' | 'new_trades'
+          reason?: string | null
+          created_at?: string
         }
-        Relationships: []
       }
     }
     Views: {
@@ -587,9 +552,45 @@ export type Database = {
       has_role: {
         Args: {
           _user_id: string
-          _role: Database["public"]["Enums"]["app_role"]
+          _role: 'admin' | 'user'
         }
         Returns: boolean
+      }
+      get_user_trade_outcome_mode: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: string
+      }
+      apply_forced_trade_outcome: {
+        Args: {
+          p_trade_id: string
+        }
+        Returns: boolean
+      }
+      get_trade_outcome_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_users: number
+          force_win_users: number
+          force_loss_users: number
+          default_users: number
+        }[]
+      }
+      get_user_trade_outcome_history: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: {
+          log_id: string
+          admin_name: string
+          admin_email: string
+          previous_mode: string
+          new_mode: string
+          applies_to: string
+          reason: string | null
+          created_at: string
+        }[]
       }
       log_admin_action: {
         Args: {
@@ -601,145 +602,62 @@ export type Database = {
           p_old_values?: Json
           p_new_values?: Json
           p_description?: string
-          p_ip_address?: unknown
+          p_ip_address?: string
         }
         Returns: string
       }
-      setup_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
     }
     Enums: {
-      app_role: "admin" | "user"
-    }
-    CompositeTypes: {
-      [_ in never]: never
+      app_role: 'admin' | 'user'
     }
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+// Type aliases for easier use
+export type Profile = Database['public']['Tables']['profiles']['Row']
+export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
+export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+export type Trade = Database['public']['Tables']['trades']['Row']
+export type TradeInsert = Database['public']['Tables']['trades']['Insert']
+export type TradeUpdate = Database['public']['Tables']['trades']['Update']
 
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+export type Transaction = Database['public']['Tables']['transactions']['Row']
+export type TransactionInsert = Database['public']['Tables']['transactions']['Insert']
+export type TransactionUpdate = Database['public']['Tables']['transactions']['Update']
 
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+export type TradingPair = Database['public']['Tables']['trading_pairs']['Row']
+export type TradingPairInsert = Database['public']['Tables']['trading_pairs']['Insert']
+export type TradingPairUpdate = Database['public']['Tables']['trading_pairs']['Update']
 
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+export type KycDocument = Database['public']['Tables']['kyc_documents']['Row']
+export type KycDocumentInsert = Database['public']['Tables']['kyc_documents']['Insert']
+export type KycDocumentUpdate = Database['public']['Tables']['kyc_documents']['Update']
 
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+export type Notification = Database['public']['Tables']['notifications']['Row']
+export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
+export type NotificationUpdate = Database['public']['Tables']['notifications']['Update']
 
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+export type SupportTicket = Database['public']['Tables']['support_tickets']['Row']
+export type SupportTicketInsert = Database['public']['Tables']['support_tickets']['Insert']
+export type SupportTicketUpdate = Database['public']['Tables']['support_tickets']['Update']
 
-export const Constants = {
-  public: {
-    Enums: {
-      app_role: ["admin", "user"],
-    },
-  },
-} as const
+export type SupportMessage = Database['public']['Tables']['support_messages']['Row']
+export type SupportMessageInsert = Database['public']['Tables']['support_messages']['Insert']
+export type SupportMessageUpdate = Database['public']['Tables']['support_messages']['Update']
+
+export type AdminAction = Database['public']['Tables']['admin_actions']['Row']
+export type AdminActionInsert = Database['public']['Tables']['admin_actions']['Insert']
+export type AdminActionUpdate = Database['public']['Tables']['admin_actions']['Update']
+
+export type WalletAdjustment = Database['public']['Tables']['wallet_adjustments']['Row']
+export type WalletAdjustmentInsert = Database['public']['Tables']['wallet_adjustments']['Insert']
+export type WalletAdjustmentUpdate = Database['public']['Tables']['wallet_adjustments']['Update']
+
+export type UserSession = Database['public']['Tables']['user_sessions']['Row']
+export type UserSessionInsert = Database['public']['Tables']['user_sessions']['Insert']
+export type UserSessionUpdate = Database['public']['Tables']['user_sessions']['Update']
+
+export type TradeOutcomeLog = Database['public']['Tables']['trade_outcome_logs']['Row']
+export type TradeOutcomeLogInsert = Database['public']['Tables']['trade_outcome_logs']['Insert']
+export type TradeOutcomeLogUpdate = Database['public']['Tables']['trade_outcome_logs']['Update']

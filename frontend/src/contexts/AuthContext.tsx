@@ -4,8 +4,10 @@ import activityService from '@/services/activityService';
 import tradingEngine from '@/services/tradingEngine';
 import websocketService from '@/services/websocketService';
 import { useToast } from '@/hooks/use-toast';
-import kycService from '../services/kycService'; // Added import for kycService
-import userSessionService from '../services/userSessionService'; // Added import for userSessionService
+import kycService from '../services/kycService';
+import userSessionService from '../services/userSessionService';
+import supabaseAuthService, { AuthUser, LoginCredentials, RegisterData, ProfileUpdateData } from '@/services/supabaseAuthService';
+import supabaseTradingService from '@/services/supabaseTradingService';
 
 interface User {
   id: string;
@@ -50,6 +52,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;
@@ -104,69 +107,10 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(() => {
-    // Initialize user from localStorage or sessionStorage on app load
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        // Check localStorage first (persistent login)
-        const savedUser = localStorage.getItem('authUser');
-        if (savedUser) {
-          return JSON.parse(savedUser);
-        }
-        
-        // Check sessionStorage (session login)
-        const sessionUser = sessionStorage.getItem('authUser');
-        if (sessionUser) {
-          return JSON.parse(sessionUser);
-        }
-      }
-    } catch (error) {
-      console.warn('Error accessing storage:', error);
-    }
-    return null;
-  });
-  
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Initialize authentication state from localStorage or sessionStorage
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        // Check localStorage first (persistent login)
-        if (localStorage.getItem('authToken')) {
-          return true;
-        }
-        
-        // Check sessionStorage (session login)
-        if (sessionStorage.getItem('authToken')) {
-          return true;
-        }
-      }
-    } catch (error) {
-      console.warn('Error accessing storage:', error);
-    }
-    return false;
-  });
-  
-  const [isAdmin, setIsAdmin] = useState(() => {
-    // Initialize admin state from localStorage or sessionStorage
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        // Check localStorage first (persistent login)
-        const localStorageAdmin = localStorage.getItem('authIsAdmin');
-        if (localStorageAdmin) {
-          return localStorageAdmin === 'true';
-        }
-        
-        // Check sessionStorage (session login)
-        const sessionStorageAdmin = sessionStorage.getItem('authIsAdmin');
-        if (sessionStorageAdmin) {
-          return sessionStorageAdmin === 'true';
-        }
-      }
-    } catch (error) {
-      console.warn('Error accessing storage:', error);
-    }
-    return false;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Global state for real-time updates - Start with clean data for new users
   const [tradingAccount, setTradingAccount] = useState<{ [key: string]: { balance: string; usdValue: string; available: string } }>({
@@ -180,7 +124,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
-
   const [tradingHistory, setTradingHistory] = useState<any[]>([]);
 
   const [portfolioStats, setPortfolioStats] = useState({
@@ -195,15 +138,130 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Real-time price data
   const [realTimePrices, setRealTimePrices] = useState<{ [key: string]: { price: number; change: number; volume: number; timestamp: string } }>({});
 
-  // TODO: Implement real API call to get asset prices
-  const getAssetPrice = (asset: string): number => {
-    // TODO: Replace with real API call
-    // const response = await fetch(`/api/prices/${asset}`);
-    // const data = await response.json();
-    // return data.price;
-    
-    // For now, return 0 until real API is implemented
-    return 0;
+  // Initialize Supabase auth
+  useEffect(() => {
+    const unsubscribe = supabaseAuthService.subscribe((authState) => {
+      setIsLoading(authState.isLoading);
+      setIsAuthenticated(authState.isAuthenticated);
+      setIsAdmin(authState.isAdmin);
+
+      if (authState.user) {
+        // Convert AuthUser to User interface
+        const userData: User = {
+          id: authState.user.id,
+          email: authState.user.email,
+          username: authState.user.email.split('@')[0],
+          firstName: authState.user.fullName?.split(' ')[0] || 'John',
+          lastName: authState.user.fullName?.split(' ').slice(1).join(' ') || 'Trader',
+          phone: authState.user.phone || '+1 (555) 123-4567',
+          country: authState.user.country || 'United States',
+          bio: 'Professional crypto trader with 5+ years of experience.',
+          avatar: authState.user.avatar,
+          walletBalance: authState.user.accountBalance,
+          kycStatus: authState.user.kycStatus === 'approved' ? 'verified' : authState.user.kycStatus,
+          kycLevel1: {
+            status: authState.user.isVerified ? 'verified' : 'unverified'
+          },
+          kycLevel2: {
+            status: authState.user.kycStatus === 'approved' ? 'approved' : 
+                    authState.user.kycStatus === 'rejected' ? 'rejected' : 
+                    authState.user.kycStatus === 'pending' ? 'pending' : 'not_started'
+          }
+        };
+
+        setUser(userData);
+
+        // Update trading account with user's balance
+        if (authState.user.accountBalance > 0) {
+          setTradingAccount(prev => ({
+            ...prev,
+            USDT: {
+              balance: authState.user.accountBalance.toFixed(8),
+              usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
+              available: authState.user.accountBalance.toFixed(8)
+            }
+          }));
+
+          setFundingAccount(prev => ({
+            USDT: {
+              balance: authState.user.accountBalance.toFixed(2),
+              usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
+              available: authState.user.accountBalance.toFixed(2)
+            }
+          }));
+        }
+
+        // Load user activities and trading data
+        loadUserData(authState.user.id);
+      } else {
+        setUser(null);
+        setTradingAccount({
+          USDT: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+          BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+          ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
+        });
+        setFundingAccount({
+          USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
+        });
+        setActivityFeed([]);
+        setTradingHistory([]);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      supabaseTradingService.cleanup();
+    };
+  }, []);
+
+  const loadUserData = async (userId: string) => {
+    try {
+      // Load trading history
+      const { success, trades } = await supabaseTradingService.getRecentTrades(userId, 50);
+      if (success && trades) {
+        setTradingHistory(trades.map(trade => ({
+          id: trade.id,
+          symbol: 'BTC/USDT', // Default symbol since we don't have trading_pairs relation
+          type: trade.trade_type,
+          amount: trade.amount,
+          price: trade.price,
+          pnl: trade.profit_loss,
+          status: trade.result,
+          timestamp: trade.created_at
+        })));
+      }
+
+      // Load trading stats
+      const { success: statsSuccess, stats } = await supabaseTradingService.getTradingStats(userId);
+      if (statsSuccess && stats) {
+        setPortfolioStats({
+          totalBalance: `$${stats.netProfit.toFixed(2)}`,
+          totalPnl: `$${stats.netProfit.toFixed(2)}`,
+          pnlPercentage: `${stats.winRate.toFixed(1)}%`,
+          totalTrades: stats.totalTrades,
+          winRate: `${stats.winRate.toFixed(1)}%`,
+          activePositions: 0
+        });
+      }
+
+      // Load portfolio data
+      const { success: portfolioSuccess, portfolio } = await supabaseTradingService.getPortfolioData(userId);
+      if (portfolioSuccess && portfolio) {
+        setTradingAccount(prev => {
+          const newAccount = { ...prev };
+          portfolio.assets.forEach(asset => {
+            newAccount[asset.symbol.split('/')[0]] = {
+              balance: asset.balance.toFixed(8),
+              usdValue: `$${asset.value.toFixed(2)}`,
+              available: asset.balance.toFixed(8)
+            };
+          });
+          return newAccount;
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
   };
 
   // Memoize functions to prevent infinite re-renders
@@ -288,449 +346,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }));
   }, []);
 
-  // Auto-login effect - check for existing auth token on app load
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const token = localStorage.getItem('authToken');
-        const savedUser = localStorage.getItem('authUser');
-        
-        if (token && savedUser) {
-          try {
-            const userData = JSON.parse(savedUser);
-            setUser(userData);
-            setIsAuthenticated(true);
-            setIsAdmin(localStorage.getItem('authIsAdmin') === 'true');
-            
-            // WebSocket is already connected by default, no need to reconnect
-            console.log('Auto-login successful for user:', userData.email);
-          } catch (error) {
-            console.error('Error during auto-login:', error);
-            // Clear invalid data
-            try {
-              if (typeof window !== 'undefined' && window.localStorage) {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('authUser');
-                localStorage.removeItem('authIsAdmin');
-              }
-            } catch (clearError) {
-              console.warn('Error clearing localStorage:', clearError);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error accessing localStorage during auto-login:', error);
-    }
-  }, []);
-
-  // WebSocket event handlers for admin updates
-  useEffect(() => {
-    // Listen for admin actions that affect user data
-    websocketService.on('admin_user_update', (data: any) => {
-      console.log('Admin updated user data:', data);
-      // Handle admin updates to user data
-      if (data.userId === user?.id) {
-        // Update local state based on admin changes
-        if (data.type === 'wallet_update') {
-          // Update wallet balances
-          if (data.currency === 'USDT') {
-            setFundingAccount(prev => ({
-              ...prev,
-              USDT: {
-                balance: data.newBalance.toFixed(2),
-                usdValue: `$${data.newBalance.toFixed(2)}`,
-                available: data.newAvailable.toFixed(2)
-              }
-            }));
-          }
-        }
-      }
-    });
-
-    // Listen for new user registrations (admin only)
-    websocketService.on('user_registered', (data: any) => {
-      console.log('New user registered:', data);
-      // This event is for admin panel updates
-    });
-
-    // Listen for profile updates (admin only)
-    websocketService.on('profile_updated', (data: any) => {
-      console.log('Profile updated:', data);
-      // This event is for admin panel updates
-    });
-
-    return () => {
-      websocketService.off('admin_user_update', () => {});
-      websocketService.off('user_registered', () => {});
-      websocketService.off('profile_updated', () => {});
-    };
-  }, [user?.id]);
-
-  // Update portfolio stats when balances change
-  useEffect(() => {
-    updatePortfolioStats();
-  }, [tradingAccount, fundingAccount]);
-
-  // Initialize trading engine with auth context
-  useEffect(() => {
-    tradingEngine.setAuthContext({
-      tradingAccount,
-      updateTradingBalance
-    });
-  }, [tradingAccount]); // Remove updateTradingBalance from dependencies since it's now memoized
-
-  // WebSocket event listeners for real-time updates
-  useEffect(() => {
-    const handleAuthSuccess = (data: any) => {
-      console.log('Auth success:', data);
-      
-      // Load persisted user data from localStorage with safety checks
-      let persistedUserData: any = {};
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const persistedProfile = localStorage.getItem('userProfile');
-          if (persistedProfile) {
-            persistedUserData = JSON.parse(persistedProfile);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading persisted user data:', error);
-      }
-      
-      const userData = {
-        id: data.user.id,
-        email: data.user.email,
-        username: data.user.email.split('@')[0],
-        firstName: persistedUserData.firstName || 'John',
-        lastName: persistedUserData.lastName || 'Trader',
-        phone: persistedUserData.phone || '+1 (555) 123-4567',
-        country: persistedUserData.country || 'United States',
-        bio: persistedUserData.bio || 'Professional crypto trader with 5+ years of experience.',
-        avatar: persistedUserData.avatar || undefined
-      };
-      
-      // Persist authentication data to localStorage with safety checks
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const mockToken = 'mock-jwt-token-' + Date.now();
-          localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('authUser', JSON.stringify(userData));
-          localStorage.setItem('authIsAdmin', (data.user.is_admin || false).toString());
-        }
-      } catch (localStorageError) {
-        console.warn('Error persisting to localStorage:', localStorageError);
-      }
-      
-      setUser(userData);
-      setIsAuthenticated(true);
-      setIsAdmin(data.user.is_admin || false);
-      
-      // Load user activities
-      setActivityFeed(activityService.getUserActivities(userData.id));
-      
-      // Add initial activity if user has no activities
-      if (activityService.getUserActivities(userData.id).length === 0) {
-        const initialActivity = {
-          type: 'reset' as const,
-          action: 'ACCOUNT_RESET',
-          description: 'Reset to 1,000 USDT',
-          amount: '1,000 USDT',
-          status: 'completed' as const,
-          icon: '🔄'
-        };
-        activityService.addActivity(userData.id, initialActivity);
-        setActivityFeed(activityService.getUserActivities(userData.id));
-      }
-      
-      // Set trading engine auth context
-      tradingEngine.setAuthContext({ user: userData, isAdmin: data.user.is_admin || false });
-    };
-
-    const handleAuthError = (error: any) => {
-      console.error('Auth error:', error);
-      
-      // Clear authentication data from localStorage with safety checks
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('authUser');
-          localStorage.removeItem('authIsAdmin');
-        }
-      } catch (localStorageError) {
-        console.warn('Error clearing localStorage:', localStorageError);
-      }
-      
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-    };
-
-    const handlePriceUpdates = (updates: any[]) => {
-      updates.forEach(update => {
-        updateRealTimePrice(update.symbol, update.price, update.change, update.volume);
-      });
-    };
-
-    const handleTradeEvent = (tradeEvent: any) => {
-      addActivity(tradeEvent);
-      addTrade({
-        pair: tradeEvent.symbol,
-        type: tradeEvent.action.toLowerCase(),
-        amount: tradeEvent.amount.split(' ')[0],
-        price: tradeEvent.price,
-        pnl: tradeEvent.pnl,
-        status: tradeEvent.status
-      });
-    };
-
-    const handleBalanceUpdate = (balanceUpdate: any) => {
-      if (balanceUpdate.type === 'trading') {
-        updateTradingBalance(balanceUpdate.asset, balanceUpdate.amount, balanceUpdate.operation);
-      } else if (balanceUpdate.type === 'funding') {
-        updateFundingBalance(balanceUpdate.amount, balanceUpdate.operation);
-      }
-    };
-
-    const handleNotification = (notification: any) => {
-      console.log('Received notification:', notification);
-      // Handle notifications (could show toast, update UI, etc.)
-    };
-
-    // Set up WebSocket event listeners
-    websocketService.on('auth_success', handleAuthSuccess);
-    websocketService.on('auth_error', handleAuthError);
-    websocketService.on('price_updates', handlePriceUpdates);
-    websocketService.on('trade_event', handleTradeEvent);
-    websocketService.on('balance_update', handleBalanceUpdate);
-    websocketService.on('notification', handleNotification);
-
-    return () => {
-      websocketService.off('auth_success', handleAuthSuccess);
-      websocketService.off('auth_error', handleAuthError);
-      websocketService.off('price_updates', handlePriceUpdates);
-      websocketService.off('trade_event', handleTradeEvent);
-      websocketService.off('balance_update', handleBalanceUpdate);
-      websocketService.off('notification', handleNotification);
-    };
-  }, []);
-
   const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
-      // Check for admin credentials
-      if (email === 'admin@kryvex.com' && password === 'Kryvex.@123') {
-        const adminUser = {
-          id: 'admin-001',
-          email: 'admin@kryvex.com',
-          username: 'admin',
-          firstName: 'Admin',
-          lastName: 'Kryvex'
-        };
-        
-        const mockToken = 'admin-jwt-token-' + Date.now();
-        
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            // Use localStorage for admin (always persistent)
-            localStorage.setItem('authToken', mockToken);
-            localStorage.setItem('authUser', JSON.stringify(adminUser));
-            localStorage.setItem('authIsAdmin', 'true');
-          }
-        } catch (localStorageError) {
-          console.warn('Error persisting to localStorage:', localStorageError);
-        }
-        
-        setUser(adminUser);
-        setIsAuthenticated(true);
-        setIsAdmin(true);
-        
-        websocketService.authenticate(email, password);
-        
-        console.log('Admin login successful');
-        return;
+      const credentials: LoginCredentials = { email, password };
+      const { success, error } = await supabaseAuthService.signIn(credentials);
+
+      if (!success) {
+        throw new Error(error || 'Login failed');
       }
-      
-      // Check if user exists in registeredUsers (real registration)
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-          const user = registeredUsers.find((u: any) => u.email === email && u.password === password);
-          
-          if (!user) {
-            // Create a demo user if this is the first login attempt
-            const demoUsers = JSON.parse(localStorage.getItem('demoUsersCreated') || '[]');
-            if (!demoUsers.includes(email)) {
-              // Create demo user automatically
-              const demoUser = {
-                id: `user-${Date.now()}`,
-                email,
-                firstName: 'Demo',
-                lastName: 'User',
-                phone: '+1234567890',
-                username: 'demo_user',
-                country: 'US',
-                bio: 'Demo account created automatically',
-                avatar: '',
-                kycStatus: 'unverified' as const,
-                walletBalance: 1000, // Demo balance
-                password: password,
-                createdAt: new Date().toISOString()
-              };
-              
-              registeredUsers.push(demoUser);
-              localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-              demoUsers.push(email);
-              localStorage.setItem('demoUsersCreated', JSON.stringify(demoUsers));
-              
-              console.log('Demo user created automatically:', email);
-              
-              // Now try to login with the created user
-              const createdUser = registeredUsers.find((u: any) => u.email === email && u.password === password);
-              if (createdUser) {
-                const sessionUser = { ...createdUser };
-                delete sessionUser.password; // Don't store password in session
-                
-                const mockToken = 'user-jwt-token-' + Date.now();
-                
-                if (rememberMe) {
-                  localStorage.setItem('authToken', mockToken);
-                  localStorage.setItem('authUser', JSON.stringify(sessionUser));
-                  localStorage.setItem('authIsAdmin', 'false');
-                } else {
-                  sessionStorage.setItem('authToken', mockToken);
-                  sessionStorage.setItem('authUser', JSON.stringify(sessionUser));
-                  sessionStorage.setItem('authIsAdmin', 'false');
-                }
-                
-                setUser(sessionUser);
-                setIsAuthenticated(true);
-                setIsAdmin(false);
-                
-                // Update trading account with demo balance
-                setTradingAccount(prev => ({
-                  ...prev,
-                  USDT: {
-                    balance: sessionUser.walletBalance.toFixed(8),
-                    usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
-                    available: sessionUser.walletBalance.toFixed(8)
-                  }
-                }));
-                
-                setFundingAccount(prev => ({
-                  USDT: {
-                    balance: sessionUser.walletBalance.toFixed(2),
-                    usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
-                    available: sessionUser.walletBalance.toFixed(2)
-                  }
-                }));
-                
-                websocketService.authenticate(email, password);
-                
-                toast({
-                  title: "Demo Account Created",
-                  description: `Welcome! A demo account has been created for ${email} with $1000 balance.`,
-                });
-                
-                return;
-              }
-            }
-            
-            throw new Error('Invalid credentials. Please register first or use demo credentials.');
-          }
-          
-          // Create clean user object without password for session
-          const sessionUser = {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            username: user.username,
-            country: user.country || '',
-            bio: user.bio || '',
-            avatar: user.avatar || '',
-            kycStatus: user.kycStatus || 'unverified',
-            walletBalance: user.walletBalance || 0
-          };
-          
-          const mockToken = 'user-jwt-token-' + Date.now();
-          
-          // Use appropriate storage based on rememberMe preference
-          if (rememberMe) {
-            localStorage.setItem('authToken', mockToken);
-            localStorage.setItem('authUser', JSON.stringify(sessionUser));
-            localStorage.setItem('authIsAdmin', 'false');
-            console.log('User login successful (persistent):', sessionUser.email);
-          } else {
-            sessionStorage.setItem('authToken', mockToken);
-            sessionStorage.setItem('authUser', JSON.stringify(sessionUser));
-            sessionStorage.setItem('authIsAdmin', 'false');
-            console.log('User login successful (session):', sessionUser.email);
-          }
-          
-          setUser(sessionUser);
-          setIsAuthenticated(true);
-          setIsAdmin(false);
-          
-          // Sync user's wallet balance to trading account
-          if (sessionUser.walletBalance && sessionUser.walletBalance > 0) {
-            // Update trading account with user's wallet balance
-            setTradingAccount(prev => ({
-              ...prev,
-              USDT: {
-                balance: sessionUser.walletBalance.toFixed(8),
-                usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
-                available: sessionUser.walletBalance.toFixed(8)
-              }
-            }));
-            
-            // Also update funding account
-            setFundingAccount(prev => ({
-              USDT: {
-                balance: sessionUser.walletBalance.toFixed(2),
-                usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
-                available: sessionUser.walletBalance.toFixed(2)
-              }
-            }));
-          }
-          
-          // Create user session for tracking
-          const sessionToken = mockToken;
-          const ipAddress = 'production'; // In real app, get from request
-          const userAgent = navigator.userAgent;
-          userSessionService.createSession(
-            sessionUser.id,
-            sessionUser.username || `${sessionUser.firstName} ${sessionUser.lastName}`,
-            sessionUser.email,
-            sessionToken,
-            ipAddress,
-            userAgent
-          );
-          
-          websocketService.authenticate(email, password);
-          
-          return;
-        }
-      } catch (localStorageError) {
-        console.warn('Error accessing localStorage:', localStorageError);
-      }
-      
-      throw new Error('Invalid credentials. Please register first.');
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to Kryvex Trading!",
+      });
     } catch (error) {
       console.error('Login error:', error);
-      
-      // Provide helpful guidance
-      if (error.message.includes('Invalid credentials')) {
-        console.log('💡 Demo Credentials:');
-        console.log('   Admin: admin@kryvex.com / Kryvex.@123');
-        console.log('   User: Any email/password (auto-creates demo account)');
-        console.log('   Or register a new account first');
-      }
-      
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "Failed to login. Please try again."
+        description: error instanceof Error ? error.message : "Failed to login. Please try again."
       });
       throw error;
     }
@@ -738,234 +372,133 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, firstName: string, lastName: string, phone: string) => {
     try {
-      // TODO: Implement real API call for registration
-      console.log('Registering user:', { email, firstName, lastName, phone });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create user object
-      const newUser = {
-        id: `user-${Date.now()}`,
+      const registerData: RegisterData = {
         email,
-        firstName,
-        lastName,
+        password,
+        fullName: `${firstName} ${lastName}`,
         phone,
-        username: `${firstName} ${lastName}`,
-        country: '',
-        bio: '',
-        avatar: '',
-        // Initialize new KYC system
-        kycLevel1: {
-          status: 'unverified' as const
-        },
-        kycLevel2: {
-          status: 'not_started' as const
-        },
-        // Legacy KYC for backward compatibility
-        kycStatus: 'unverified' as const,
-        createdAt: new Date().toISOString()
+        country: 'United States'
       };
-      
-      // Store in localStorage for demo
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      existingUsers.push({ ...newUser, password }); // Include password for login
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-      
-      // Set session without password
-      const sessionUser = { ...newUser };
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        sessionStorage.setItem('authToken', 'user-jwt-token-' + Date.now());
-        sessionStorage.setItem('authUser', JSON.stringify(sessionUser));
-        sessionStorage.setItem('authIsAdmin', 'false');
+
+      const { success, error } = await supabaseAuthService.signUp(registerData);
+
+      if (!success) {
+        throw new Error(error || 'Registration failed');
       }
-      
-      setUser(sessionUser);
-      setIsAuthenticated(true);
-      setIsAdmin(false);
-      
-      // Send verification email automatically
-      try {
-        await kycService.sendVerificationEmail(email);
-        console.log('Verification email sent to:', email);
-      } catch (error) {
-        console.warn('Failed to send verification email:', error);
-      }
-      
-      // Emit real-time update to admin
-      websocketService.notifyUserRegistration(newUser);
-      
+
       toast({
         title: "Registration Successful",
         description: "Account created successfully. Please check your email for verification.",
       });
-      
     } catch (error) {
       console.error('Registration error:', error);
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: "Failed to create account. Please try again."
+        description: error instanceof Error ? error.message : "Failed to create account. Please try again."
       });
       throw error;
     }
   };
 
   const logout = () => {
-    // Clear session data from both localStorage and sessionStorage, keep registered users
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        // Clear localStorage session data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('authIsAdmin');
-        
-        // Clear sessionStorage session data
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('authUser');
-        sessionStorage.removeItem('authIsAdmin');
-        
-        // Note: We keep 'registeredUsers' so users can login again
-      }
-    } catch (localStorageError) {
-      console.warn('Error clearing storage:', localStorageError);
-    }
-    
-    setUser(null);
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    websocketService.disconnect();
-    
-    console.log('Logout successful, session data cleared (registered users preserved)');
+    supabaseAuthService.signOut();
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
   };
 
-  const updateUserProfile = (profileData: Partial<User>) => {
-    setUser(prev => {
-      if (prev) {
-        const updatedUser = { ...prev, ...profileData };
-        // Persist updated user data to localStorage with safety checks
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('authUser', JSON.stringify(updatedUser));
-          }
-        } catch (localStorageError) {
-          console.warn('Error persisting user profile to localStorage:', localStorageError);
-        }
-        
-        // Notify admin panel about profile update
-        websocketService.updateProfile(prev.id, profileData);
-        
-        return updatedUser;
+  const updateUserProfile = async (profileData: Partial<User>) => {
+    try {
+      const updateData: ProfileUpdateData = {
+        fullName: profileData.firstName && profileData.lastName ? `${profileData.firstName} ${profileData.lastName}` : undefined,
+        avatar: profileData.avatar,
+        phone: profileData.phone,
+        country: profileData.country
+      };
+
+      const { success, error } = await supabaseAuthService.updateProfile(updateData);
+
+      if (!success) {
+        throw new Error(error || 'Profile update failed');
       }
-      return null;
-    });
+
+      // Update local user state
+      setUser(prev => prev ? { ...prev, ...profileData } : null);
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      toast({
+        variant: "destructive",
+        title: "Profile Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update profile. Please try again."
+      });
+    }
   };
 
   const checkAdminAccess = () => {
-    // Enhanced admin access check with additional security
-    const isAuthenticated = !!user;
-    const isAdminUser = isAdmin === true;
-    const hasValidAdminToken = typeof window !== 'undefined' && 
-      (localStorage.getItem('authIsAdmin') === 'true' || sessionStorage.getItem('authIsAdmin') === 'true');
-    
-    const hasAdminAccess = isAuthenticated && isAdminUser && hasValidAdminToken;
-    
-    console.log('Admin access check:', {
-      isAuthenticated,
-      isAdminUser,
-      hasValidAdminToken,
-      hasAdminAccess,
-      userEmail: user?.email
-    });
-    
-    return hasAdminAccess;
+    return isAuthenticated && isAdmin;
   };
 
   const requireAdmin = () => {
     const hasAccess = checkAdminAccess();
     if (!hasAccess) {
       console.warn('Admin access denied for user:', user?.email);
-      // You could redirect to login or show an error here
     }
     return hasAccess;
   };
 
-  // Helper function to check if user is already registered
   const isUserRegistered = (email: string): boolean => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-        return registeredUsers.some((u: any) => u.email === email);
-      }
-    } catch (error) {
-      console.warn('Error checking user registration:', error);
-    }
+    // This would typically check against the database
+    // For now, return false to allow registration
     return false;
   };
 
-  // Refresh user's wallet balance from localStorage
-  const refreshUserWalletBalance = useCallback(() => {
-    if (user && typeof window !== 'undefined' && window.localStorage) {
-      try {
-        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-        const updatedUser = registeredUsers.find((u: any) => u.id === user.id);
-        
-        if (updatedUser && updatedUser.walletBalance !== user.walletBalance) {
-          // Update user state with new wallet balance
-          setUser(prev => prev ? { ...prev, walletBalance: updatedUser.walletBalance } : null);
-          
-          // Update session storage
-          const sessionUser = JSON.parse(localStorage.getItem('authUser') || sessionStorage.getItem('authUser') || 'null');
-          if (sessionUser && sessionUser.id === user.id) {
-            const updatedSessionUser = { ...sessionUser, walletBalance: updatedUser.walletBalance };
-            localStorage.setItem('authUser', JSON.stringify(updatedSessionUser));
-            sessionStorage.setItem('authUser', JSON.stringify(updatedSessionUser));
-          }
-          
-          // Sync to trading account
-          if (updatedUser.walletBalance > 0) {
-            setTradingAccount(prev => ({
-              ...prev,
-              USDT: {
-                balance: updatedUser.walletBalance.toFixed(8),
-                usdValue: `$${updatedUser.walletBalance.toFixed(2)}`,
-                available: updatedUser.walletBalance.toFixed(8)
-              }
-            }));
-            
-            setFundingAccount(prev => ({
-              USDT: {
-                balance: updatedUser.walletBalance.toFixed(2),
-                usdValue: `$${updatedUser.walletBalance.toFixed(2)}`,
-                available: updatedUser.walletBalance.toFixed(2)
-              }
-            }));
-          }
-          
-          console.log('Wallet balance refreshed:', updatedUser.walletBalance);
-        }
-      } catch (error) {
-        console.warn('Error refreshing wallet balance:', error);
-      }
-    }
-  }, [user]);
-
-  // Refresh wallet balance periodically when user is authenticated
+  // Set up real-time subscriptions when user is authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Refresh immediately
-      refreshUserWalletBalance();
-      
-      // Then refresh every 30 seconds
-      const interval = setInterval(refreshUserWalletBalance, 30000);
-      return () => clearInterval(interval);
+      // Subscribe to price updates for major trading pairs
+      const unsubscribePrices = supabaseTradingService.subscribeToPriceUpdates(
+        ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ADA/USDT'],
+        (price) => {
+          updateRealTimePrice(price.symbol, price.price, price.change24h, price.volume24h);
+        }
+      );
+
+      // Subscribe to user's trades
+      const unsubscribeTrades = supabaseTradingService.subscribeToUserTrades(
+        user.id,
+        (trade) => {
+                     addTrade({
+             id: trade.id,
+             symbol: 'BTC/USDT', // Default symbol since we don't have trading_pairs relation
+             type: trade.trade_type,
+             amount: trade.amount,
+             price: trade.price,
+             pnl: trade.profit_loss,
+             status: trade.result,
+             timestamp: trade.created_at
+           });
+        }
+      );
+
+      return () => {
+        unsubscribePrices();
+        unsubscribeTrades();
+      };
     }
-  }, [isAuthenticated, user, refreshUserWalletBalance]);
+  }, [isAuthenticated, user, addTrade, updateRealTimePrice]);
 
   const value: AuthContextType = {
     user,
     isAuthenticated,
     isAdmin,
+    isLoading,
     login,
     logout,
     register,
