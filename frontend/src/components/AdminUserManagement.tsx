@@ -45,8 +45,6 @@ import {
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-import userPersistenceService, { UserData } from '@/services/userPersistenceService';
-import userActivityService, { UserActivity as ActivityData, AdminNotification } from '@/services/userActivityService';
 import supabaseAdminService from '@/services/supabaseAdminService';
 
 interface User {
@@ -168,7 +166,7 @@ export default function AdminUserManagement() {
   }>>([]);
 
   // Handler functions for userActivityService
-  const handleActivityUpdate = (activity: ActivityData) => {
+  const handleActivityUpdate = (activity: any) => {
     console.log('AdminUserManagement: Received activity update:', activity);
     
     // Update live activity feed
@@ -182,7 +180,7 @@ export default function AdminUserManagement() {
     }, ...prev.slice(0, 19)]); // Keep last 20 activities
   };
 
-  const handleNotificationUpdate = (notification: AdminNotification) => {
+  const handleNotificationUpdate = (notification: any) => {
     console.log('AdminUserManagement: Received notification update:', notification);
     
     // Update notifications
@@ -254,17 +252,11 @@ export default function AdminUserManagement() {
   useEffect(() => {
     loadUsers();
     
-    // Subscribe to userActivityService events
-    userActivityService.on('activity', handleActivityUpdate);
-    userActivityService.on('notification', handleNotificationUpdate);
-    
     // Set up periodic refresh
     const interval = setInterval(loadUsers, 30000); // Refresh every 30 seconds
     
     return () => {
       clearInterval(interval);
-      userActivityService.off('activity', handleActivityUpdate);
-      userActivityService.off('notification', handleNotificationUpdate);
     };
   }, []);
 

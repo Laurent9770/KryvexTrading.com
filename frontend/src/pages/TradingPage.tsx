@@ -28,7 +28,15 @@ const TradingPage = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { realTimePrices, tradingAccount, addActivity, addTrade, updateTradingBalance } = useAuth();
+  const { realTimePrices, tradingAccount, addActivity, addTrade, updateTradingBalance, user } = useAuth();
+  
+  // Set up user ID for trading service
+  useEffect(() => {
+    if (user?.id) {
+      supabaseTradingPageService.setUserId(user.id);
+    }
+  }, [user?.id]);
+  
   const [activeTab, setActiveTab] = useState("spot");
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
   const [orderType, setOrderType] = useState('limit');
@@ -493,25 +501,22 @@ const TradingPage = () => {
       updateTradingBalance('USDT', amount, 'subtract');
 
       // Add to unified trading engine
-      const tradeRequest: TradeRequest = {
-        type: 'spot',
-        action: spotDirection as 'buy' | 'sell',
+      const tradeRequest = {
+        type: 'market',
+        side: spotDirection as 'buy' | 'sell',
         symbol: selectedPair,
-        amount: amount as number,
-        price: entryPrice,
-        duration: spotDuration,
-        leverage: 1,
-        direction: spotDirection === 'buy' ? 'up' : 'down'
+        quantity: amount as number,
+        price: entryPrice
       };
       
       // Execute the trade in the trading engine
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
       
-      if (!result.success) {
+      if (!result) {
         toast({
           variant: "destructive",
           title: "Trade Failed",
-          description: result.message
+          description: "Failed to execute trade"
         });
         return;
       }
@@ -592,7 +597,7 @@ const TradingPage = () => {
     }
 
     // Complete the spot trade in the trading engine
-    await tradingEngine.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, parseFloat(trade.profit_percentage) || 5);
+    await supabaseTradingPageService.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, parseFloat(trade.profit_percentage) || 5);
 
     const tradeActivity = {
       type: "spot" as const,
@@ -706,8 +711,8 @@ const TradingPage = () => {
   }, []);
 
   // Debug function to check trading history
-  const debugTradingHistory = () => {
-    const history = tradingEngine.getTradeHistory();
+  const debugTradingHistory = async () => {
+    const history = await supabaseTradingPageService.getTradeHistory();
     console.log('Current Trading History:', history);
     console.log('Spot Trades:', history.filter(t => t.type === 'spot'));
     console.log('Total Trades:', history.length);
@@ -727,18 +732,18 @@ const TradingPage = () => {
     setIsExecuting(true);
     try {
       const selectedFuturesPair = futuresPairs.find(p => p.symbol === selectedPair);
-      const tradeRequest: TradeRequest = {
-        type: 'futures',
-        action: futuresPosition === 'long' ? 'buy' : 'sell',
+      const tradeRequest = {
+        type: 'market',
+        side: futuresPosition === 'long' ? 'buy' : 'sell',
         symbol: selectedPair.split('USDT')[0],
-        amount: parseFloat(futuresAmount),
+        quantity: parseFloat(futuresAmount),
         price: parseFloat(futuresPrice || selectedFuturesPair?.price.toString() || "0"),
         leverage: futuresLeverage[0],
       };
 
-      const result = await tradingEngine.executeTrade(tradeRequest);
+      const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result.success) {
+      if (result) {
         const tradeActivity = {
           type: "futures_trade",
           action: `${futuresPosition.toUpperCase()} FUTURES`,

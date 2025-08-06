@@ -340,6 +340,123 @@ class SupabaseTradingPageService {
     };
   }
 
+  // Additional methods to match tradingEngine interface
+  async executeTrade(tradeRequest: any): Promise<any> {
+    // This is a generic method that handles different trade types
+    // For now, we'll route to the appropriate method based on the request
+    if (tradeRequest.type === 'spot' || tradeRequest.type === 'market') {
+      return this.placeSpotTrade(tradeRequest);
+    } else if (tradeRequest.type === 'futures') {
+      return this.placeFuturesTrade(tradeRequest);
+    } else {
+      // For other trade types (binary, options, etc.), we'll create a generic trade
+      return this.createGenericTrade(tradeRequest);
+    }
+  }
+
+  async completeSpotTrade(tradeId: string, outcome: 'win' | 'lose', currentMarketPrice: number, profitPercentage: number): Promise<void> {
+    if (!this.userId) {
+      throw new Error('User ID not set');
+    }
+
+    try {
+      const profitLoss = outcome === 'win' ? 
+        (currentMarketPrice * profitPercentage / 100) : 
+        -(currentMarketPrice * profitPercentage / 100);
+
+      const { error } = await supabase
+        .from('trades')
+        .update({
+          status: 'completed',
+          result: outcome,
+          profit_loss: profitLoss,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', tradeId)
+        .eq('user_id', this.userId);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error completing spot trade:', error);
+      throw error;
+    }
+  }
+
+  async getTradeHistory(): Promise<any[]> {
+    if (!this.userId) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('user_id', this.userId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Error fetching trade history:', error);
+        return [];
+      }
+
+      return data.map(trade => ({
+        id: trade.id,
+        symbol: trade.trading_pair_id,
+        type: trade.trade_type,
+        amount: trade.amount,
+        price: trade.price,
+        status: trade.status,
+        result: trade.result,
+        profit_loss: trade.profit_loss,
+        created_at: trade.created_at,
+        completed_at: trade.completed_at
+      }));
+    } catch (error) {
+      console.error('Error fetching trade history:', error);
+      return [];
+    }
+  }
+
+  private async createGenericTrade(tradeRequest: any): Promise<any> {
+    if (!this.userId) {
+      throw new Error('User ID not set');
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('trades')
+        .insert({
+          user_id: this.userId,
+          trading_pair_id: tradeRequest.symbol || 'BTC/USDT',
+          trade_type: tradeRequest.side || tradeRequest.action || 'buy',
+          amount: tradeRequest.quantity || tradeRequest.amount || 0,
+          price: tradeRequest.price || 0,
+          status: 'pending',
+          result: 'pending'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        success: true,
+        trade: this.mapTradeData(data)
+      };
+    } catch (error) {
+      console.error('Error creating generic trade:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
   // Cleanup
   cleanup() {
     // Unsubscribe from all channels

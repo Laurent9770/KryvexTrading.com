@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { ActivityItem } from '@/services/activityService';
-import activityService from '@/services/activityService';
+import { ActivityItem } from '@/services/supabaseActivityService';
+import supabaseActivityService from '@/services/supabaseActivityService';
 
 import { useToast } from '@/hooks/use-toast';
 import supabaseKYCService from '../services/supabaseKYCService';
-import userSessionService from '../services/userSessionService';
 import supabaseAuthService, { AuthUser, LoginCredentials, RegisterData, ProfileUpdateData } from '@/services/supabaseAuthService';
 import supabaseTradingService from '@/services/supabaseTradingService';
 
@@ -307,7 +306,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
     
     setActivityFeed(prev => [newActivity, ...prev]);
-    activityService.addActivity(user?.id || 'unknown', activity);
+    if (user?.id) {
+      supabaseActivityService.addActivity(user.id, activity);
+    }
   }, [user?.id]);
 
   const addTrade = useCallback((trade: any) => {
