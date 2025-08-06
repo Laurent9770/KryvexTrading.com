@@ -51,8 +51,8 @@ import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
 import AdminWalletManager from '@/components/AdminWalletManager';
 import { AdminRoomManagement } from '@/components/AdminRoomManagement';
 import AdminBinanceControl from '@/components/AdminBinanceControl';
-import tradingEngine from "@/services/tradingEngine";
-import websocketService from "@/services/websocketService";
+import supabaseTradingService from "@/services/supabaseTradingService";
+import supabaseWalletService from "@/services/supabaseWalletService";
 
 interface User {
   id: string;
@@ -380,14 +380,9 @@ export default function AdminDashboard() {
       });
     };
 
-    // Subscribe to WebSocket events
-    websocketService.on('user_registered', handleNewUserRegistration);
-    websocketService.on('wallet_updated', handleWalletUpdate);
-    websocketService.on('trade_completed', handleTradeCompleted);
-    websocketService.on('kyc_status_updated', handleKYCStatusUpdate);
-    websocketService.on('kyc_submission_created', handleKYCSubmissionCreated);
-    websocketService.on('deposit_request', handleDepositRequest);
-    websocketService.on('withdrawal_request', handleWithdrawalRequest);
+    // Subscribe to Supabase real-time events
+    const walletSubscription = supabaseWalletService.subscribeToTransactions(handleWalletUpdate);
+    const withdrawalSubscription = supabaseWalletService.subscribeToWithdrawalRequests(handleWithdrawalRequest);
 
     // Initial data fetch
     fetchDashboardData();
@@ -396,14 +391,9 @@ export default function AdminDashboard() {
     const interval = setInterval(fetchDashboardData, 30000); // Refresh every 30 seconds
 
     return () => {
-      // Cleanup WebSocket listeners
-      websocketService.off('user_registered', handleNewUserRegistration);
-      websocketService.off('wallet_updated', handleWalletUpdate);
-      websocketService.off('trade_completed', handleTradeCompleted);
-      websocketService.off('kyc_status_updated', handleKYCStatusUpdate);
-      websocketService.off('kyc_submission_created', handleKYCSubmissionCreated);
-      websocketService.off('deposit_request', handleDepositRequest);
-      websocketService.off('withdrawal_request', handleWithdrawalRequest);
+      // Cleanup Supabase subscriptions
+      if (walletSubscription) walletSubscription.unsubscribe();
+      if (withdrawalSubscription) withdrawalSubscription.unsubscribe();
       
       clearInterval(interval);
     };
@@ -433,10 +423,14 @@ export default function AdminDashboard() {
         index === self.findIndex(u => u.id === user.id)
       );
 
-      // Get real trade data from trading engine
-      const tradeHistory = tradingEngine.getTradeHistory();
-      const tradeStats = tradingEngine.getTradeStatistics();
-      const spotTrades = tradingEngine.getSpotTrades();
+      // Get real trade data from Supabase
+      const tradeHistoryResponse = await supabaseTradingService.getTradeHistory('all', 1, 100);
+      const tradeStatsResponse = await supabaseTradingService.getTradingStats('all');
+      const spotTradesResponse = await supabaseTradingService.getTrades('all', 100);
+      
+      const tradeHistory = tradeHistoryResponse.success ? tradeHistoryResponse.trades || [] : [];
+      const tradeStats = tradeStatsResponse.success ? tradeStatsResponse.stats : null;
+      const spotTrades = spotTradesResponse.success ? spotTradesResponse.trades || [] : [];
       
       // Get real wallet data
       let allUserWallets: any[] = [];
@@ -506,13 +500,13 @@ export default function AdminDashboard() {
         .map(trade => ({
           id: trade.id,
           amount: trade.amount,
-          trade_type: trade.action,
+          trade_type: trade.trade_type,
           status: trade.status,
-          result: trade.status === 'won' ? 'win' : 'loss',
-          profit_loss: trade.profit || trade.loss || 0,
-          created_at: trade.timestamp.toISOString(),
-          user_id: 'current-user',
-          profiles: { full_name: 'Current User', email: 'user@example.com' }
+          result: trade.result,
+          profit_loss: trade.profit_loss || 0,
+          created_at: trade.created_at,
+          user_id: trade.user_id,
+          profiles: { full_name: 'User', email: 'user@example.com' }
         }));
 
       // Calculate real statistics
@@ -526,15 +520,15 @@ export default function AdminDashboard() {
       const totalVolume = tradeHistory.reduce((sum, t) => sum + Number(t.amount), 0);
 
       // Calculate average win rate from trades
-      const completedTrades = tradeHistory.filter(t => t.status === 'won' || t.status === 'lost');
+      const completedTrades = tradeHistory.filter(t => t.status === 'completed');
       const avgWinRate = completedTrades.length > 0 
-        ? (completedTrades.filter(t => t.status === 'won').length / completedTrades.length) * 100
+        ? (completedTrades.filter(t => t.result === 'win').length / completedTrades.length) * 100
         : 0;
 
       setUsers(realUsers);
       setDeposits(realDeposits);
       setTrades(realTrades);
-      setSpotTrades(spotTrades);
+      setSpotTrades([]); // TODO: Convert spotTrades to proper format
       
       setStats({
         totalUsers: realUsers.length,
@@ -542,7 +536,7 @@ export default function AdminDashboard() {
         activeUsers: verifiedUsers,
         totalDeposits: totalDeposits,
         pendingDeposits: pendingDeposits,
-        totalTrades: tradeStats.totalTrades,
+        totalTrades: tradeStats?.totalTrades || 0,
         totalVolume: totalVolume,
         totalBalance: totalBalance,
         avgWinRate: avgWinRate,

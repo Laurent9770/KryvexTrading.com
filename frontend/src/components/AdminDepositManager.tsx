@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import websocketService from '@/services/websocketService';
+import supabaseWalletService from '@/services/supabaseWalletService';
 import adminDataService, { AdminDepositRequest } from '@/services/adminDataService';
 
 const AdminDepositManager = () => {
@@ -79,15 +79,15 @@ const AdminDepositManager = () => {
       });
     };
     
-    // Subscribe to WebSocket events
-    websocketService.on('deposit_request', handleNewDepositRequest);
+    // Subscribe to Supabase real-time events
+    const depositSubscription = supabaseWalletService.subscribeToTransactions(handleNewDepositRequest);
     
     // Set up periodic refresh
     const interval = setInterval(fetchDepositRequests, 30000);
     
     return () => {
       clearInterval(interval);
-      websocketService.off('deposit_request', handleNewDepositRequest);
+      if (depositSubscription) depositSubscription.unsubscribe();
     };
   }, []);
 

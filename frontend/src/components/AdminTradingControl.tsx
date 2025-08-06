@@ -19,7 +19,7 @@ import {
   ArrowRight,
   Filter
 } from 'lucide-react';
-import websocketService from '@/services/websocketService';
+import supabaseTradingService from '@/services/supabaseTradingService';
 
 const AdminTradingControl: React.FC = () => {
   const [users, setUsers] = useState<AdminTradeSummary[]>([]);
@@ -58,17 +58,15 @@ const AdminTradingControl: React.FC = () => {
       ));
     };
     
-    // Subscribe to WebSocket events
-    websocketService.on('trade_completed', handleTradeUpdate);
-    websocketService.on('trade_started', handleTradeUpdate);
+    // Subscribe to Supabase real-time events
+    // TODO: Implement admin-level trade subscriptions
     
     // Set up periodic refresh
     const interval = setInterval(loadUsersWithActiveTrades, 30000);
     
     return () => {
       clearInterval(interval);
-      websocketService.off('trade_completed', handleTradeUpdate);
-      websocketService.off('trade_started', handleTradeUpdate);
+      // TODO: Cleanup admin-level trade subscriptions
     };
   }, []);
 

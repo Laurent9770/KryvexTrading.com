@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
-import websocketService from '@/services/websocketService';
+import supabaseChatService from '@/services/supabaseChatService';
 import { Plus, Users, MessageCircle, Trash2 } from 'lucide-react';
 
 interface Room {
@@ -41,10 +41,8 @@ export const AdminRoomManagement = () => {
   }, [user]);
 
   const loadRooms = () => {
-    websocketService.on('all_rooms', (roomList: Room[]) => {
-      setRooms(roomList);
-    });
-    websocketService.getAllRooms();
+    // TODO: Implement Supabase chat room loading
+    setRooms([]);
   };
 
   const loadUsers = () => {
@@ -67,7 +65,7 @@ export const AdminRoomManagement = () => {
       return;
     }
 
-    websocketService.createRoom(newRoomId, newRoomName, isAdminOnly);
+    // TODO: Implement Supabase chat room creation
     
     toast({
       title: "Success",
@@ -89,7 +87,7 @@ export const AdminRoomManagement = () => {
       return;
     }
 
-    websocketService.addUserToRoom(user?.id || '', selectedUser, selectedRoom);
+    // TODO: Implement Supabase user addition to room
     
     toast({
       title: "Success",

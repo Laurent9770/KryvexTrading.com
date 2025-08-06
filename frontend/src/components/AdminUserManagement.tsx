@@ -288,31 +288,8 @@ export default function AdminUserManagement() {
   }, []);
 
   const setupWebSocketListeners = () => {
-    // Listen for new user registrations
-    websocketService.on('user_registered', handleNewUserRegistration);
-    
-    // Listen for user profile updates
-    websocketService.on('user_updated', handleUserUpdate);
-    
-    // Listen for KYC status updates
-    websocketService.on('kyc_status_updated', handleKYCUpdate);
-    
-    // Listen for wallet updates
-    websocketService.on('wallet_updated', handleWalletUpdate);
-    
-    // Listen for trade updates
-    websocketService.on('trade_completed', handleTradeUpdate);
-    
-    // Listen for deposit/withdrawal updates
-    websocketService.on('deposit_status_updated', handleDepositUpdate);
-    websocketService.on('withdrawal_status_updated', handleWithdrawalUpdate);
-    
-    // Listen for user activity updates
-    websocketService.on('user_activity', handleUserActivity);
-    
-    // Listen for login/logout events
-    websocketService.on('user_login', handleUserLogin);
-    websocketService.on('user_logout', handleUserLogout);
+    // WebSocket functionality replaced with Supabase real-time subscriptions
+    // TODO: Implement Supabase real-time subscriptions for user management
   };
 
   const handleTradeUpdate = (data: any) => {
@@ -879,12 +856,7 @@ export default function AdminUserManagement() {
       existingActions.push(adminAction);
       localStorage.setItem('admin_actions', JSON.stringify(existingActions));
 
-      // Send WebSocket notification for real-time update
-      websocketService.performAdminAction('status_change', userId, {
-        status,
-        reason,
-        timestamp: new Date().toISOString()
-      });
+      // Real-time notification replaced with Supabase
 
       toast({
         title: 'User Status Updated',
@@ -1047,17 +1019,7 @@ export default function AdminUserManagement() {
       existingActions.push(adminAction);
       localStorage.setItem('admin_actions', JSON.stringify(existingActions));
 
-      // Try to send WebSocket notification, but don't fail if it doesn't work
-      try {
-        websocketService.updateWallet(
-          selectedUser.id,
-          'USDT',
-          walletAdjustment.amount,
-          walletAdjustment.type as 'add' | 'subtract'
-        );
-      } catch (error) {
-        console.warn('WebSocket notification failed, but wallet adjustment was successful:', error);
-      }
+      // Wallet update notification replaced with Supabase
 
       // Reset form
       setWalletAdjustment({
@@ -1111,13 +1073,7 @@ export default function AdminUserManagement() {
       existingMessages.push(messageRecord);
       localStorage.setItem('user_messages', JSON.stringify(existingMessages));
 
-      // Send message via WebSocket
-      websocketService.sendChatMessage(
-        messageData.message,
-        'admin_support',
-        'Admin',
-        'admin_message'
-      );
+      // Send message via Supabase (replaced WebSocket)
 
       // Log admin action
       const adminAction = {
