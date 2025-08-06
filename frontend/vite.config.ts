@@ -1,41 +1,36 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  base: '/',
-  server: {
-    host: "::",
-    port: 8080,
-    historyApiFallback: true,
-  },
-  plugins: [
-    react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
   },
-  build: {
-    minify: 'esbuild',
-    target: 'esnext',
-    outDir: 'dist',
-    assetsDir: 'assets',
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext',
-    },
-  },
-  // SPA routing configuration
-  preview: {
+  server: {
     port: 8080,
     host: true,
-    historyApiFallback: true,
   },
-}));
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+        },
+      },
+    },
+  },
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['@supabase/supabase-js'],
+  },
+})

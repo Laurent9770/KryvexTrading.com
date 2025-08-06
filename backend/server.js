@@ -2,275 +2,211 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const WebSocket = require('ws');
-const http = require('http');
-const path = require('path');
+const rateLimit = require('express-rate-limit');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-// Import database connection
-const { testConnection } = require('./database/connection');
-
-// Import middleware
-const { apiRateLimiter } = require('./middleware/auth');
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const walletRoutes = require('./routes/wallets');
-const tradingRoutes = require('./routes/trading');
-const kycRoutes = require('./routes/kyc');
-const adminRoutes = require('./routes/admin');
-const chatRoutes = require('./routes/chat');
-const marketRoutes = require('./routes/market');
-const stripeRoutes = require('./routes/stripe');
-const requestRoutes = require('./routes/requests');
-const dataManagementRoutes = require('./routes/dataManagement');
-// const binanceRoutes = require('./routes/binance');
-
-// Import WebSocket service
-const websocketService = require('./services/websocketService');
-
-// Import external API service
-const externalApiService = require('./services/externalApiService');
-
-// Import cleanup scheduler
-const cleanupScheduler = require('./services/cleanupScheduler');
-
-// Import database function initializer
-const { initDatabaseFunctions } = require('./scripts/init-database-functions');
-
-// Create Express app
 const app = express();
-const server = http.createServer(app);
+const PORT = process.env.PORT || 3001;
 
-// Trust proxy for rate limiting behind Render
-app.set('trust proxy', true);
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
+      scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "https://ftkeczodadvtnxofrwps.supabase.co", "wss://ftkeczodadvtnxofrwps.supabase.co"]
+    }
+  }
 }));
 
-// Compression middleware
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
+// Middleware
 app.use(compression());
-
-// CORS configuration
 app.use(cors({
-  origin: [
-    process.env.CORS_ORIGIN || 'http://localhost:8080',
-    'https://kryvex-frontend.onrender.com',
-    'http://localhost:3000',
-    'http://localhost:8080'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept']
+  origin: process.env.CORS_ORIGIN || 'https://kryvex-frontend.onrender.com',
+  credentials: true
 }));
-
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiting
-app.use(apiRateLimiter);
-
-// Request logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
-  });
-  next();
-});
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
+  res.json({ 
+    status: 'healthy', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV,
+    supabase: process.env.SUPABASE_URL ? 'configured' : 'not configured'
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/wallets', walletRoutes);
-app.use('/api/trading', tradingRoutes);
-app.use('/api/kyc', kycRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/market', marketRoutes);
-app.use('/api/stripe', stripeRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/data-management', dataManagementRoutes);
-// app.use('/api/binance', binanceRoutes);
-
-// Serve frontend files in production
-if (process.env.NODE_ENV === 'production') {
-  // Try multiple possible frontend paths
-  const possiblePaths = [
-    path.join(__dirname, '../frontend/dist'),
-    path.join(__dirname, '../../frontend/dist'),
-    path.join(__dirname, 'frontend/dist'),
-    path.join(process.cwd(), 'frontend/dist'),
-    path.join(process.cwd(), '../frontend/dist')
-  ];
-  
-  let frontendPath = null;
-  for (const testPath of possiblePaths) {
-    try {
-      const indexPath = path.join(testPath, 'index.html');
-      if (require('fs').existsSync(indexPath)) {
-        frontendPath = testPath;
-        console.log(`✅ Found frontend at: ${frontendPath}`);
-        break;
-      }
-    } catch (error) {
-      console.log(`❌ Path not found: ${testPath}`);
+// Admin authentication middleware
+const authenticateAdmin = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
     }
+
+    // Verify admin token (you can implement your own admin auth logic)
+    // For now, we'll use a simple check
+    if (token === process.env.JWT_SECRET) {
+      next();
+    } else {
+      res.status(403).json({ error: 'Invalid admin token' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Authentication failed' });
   }
-  
-  if (frontendPath) {
-    // Serve static files from the frontend build
-    app.use(express.static(frontendPath));
-    
-    // Handle all other routes by serving index.html (SPA routing)
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(frontendPath, 'index.html'));
-    });
-    
-    console.log(`📁 Serving frontend from: ${frontendPath}`);
-    console.log(`✅ SPA routing enabled for production`);
-  } else {
-    console.error('❌ Frontend build not found. Available paths checked:');
-    possiblePaths.forEach(p => console.log(`  - ${p}`));
-    
-    // Fallback: serve API only
-    app.use('*', (req, res) => {
-      res.status(404).json({
-        error: 'Not found',
-        message: `Route ${req.originalUrl} not found. Frontend build not available.`
-      });
-    });
+};
+
+// Admin API endpoints
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ users: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-} else {
-  // Development: 404 handler for API routes only
-  app.use('*', (req, res) => {
-    res.status(404).json({
-      error: 'Not found',
-      message: `Route ${req.originalUrl} not found`
+});
+
+app.get('/api/admin/trades', authenticateAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('trades')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ trades: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/admin/withdrawals', authenticateAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('withdrawal_requests')
+      .select('*')
+      .order('requested_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ withdrawals: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/withdrawals/:id/approve', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('withdrawal_requests')
+      .update({ 
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+        remarks: req.body.remarks || 'Admin approved'
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true, withdrawal: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/withdrawals/:id/reject', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('withdrawal_requests')
+      .update({ 
+        status: 'rejected',
+        processed_at: new Date().toISOString(),
+        remarks: req.body.remarks || 'Admin rejected'
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true, withdrawal: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Public API endpoints
+app.get('/api/stats', async (req, res) => {
+  try {
+    // Get basic stats from Supabase
+    const { data: users } = await supabase
+      .from('profiles')
+      .select('id');
+
+    const { data: trades } = await supabase
+      .from('trades')
+      .select('id');
+
+    const { data: withdrawals } = await supabase
+      .from('withdrawal_requests')
+      .select('id')
+      .eq('status', 'pending');
+
+    res.json({
+      totalUsers: users?.length || 0,
+      totalTrades: trades?.length || 0,
+      pendingWithdrawals: withdrawals?.length || 0
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Catch-all handler for SPA
+app.get('*', (req, res) => {
+  res.json({ 
+    message: 'Kryvex Trading API',
+    status: 'running',
+    timestamp: new Date().toISOString()
   });
-}
+});
 
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Error:', error);
-  
-  if (error.name === 'ValidationError') {
-    return res.status(400).json({
-      error: 'Validation error',
-      message: error.message
-    });
-  }
-  
-  if (error.name === 'UnauthorizedError') {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Invalid token'
-    });
-  }
-  
-  res.status(500).json({
+  res.status(500).json({ 
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : error.message
+    message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
   });
 });
-
-// Setup WebSocket server
-websocketService.initialize(server);
 
 // Start server
-const PORT = process.env.PORT || 3001;
-
-const startServer = async () => {
-  try {
-    // Test database connection
-    const dbConnected = await testConnection();
-    if (!dbConnected) {
-      console.warn('⚠️ Database connection failed. Running in fallback mode with mock data.');
-      console.warn('⚠️ Some features may not work properly without database connection.');
-    } else {
-      console.log('✅ Database connected successfully');
-      
-      // Initialize database functions
-      try {
-        await initDatabaseFunctions();
-        console.log('✅ Database functions initialized');
-      } catch (functionError) {
-        console.warn('⚠️ Database function initialization failed:', functionError.message);
-        console.warn('⚠️ Cleanup features may not work properly.');
-      }
-    }
-
-    // Start HTTP server
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🔌 WebSocket server ready on port ${PORT}/ws`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 Production URL: https://kryvextrading-com.onrender.com`);
-      
-      // Start external API service cleanup
-      externalApiService.startCleanup();
-      
-      // Start automated data cleanup scheduler
-      cleanupScheduler.start();
-    });
-
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🔄 SIGTERM received, shutting down gracefully...');
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Kryvex Backend Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  console.log(`🔗 Supabase: ${process.env.SUPABASE_URL ? 'Configured' : 'Not configured'}`);
+  console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN}`);
 });
 
-process.on('SIGINT', () => {
-  console.log('🔄 SIGINT received, shutting down gracefully...');
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
-
-// Start the server
-startServer(); 
+module.exports = app; 
