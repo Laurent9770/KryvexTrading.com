@@ -23,7 +23,11 @@ class WebSocketService {
       const baseUrl = import.meta.env.VITE_WS_URL || 'wss://kryvextrading-com.onrender.com';
       return `${baseUrl}/ws`;
     }
-    return `${getWebSocketUrl()}/ws`;
+    // In development, use the current hostname for WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    return `${protocol}//${hostname}${port}/ws`;
   }
 
   private connect() {
@@ -32,18 +36,22 @@ class WebSocketService {
     this.isConnecting = true;
     const wsUrl = this.getWebSocketUrl();
     
+    console.log('🔌 Attempting WebSocket connection to:', wsUrl);
+    console.log('🌐 Current domain:', window.location.hostname);
+    console.log('🔗 Current URL:', window.location.href);
+    
     try {
-      console.log('Attempting to connect to WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);
       
       this.ws.onopen = () => {
-        console.log('WebSocket connected successfully');
+        console.log('✅ WebSocket connected successfully');
         this.isConnected = true;
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.emit('connected');
         
         // Authenticate immediately after connection
+        console.log('🔐 Starting authentication...');
         this.authenticate();
         
         this.startRealTimeUpdates();
@@ -52,14 +60,15 @@ class WebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('📨 WebSocket message received:', data.type);
           this.handleMessage(data);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('❌ Error parsing WebSocket message:', error);
         }
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
+        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
         this.isConnected = false;
         this.isConnecting = false;
         this.emit('disconnected');
@@ -67,16 +76,19 @@ class WebSocketService {
         
         // Only attempt reconnect if not a normal closure and not authentication error
         if (event.code !== 1000 && event.code !== 1008) {
+          console.log('🔄 Attempting to reconnect...');
           this.attemptReconnect();
+        } else {
+          console.log('⏸️ Not attempting reconnect due to code:', event.code);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket connection error:', error);
+        console.error('❌ WebSocket connection error:', error);
         this.isConnecting = false;
       };
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      console.error('❌ Error creating WebSocket connection:', error);
       this.isConnecting = false;
       this.attemptReconnect();
     }

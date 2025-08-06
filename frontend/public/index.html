@@ -8,6 +8,10 @@
     
     <!-- Redirect to unified domain if accessed from old frontend URL -->
     <script>
+      console.log('🔍 Checking domain redirect...');
+      console.log('📍 Current hostname:', window.location.hostname);
+      console.log('🔗 Full URL:', window.location.href);
+      
       // Immediate redirect for old domain
       if (window.location.hostname === 'kryvex-frontend.onrender.com') {
         const newUrl = 'https://kryvextrading-com.onrender.com' + window.location.pathname + window.location.search;
@@ -19,11 +23,14 @@
       if (window.location.hostname !== 'kryvextrading-com.onrender.com' && 
           window.location.hostname !== 'localhost' && 
           window.location.hostname !== '127.0.0.1' &&
-          !window.location.hostname.includes('localhost')) {
+          !window.location.hostname.includes('localhost') &&
+          !window.location.hostname.includes('127.0.0.1')) {
         const newUrl = 'https://kryvextrading-com.onrender.com' + window.location.pathname + window.location.search;
         console.log('🔄 Redirecting to correct domain:', newUrl);
         window.location.replace(newUrl);
       }
+      
+      console.log('✅ Domain check completed');
     </script>
   </head>
   <body>
