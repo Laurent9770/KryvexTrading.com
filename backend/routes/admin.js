@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateAdmin } = require('../middleware/auth');
-const adminService = require('../services/adminService');
-const tradingService = require('../services/tradingService');
-const authService = require('../services/authService');
+const { authenticateAdmin } = require('../middleware/supabaseAdminAuth');
+const supabaseAdminService = require('../services/supabaseAdminService');
 
 // Admin login endpoint (no authentication required)
 router.post('/login', async (req, res) => {
@@ -17,47 +15,29 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check if user exists and is admin
-    const user = await authService.getUserByEmail(email);
-    
-    if (!user || !user.is_admin) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials or insufficient privileges'
+    // For now, use a simple admin check
+    // In production, you should implement proper admin authentication
+    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+      const token = 'admin-token-' + Date.now(); // Simple token for demo
+      
+      res.json({
+        success: true,
+        message: 'Admin login successful',
+        data: {
+          token,
+          user: {
+            id: 'admin',
+            email: email,
+            isAdmin: true
+          }
+        }
       });
-    }
-
-    // Verify password
-    const isValidPassword = await authService.verifyPassword(password, user.password_hash);
-    
-    if (!isValidPassword) {
+    } else {
       return res.status(401).json({
         success: false,
         error: 'Invalid credentials'
       });
     }
-
-    // Generate JWT token
-    const token = authService.generateToken({
-      id: user.id,
-      email: user.email,
-      admin: true
-    });
-
-    res.json({
-      success: true,
-      message: 'Admin login successful',
-      data: {
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          isAdmin: true
-        }
-      }
-    });
   } catch (error) {
     console.error('Admin login error:', error);
     res.status(500).json({
@@ -76,7 +56,7 @@ router.use(authenticateAdmin);
 router.get('/users', async (req, res) => {
   try {
     const { limit = 50, offset = 0, search } = req.query;
-    const users = await adminService.getAllUsers(
+    const result = await supabaseAdminService.getAllUsers(
       parseInt(limit), 
       parseInt(offset), 
       search
@@ -84,7 +64,7 @@ router.get('/users', async (req, res) => {
     
     res.json({
       success: true,
-      data: users
+      data: result
     });
   } catch (error) {
     console.error('Get users error:', error);
@@ -99,7 +79,7 @@ router.get('/users', async (req, res) => {
 router.get('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await adminService.getUserDetails(userId);
+    const user = await supabaseAdminService.getUserById(userId);
     
     res.json({
       success: true,
@@ -114,28 +94,27 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
-// Add funds to user
-router.post('/users/:userId/fund/add', async (req, res) => {
+// Update user role
+router.put('/users/:userId/role', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { asset, amount, reason } = req.body;
-    const adminId = req.user.id;
-
-    if (!asset || !amount) {
+    const { role } = req.body;
+    
+    if (!role || !['user', 'admin'].includes(role)) {
       return res.status(400).json({
         success: false,
-        error: 'Asset and amount are required'
+        error: 'Valid role (user/admin) is required'
       });
     }
 
-    const result = await adminService.addFundsToUser(adminId, userId, asset, amount, reason);
+    await supabaseAdminService.updateUserRole(userId, role);
     
     res.json({
       success: true,
-      message: result.message
+      message: `User role updated to ${role}`
     });
   } catch (error) {
-    console.error('Add funds error:', error);
+    console.error('Update user role error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -143,28 +122,27 @@ router.post('/users/:userId/fund/add', async (req, res) => {
   }
 });
 
-// Remove funds from user
-router.post('/users/:userId/fund/remove', async (req, res) => {
+// Update user status
+router.put('/users/:userId/status', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { asset, amount, reason } = req.body;
-    const adminId = req.user.id;
-
-    if (!asset || !amount) {
+    const { status } = req.body;
+    
+    if (!status || !['active', 'suspended', 'blocked'].includes(status)) {
       return res.status(400).json({
         success: false,
-        error: 'Asset and amount are required'
+        error: 'Valid status (active/suspended/blocked) is required'
       });
     }
 
-    const result = await adminService.removeFundsFromUser(adminId, userId, asset, amount, reason);
+    await supabaseAdminService.updateUserStatus(userId, status);
     
     res.json({
       success: true,
-      message: result.message
+      message: `User status updated to ${status}`
     });
   } catch (error) {
-    console.error('Remove funds error:', error);
+    console.error('Update user status error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -172,332 +150,21 @@ router.post('/users/:userId/fund/remove', async (req, res) => {
   }
 });
 
-// ==================== KYC TAB ====================
+// ==================== TRADES TAB ====================
 
-// Get all KYC submissions
-router.get('/kyc', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0, status } = req.query;
-    const submissions = await adminService.getAllKYCSubmissions(
-      parseInt(limit), 
-      parseInt(offset), 
-      status
-    );
-    
-    res.json({
-      success: true,
-      data: submissions
-    });
-  } catch (error) {
-    console.error('Get KYC submissions error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Approve KYC submission
-router.post('/kyc/:submissionId/approve', async (req, res) => {
-  try {
-    const { submissionId } = req.params;
-    const { notes } = req.body;
-    const adminId = req.user.id;
-
-    const result = await adminService.approveKYC(adminId, submissionId, notes);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Approve KYC error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Reject KYC submission
-router.post('/kyc/:submissionId/reject', async (req, res) => {
-  try {
-    const { submissionId } = req.params;
-    const { reason, notes } = req.body;
-    const adminId = req.user.id;
-
-    if (!reason) {
-      return res.status(400).json({
-        success: false,
-        error: 'Reason is required for rejection'
-      });
-    }
-
-    const result = await adminService.rejectKYC(adminId, submissionId, reason, notes);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Reject KYC error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ==================== DEPOSITS TAB ====================
-
-// Get all deposits
-router.get('/deposits', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0, status } = req.query;
-    const deposits = await adminService.getAllDeposits(
-      parseInt(limit), 
-      parseInt(offset), 
-      status
-    );
-    
-    res.json({
-      success: true,
-      data: deposits
-    });
-  } catch (error) {
-    console.error('Get deposits error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Approve deposit
-router.post('/deposits/:depositId/approve', async (req, res) => {
-  try {
-    const { depositId } = req.params;
-    const { notes } = req.body;
-    const adminId = req.user.id;
-
-    const result = await adminService.approveDeposit(adminId, depositId, notes);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Approve deposit error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Reject deposit
-router.post('/deposits/:depositId/reject', async (req, res) => {
-  try {
-    const { depositId } = req.params;
-    const { reason, notes } = req.body;
-    const adminId = req.user.id;
-
-    if (!reason) {
-      return res.status(400).json({
-        success: false,
-        error: 'Reason is required for rejection'
-      });
-    }
-
-    const result = await adminService.rejectDeposit(adminId, depositId, reason, notes);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Reject deposit error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ==================== WITHDRAWALS TAB ====================
-
-// Get all withdrawals
-router.get('/withdrawals', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0, status } = req.query;
-    const withdrawals = await adminService.getAllWithdrawals(
-      parseInt(limit), 
-      parseInt(offset), 
-      status
-    );
-    
-    res.json({
-      success: true,
-      data: withdrawals
-    });
-  } catch (error) {
-    console.error('Get withdrawals error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Approve withdrawal
-router.post('/withdrawals/:withdrawalId/approve', async (req, res) => {
-  try {
-    const { withdrawalId } = req.params;
-    const { notes } = req.body;
-    const adminId = req.user.id;
-
-    const result = await adminService.approveWithdrawal(adminId, withdrawalId, notes);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Approve withdrawal error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Reject withdrawal
-router.post('/withdrawals/:withdrawalId/reject', async (req, res) => {
-  try {
-    const { withdrawalId } = req.params;
-    const { reason, notes } = req.body;
-    const adminId = req.user.id;
-
-    if (!reason) {
-      return res.status(400).json({
-        success: false,
-        error: 'Reason is required for rejection'
-      });
-    }
-
-    const result = await adminService.rejectWithdrawal(adminId, withdrawalId, reason, notes);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Reject withdrawal error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ==================== WALLETS TAB ====================
-
-// Get all wallets (user balances)
-router.get('/wallets', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0 } = req.query;
-    const users = await adminService.getAllUsers(
-      parseInt(limit), 
-      parseInt(offset)
-    );
-    
-    res.json({
-      success: true,
-      data: users
-    });
-  } catch (error) {
-    console.error('Get wallets error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Get admin fund actions history
-router.get('/wallets/fund-actions', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0, userId } = req.query;
-    const actions = await adminService.getAdminFundActions(
-      parseInt(limit), 
-      parseInt(offset), 
-      userId
-    );
-    
-    res.json({
-      success: true,
-      data: actions
-    });
-  } catch (error) {
-    console.error('Get fund actions error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ==================== TRADING CONTROL TAB ====================
-
-// Set trade override mode
-router.post('/trade-override', async (req, res) => {
-  try {
-    const { userId, mode } = req.body;
-    const adminId = req.user.id;
-
-    if (!userId || !mode) {
-      return res.status(400).json({
-        success: false,
-        error: 'User ID and mode are required'
-      });
-    }
-
-    if (!['win', 'lose', null].includes(mode)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Mode must be "win", "lose", or null'
-      });
-    }
-
-    const result = await adminService.setTradeOverride(adminId, userId, mode);
-    
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Set trade override error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Get all trades (admin view)
+// Get all trades
 router.get('/trades', async (req, res) => {
   try {
-    const { limit = 50, offset = 0, status, userId } = req.query;
-    const trades = await tradingService.getAllTrades(
+    const { limit = 50, offset = 0, userId } = req.query;
+    const result = await supabaseAdminService.getAllTrades(
       parseInt(limit), 
       parseInt(offset), 
-      status, 
       userId
     );
     
     res.json({
       success: true,
-      data: trades
+      data: result
     });
   } catch (error) {
     console.error('Get trades error:', error);
@@ -508,47 +175,27 @@ router.get('/trades', async (req, res) => {
   }
 });
 
-// Get trading statistics
-router.get('/trades/stats', async (req, res) => {
+// Force trade outcome
+router.put('/trades/:tradeId/force-outcome', async (req, res) => {
   try {
-    const stats = await tradingService.getAdminTradingStats();
+    const { tradeId } = req.params;
+    const { outcome } = req.body;
     
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Get trading stats error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ==================== ROOMS TAB ====================
-
-// Send notification to specific user
-router.post('/notifications/send', async (req, res) => {
-  try {
-    const { userId, title, message, type = 'admin' } = req.body;
-    const adminId = req.user.id;
-
-    if (!userId || !title || !message) {
+    if (!outcome || !['win', 'loss'].includes(outcome)) {
       return res.status(400).json({
         success: false,
-        error: 'User ID, title, and message are required'
+        error: 'Valid outcome (win/loss) is required'
       });
     }
 
-    const result = await adminService.sendNotification(adminId, userId, title, message, type);
+    await supabaseAdminService.forceTradeOutcome(tradeId, outcome);
     
     res.json({
       success: true,
-      message: result.message
+      message: `Trade outcome forced to ${outcome}`
     });
   } catch (error) {
-    console.error('Send notification error:', error);
+    console.error('Force trade outcome error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -556,27 +203,57 @@ router.post('/notifications/send', async (req, res) => {
   }
 });
 
-// Broadcast notification to all users
-router.post('/notifications/broadcast', async (req, res) => {
+// Cancel trade
+router.put('/trades/:tradeId/cancel', async (req, res) => {
   try {
-    const { title, message, type = 'admin' } = req.body;
-    const adminId = req.user.id;
+    const { tradeId } = req.params;
+    
+    await supabaseAdminService.cancelTrade(tradeId);
+    
+    res.json({
+      success: true,
+      message: 'Trade cancelled successfully'
+    });
+  } catch (error) {
+    console.error('Cancel trade error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
-    if (!title || !message) {
+// ==================== WALLET TAB ====================
+
+// Adjust user balance
+router.put('/users/:userId/balance', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { amount, reason } = req.body;
+    
+    if (typeof amount !== 'number') {
       return res.status(400).json({
         success: false,
-        error: 'Title and message are required'
+        error: 'Valid amount is required'
       });
     }
 
-    const result = await adminService.broadcastNotification(adminId, title, message, type);
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        error: 'Reason is required'
+      });
+    }
+
+    const result = await supabaseAdminService.adjustUserBalance(userId, amount, reason);
     
     res.json({
       success: true,
-      message: result.message
+      message: `Balance adjusted by ${amount}`,
+      data: result
     });
   } catch (error) {
-    console.error('Broadcast notification error:', error);
+    console.error('Adjust balance error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -584,26 +261,24 @@ router.post('/notifications/broadcast', async (req, res) => {
   }
 });
 
-// ==================== AUDIT TAB ====================
-
-// Get audit logs
-router.get('/audit-logs', async (req, res) => {
+// Get user transactions
+router.get('/users/:userId/transactions', async (req, res) => {
   try {
-    const { limit = 50, offset = 0, actionType, adminId, targetUserId } = req.query;
-    const logs = await adminService.getAuditLogs(
-      parseInt(limit), 
-      parseInt(offset), 
-      actionType, 
-      adminId, 
-      targetUserId
+    const { userId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const result = await supabaseAdminService.getUserTransactions(
+      userId,
+      parseInt(limit),
+      parseInt(offset)
     );
     
     res.json({
       success: true,
-      data: logs
+      data: result
     });
   } catch (error) {
-    console.error('Get audit logs error:', error);
+    console.error('Get user transactions error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -611,19 +286,96 @@ router.get('/audit-logs', async (req, res) => {
   }
 });
 
-// ==================== SYSTEM STATISTICS ====================
+// ==================== KYC TAB ====================
 
-// Get system statistics
+// Get all KYC documents
+router.get('/kyc', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, status } = req.query;
+    const result = await supabaseAdminService.getAllKYCDocuments(
+      parseInt(limit),
+      parseInt(offset),
+      status
+    );
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Get KYC documents error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Update KYC status
+router.put('/kyc/:documentId/status', async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { status, adminNotes } = req.body;
+    
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid status (approved/rejected) is required'
+      });
+    }
+
+    await supabaseAdminService.updateKYCStatus(documentId, status, adminNotes);
+    
+    res.json({
+      success: true,
+      message: `KYC status updated to ${status}`
+    });
+  } catch (error) {
+    console.error('Update KYC status error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ==================== STATISTICS ====================
+
+// Get platform statistics
 router.get('/stats', async (req, res) => {
   try {
-    const stats = await adminService.getSystemStats();
+    const stats = await supabaseAdminService.getPlatformStats();
     
     res.json({
       success: true,
       data: stats
     });
   } catch (error) {
-    console.error('Get system stats error:', error);
+    console.error('Get platform stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ==================== AUDIT LOGS ====================
+
+// Get admin action logs
+router.get('/logs', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    const result = await supabaseAdminService.getAdminActionLogs(
+      parseInt(limit),
+      parseInt(offset)
+    );
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Get admin logs error:', error);
     res.status(500).json({
       success: false,
       error: error.message

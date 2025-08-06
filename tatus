@@ -1,0 +1,5 @@
+[33m94c84f1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m docs: Add comprehensive deployment instructions for Supabase integration
+[33m65bb603[m chore: Add Supabase environment variables to deployment config
+[33m656ce6b[m feat: Complete Supabase integration with real-time trading platform
+[33mc82d791[m Add debugging for WebSocket connection issues - Add detailed console logs for domain redirects - Add WebSocket connection debugging - Improve domain detection for localhost - Add authentication debugging - Help diagnose connection and redirect issues
+[33m72e3f03[m Fix React error #31 by removing immediate meta refresh redirect - Remove meta refresh that was causing React rendering issues - Keep JavaScript redirects for domain handling - Improve localhost detection for development - Prevent React error when page loads
