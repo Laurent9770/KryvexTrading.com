@@ -36,6 +36,9 @@ const externalApiService = require('./services/externalApiService');
 // Import cleanup scheduler
 const cleanupScheduler = require('./services/cleanupScheduler');
 
+// Import database function initializer
+const { initDatabaseFunctions } = require('./scripts/init-database-functions');
+
 // Create Express app
 const app = express();
 const server = http.createServer(app);
@@ -209,6 +212,15 @@ const startServer = async () => {
       console.warn('⚠️ Some features may not work properly without database connection.');
     } else {
       console.log('✅ Database connected successfully');
+      
+      // Initialize database functions
+      try {
+        await initDatabaseFunctions();
+        console.log('✅ Database functions initialized');
+      } catch (functionError) {
+        console.warn('⚠️ Database function initialization failed:', functionError.message);
+        console.warn('⚠️ Cleanup features may not work properly.');
+      }
     }
 
     // Start HTTP server

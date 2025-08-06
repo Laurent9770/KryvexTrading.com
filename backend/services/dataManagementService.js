@@ -14,11 +14,39 @@ class DataManagementService {
     try {
       console.log('🧹 Starting data cleanup...');
       
-      // Call the cleanup function
-      await client.query('SELECT cleanup_old_data()');
+      // Check if cleanup function exists
+      const functionExists = await client.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.routines 
+          WHERE routine_name = 'cleanup_old_data' 
+          AND routine_schema = 'public'
+        );
+      `);
       
-      // Update storage usage
-      await client.query('SELECT update_storage_usage()');
+      if (functionExists.rows[0].exists) {
+        // Call the cleanup function
+        await client.query('SELECT cleanup_old_data()');
+        console.log('✅ Cleanup function executed');
+      } else {
+        console.log('⚠️ Cleanup function not found, skipping cleanup');
+      }
+      
+      // Check if storage usage function exists
+      const storageFunctionExists = await client.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.routines 
+          WHERE routine_name = 'update_storage_usage' 
+          AND routine_schema = 'public'
+        );
+      `);
+      
+      if (storageFunctionExists.rows[0].exists) {
+        // Update storage usage
+        await client.query('SELECT update_storage_usage()');
+        console.log('✅ Storage usage updated');
+      } else {
+        console.log('⚠️ Storage usage function not found, skipping update');
+      }
       
       console.log('✅ Data cleanup completed');
       
@@ -26,6 +54,10 @@ class DataManagementService {
       const summary = await this.getCleanupSummary();
       return summary;
       
+    } catch (error) {
+      console.error('❌ Data cleanup error:', error.message);
+      // Return empty summary on error
+      return [];
     } finally {
       client.release();
     }
