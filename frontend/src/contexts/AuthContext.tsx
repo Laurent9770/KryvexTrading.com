@@ -557,7 +557,85 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const user = registeredUsers.find((u: any) => u.email === email && u.password === password);
           
           if (!user) {
-            throw new Error('Invalid credentials. Please register first.');
+            // Create a demo user if this is the first login attempt
+            const demoUsers = JSON.parse(localStorage.getItem('demoUsersCreated') || '[]');
+            if (!demoUsers.includes(email)) {
+              // Create demo user automatically
+              const demoUser = {
+                id: `user-${Date.now()}`,
+                email,
+                firstName: 'Demo',
+                lastName: 'User',
+                phone: '+1234567890',
+                username: 'demo_user',
+                country: 'US',
+                bio: 'Demo account created automatically',
+                avatar: '',
+                kycStatus: 'unverified' as const,
+                walletBalance: 1000, // Demo balance
+                password: password,
+                createdAt: new Date().toISOString()
+              };
+              
+              registeredUsers.push(demoUser);
+              localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+              demoUsers.push(email);
+              localStorage.setItem('demoUsersCreated', JSON.stringify(demoUsers));
+              
+              console.log('Demo user created automatically:', email);
+              
+              // Now try to login with the created user
+              const createdUser = registeredUsers.find((u: any) => u.email === email && u.password === password);
+              if (createdUser) {
+                const sessionUser = { ...createdUser };
+                delete sessionUser.password; // Don't store password in session
+                
+                const mockToken = 'user-jwt-token-' + Date.now();
+                
+                if (rememberMe) {
+                  localStorage.setItem('authToken', mockToken);
+                  localStorage.setItem('authUser', JSON.stringify(sessionUser));
+                  localStorage.setItem('authIsAdmin', 'false');
+                } else {
+                  sessionStorage.setItem('authToken', mockToken);
+                  sessionStorage.setItem('authUser', JSON.stringify(sessionUser));
+                  sessionStorage.setItem('authIsAdmin', 'false');
+                }
+                
+                setUser(sessionUser);
+                setIsAuthenticated(true);
+                setIsAdmin(false);
+                
+                // Update trading account with demo balance
+                setTradingAccount(prev => ({
+                  ...prev,
+                  USDT: {
+                    balance: sessionUser.walletBalance.toFixed(8),
+                    usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
+                    available: sessionUser.walletBalance.toFixed(8)
+                  }
+                }));
+                
+                setFundingAccount(prev => ({
+                  USDT: {
+                    balance: sessionUser.walletBalance.toFixed(2),
+                    usdValue: `$${sessionUser.walletBalance.toFixed(2)}`,
+                    available: sessionUser.walletBalance.toFixed(2)
+                  }
+                }));
+                
+                websocketService.authenticate(email, password);
+                
+                toast({
+                  title: "Demo Account Created",
+                  description: `Welcome! A demo account has been created for ${email} with $1000 balance.`,
+                });
+                
+                return;
+              }
+            }
+            
+            throw new Error('Invalid credentials. Please register first or use demo credentials.');
           }
           
           // Create clean user object without password for session
@@ -640,6 +718,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error('Invalid credentials. Please register first.');
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Provide helpful guidance
+      if (error.message.includes('Invalid credentials')) {
+        console.log('💡 Demo Credentials:');
+        console.log('   Admin: admin@kryvex.com / Kryvex.@123');
+        console.log('   User: Any email/password (auto-creates demo account)');
+        console.log('   Or register a new account first');
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Failed to login. Please try again."
+      });
       throw error;
     }
   };
