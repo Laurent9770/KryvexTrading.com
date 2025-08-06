@@ -3,4 +3,7 @@
 /admin/*    /index.html   200
 
 # Redirect old frontend domain to unified domain
-https://kryvex-frontend.onrender.com/*    https://kryvextrading-com.onrender.com/:splat    301 
+https://kryvex-frontend.onrender.com/*    https://kryvextrading-com.onrender.com/:splat    301
+
+# Redirect any old domain to unified domain
+https://kryvex-frontend.onrender.com    https://kryvextrading-com.onrender.com    301 
