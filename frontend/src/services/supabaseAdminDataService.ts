@@ -148,7 +148,7 @@ class SupabaseAdminDataService {
           amount,
           profit_loss,
           created_at,
-          profiles(email)
+          profiles!inner(email)
         `)
         .order('created_at', { ascending: false });
 
@@ -162,7 +162,7 @@ class SupabaseAdminDataService {
       
       data.forEach(trade => {
         const userId = trade.user_id;
-        const userEmail = trade.profiles?.email || 'unknown@email.com';
+        const userEmail = trade.profiles?.[0]?.email || 'unknown@email.com';
         
         if (!userTradeMap.has(userId)) {
           userTradeMap.set(userId, {
@@ -286,7 +286,7 @@ class SupabaseAdminDataService {
       return data.map(request => ({
         id: request.id,
         userId: request.user_id,
-        userEmail: request.profiles?.email || 'unknown@email.com',
+        userEmail: request.profiles?.[0]?.email || 'unknown@email.com',
         amount: request.amount,
         currency: request.currency,
         status: request.status,
@@ -327,7 +327,7 @@ class SupabaseAdminDataService {
       return data.map(deposit => ({
         id: deposit.id,
         userId: deposit.user_id,
-        userEmail: deposit.profiles.email,
+        userEmail: deposit.profiles?.[0]?.email || 'unknown@email.com',
         amount: deposit.amount,
         currency: deposit.currency,
         status: deposit.status,

@@ -53,6 +53,7 @@ import { AdminRoomManagement } from '@/components/AdminRoomManagement';
 import AdminBinanceControl from '@/components/AdminBinanceControl';
 import supabaseTradingService from "@/services/supabaseTradingService";
 import supabaseWalletService from "@/services/supabaseWalletService";
+import supabaseAdminDataService from "@/services/supabaseAdminDataService";
 
 interface User {
   id: string;
@@ -401,17 +402,12 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Get real user data from user persistence service
+      // Get real user data from Supabase admin service
       let allUsers: any[] = [];
       try {
-        const userPersistenceService = await import('@/services/userPersistenceService');
-        if (userPersistenceService.default && typeof userPersistenceService.default.getAllUsers === 'function') {
-          allUsers = userPersistenceService.default.getAllUsers();
-        } else {
-          console.warn('userPersistenceService.getAllUsers not available, using fallback');
-        }
+        allUsers = await supabaseAdminDataService.getAllUsers();
       } catch (error) {
-        console.warn('Error loading userPersistenceService:', error);
+        console.warn('Error loading users from Supabase:', error);
       }
       
       // Get registered users from localStorage

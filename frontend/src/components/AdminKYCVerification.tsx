@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import kycService from '@/services/kycService';
+import supabaseKYCService from '@/services/supabaseKYCService';
 import supabaseAdminDataService, { AdminKYCUser } from '@/services/supabaseAdminDataService';
 import supabaseAdminService from '@/services/supabaseAdminService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -111,7 +111,7 @@ const AdminKYCVerification = () => {
       console.log('KYC Users loaded:', kycUsers.length);
       console.log('KYC Users data:', kycUsers);
       
-      const allSubmissions = kycService.getSubmissionsByStatus('pending');
+      const allSubmissions = await supabaseKYCService.getKYCSubmissions('pending');
       console.log('KYC Submissions loaded:', allSubmissions.length);
       console.log('KYC Submissions data:', allSubmissions);
       
