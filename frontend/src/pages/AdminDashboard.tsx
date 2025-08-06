@@ -436,28 +436,18 @@ export default function AdminDashboard() {
       let allUserWallets: any[] = [];
       let withdrawalStats: any = { totalRequests: 0, pending: 0, approved: 0, rejected: 0, totalAmount: 0 };
       try {
-        const walletService = await import('@/services/walletService');
-        if (walletService.default && typeof walletService.default.getAllUserWallets === 'function') {
-          allUserWallets = walletService.default.getAllUserWallets();
-          withdrawalStats = walletService.default.getWithdrawalStats();
-        } else {
-          console.warn('walletService methods not available, using fallback');
-        }
+        allUserWallets = await supabaseWalletService.getAllUserWallets();
+        withdrawalStats = await supabaseWalletService.getWithdrawalStats();
       } catch (error) {
-        console.warn('Error loading walletService:', error);
+        console.warn('Error loading wallet data from Supabase:', error);
       }
       
       // Get real deposit data (from wallet transactions)
       let walletTransactions: any[] = [];
       try {
-        const walletService = await import('@/services/walletService');
-        if (walletService.default && typeof walletService.default.getWalletTransactions === 'function') {
-          walletTransactions = walletService.default.getWalletTransactions();
-        } else {
-          console.warn('walletService.getWalletTransactions not available, using fallback');
-        }
+        walletTransactions = await supabaseWalletService.getWalletTransactions();
       } catch (error) {
-        console.warn('Error loading walletService for transactions:', error);
+        console.warn('Error loading wallet transactions from Supabase:', error);
       }
       
       const depositTransactions = walletTransactions.filter(tx => 

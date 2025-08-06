@@ -28,7 +28,7 @@ import supabaseTradingService from "@/services/supabaseTradingService";
 const TransferPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tradingAccount, fundingAccount, realTimePrices, addActivity } = useAuth();
+  const { user, tradingAccount, fundingAccount, realTimePrices, addActivity } = useAuth();
   const [transferType, setTransferType] = useState<"user" | "account">("user");
   const [fromAccount, setFromAccount] = useState<"trading" | "funding">("trading");
   const [toAccount, setToAccount] = useState<"trading" | "funding">("funding");
@@ -219,20 +219,7 @@ const TransferPage = () => {
     setIsExecuting(true);
     
     try {
-      const tradeRequest: TradeRequest = {
-        type: "user_transfer",
-        action: "sell", // Default action for transfers
-        symbol: fromAsset,
-        fromAccount: fromAccount,
-        toAccount: toAccount,
-        fromAsset: fromAsset,
-        toAsset: toAsset,
-        amount: parseFloat(amount),
-        recipient: recipient,
-        message: "User transfer"
-      };
-
-      const response = await tradingEngine.executeTrade(tradeRequest);
+      const response = await supabaseTradingService.simulateTrade(user?.id || '', fromAsset, parseFloat(amount), 'sell');
       if (response.success) {
         toast({
           title: "Transfer Sent!",
@@ -278,19 +265,7 @@ const TransferPage = () => {
     const convertedAmount = calculateConversion();
     
     try {
-      const tradeRequest: TradeRequest = {
-        type: "account_transfer",
-        action: "sell", // Default action for transfers
-        symbol: fromAsset,
-        fromAccount: fromAccount,
-        toAccount: toAccount,
-        fromAsset: fromAsset,
-        toAsset: toAsset,
-        amount: parseFloat(transferAmount),
-        message: "Account transfer"
-      };
-
-      const response = await tradingEngine.executeTrade(tradeRequest);
+      const response = await supabaseTradingService.simulateTrade(user?.id || '', fromAsset, parseFloat(transferAmount), 'sell');
       if (response.success) {
         toast({
           title: "Transfer Successful!",
