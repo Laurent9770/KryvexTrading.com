@@ -101,6 +101,20 @@ class AuthService {
     const token = this.generateToken(user);
     const refreshToken = this.generateRefreshToken(user);
 
+    // Emit WebSocket event for real-time admin updates
+    if (global.io) {
+      global.io.emit('admin:new_user', {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        createdAt: user.created_at,
+        status: 'active',
+        isVerified: user.is_verified,
+        isAdmin: user.is_admin
+      });
+    }
+
     return {
       user: {
         id: user.id,
@@ -108,7 +122,8 @@ class AuthService {
         firstName: user.first_name,
         lastName: user.last_name,
         isAdmin: user.is_admin,
-        isVerified: user.is_verified
+        isVerified: user.is_verified,
+        createdAt: user.created_at
       },
       token,
       refreshToken
@@ -341,34 +356,128 @@ class AuthService {
     return result.rows[0];
   }
 
-  // Admin: Get all users
-  async getAllUsers(limit = 50, offset = 0) {
-    const result = await query(
-      `SELECT id, email, first_name, last_name, phone, country, is_admin, is_verified, is_active, created_at
-       FROM users
-       ORDER BY created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+  // Admin: Get all users with filtering and search
+  async getAllUsers(limit = 50, offset = 0, status = null, search = null) {
+    let query = `
+      SELECT 
+        u.id, 
+        u.email, 
+        u.first_name, 
+        u.last_name, 
+        u.phone, 
+        u.country, 
+        u.is_admin, 
+        u.is_verified, 
+        u.is_active, 
+        u.created_at,
+        up.profile_picture,
+        COALESCE(w.total_balance, 0) as wallet_balance,
+        COALESCE(t.total_trades, 0) as total_trades,
+        COALESCE(t.win_rate, 0) as win_rate
+      FROM users u
+      LEFT JOIN user_profiles up ON u.id = up.user_id
+      LEFT JOIN (
+        SELECT user_id, SUM(balance) as total_balance 
+        FROM wallets 
+        GROUP BY user_id
+      ) w ON u.id = w.user_id
+      LEFT JOIN (
+        SELECT 
+          user_id,
+          COUNT(*) as total_trades,
+          ROUND(AVG(CASE WHEN outcome = 'win' THEN 100 ELSE 0 END), 2) as win_rate
+        FROM trades 
+        GROUP BY user_id
+      ) t ON u.id = t.user_id
+    `;
 
+    const conditions = [];
+    const params = [];
+
+    if (status) {
+      conditions.push(`u.is_active = $${params.length + 1}`);
+      params.push(status === 'active');
+    }
+
+    if (search) {
+      conditions.push(`(
+        u.email ILIKE $${params.length + 1} OR 
+        u.first_name ILIKE $${params.length + 1} OR 
+        u.last_name ILIKE $${params.length + 1}
+      )`);
+      params.push(`%${search}%`);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    query += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    const result = await query(query, params);
     return result.rows;
   }
 
   // Admin: Update user status
-  async updateUserStatus(userId, status) {
+  async updateUserStatus(userId, status, reason = null) {
     const result = await query(
       `UPDATE users 
        SET is_active = $1, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
-       RETURNING id, email, first_name, last_name, is_active`,
-      [status, userId]
+       RETURNING id, email, first_name, last_name, is_active, created_at`,
+      [status === 'active', userId]
     );
 
     if (result.rows.length === 0) {
       throw new Error('User not found');
     }
 
+    // Emit WebSocket event for real-time updates
+    if (global.io) {
+      global.io.emit('admin:user_status_updated', {
+        userId,
+        status,
+        reason,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
     return result.rows[0];
+  }
+
+  // Admin: Get user statistics
+  async getUserStats() {
+    const stats = await query(`
+      SELECT 
+        COUNT(*) as total_users,
+        COUNT(CASE WHEN is_active = true THEN 1 END) as active_users,
+        COUNT(CASE WHEN is_verified = true THEN 1 END) as verified_users,
+        COUNT(CASE WHEN is_active = false THEN 1 END) as suspended_users,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as new_users_today,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as new_users_week,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_users_month
+      FROM users
+    `);
+
+    const balanceStats = await query(`
+      SELECT COALESCE(SUM(balance), 0) as total_balance
+      FROM wallets
+    `);
+
+    const tradeStats = await query(`
+      SELECT 
+        COUNT(*) as total_trades,
+        COUNT(CASE WHEN outcome = 'win' THEN 1 END) as winning_trades
+      FROM trades
+    `);
+
+    return {
+      ...stats.rows[0],
+      total_balance: parseFloat(balanceStats.rows[0]?.total_balance || 0),
+      total_trades: parseInt(tradeStats.rows[0]?.total_trades || 0),
+      winning_trades: parseInt(tradeStats.rows[0]?.winning_trades || 0)
+    };
   }
 }
 

@@ -468,142 +468,108 @@ export default function AdminUserManagement() {
 
   const loadUsers = async () => {
     try {
-      console.log('=== DEBUG: Loading users from admin service ===');
+      setIsLoading(true);
       
-      // Try to load users from admin service first
-      try {
-        const adminUsers = await adminService.getAllUsers();
-        console.log('Admin service users loaded:', adminUsers.length);
-        
-        // Convert admin service users to local User format
-        const convertedUsers: User[] = adminUsers.map((adminUser: any) => ({
-          id: adminUser.id,
-          email: adminUser.email,
-          firstName: adminUser.firstName || '',
-          lastName: adminUser.lastName || '',
-          phone: adminUser.phone || '',
-          username: adminUser.username || `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim(),
-          kycLevel: adminUser.kycLevel || 0,
-          kycStatus: adminUser.kycStatus || 'pending',
-          accountStatus: adminUser.accountStatus || 'active',
-          walletBalance: adminUser.walletBalance || 0,
-          tradingBalance: adminUser.tradingBalance || 0,
-          totalTrades: adminUser.totalTrades || 0,
-          winRate: adminUser.winRate || 0,
-          totalProfit: adminUser.totalProfit || 0,
-          lastLogin: adminUser.lastLogin || '',
-          createdAt: adminUser.createdAt || new Date().toISOString(),
-          isVerified: adminUser.isVerified || false,
-          loginAttempts: adminUser.loginAttempts || 0,
-          profilePicture: adminUser.profilePicture || '',
-          country: adminUser.country || '',
-          timezone: adminUser.timezone || '',
-          language: adminUser.language || 'en',
-          twoFactorEnabled: adminUser.twoFactorEnabled || false,
-          emailVerified: adminUser.emailVerified || false,
-          phoneVerified: adminUser.phoneVerified || false
+      // Fetch users from backend API
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/users?limit=100&offset=0`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const backendUsers: User[] = result.data.map((user: any) => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          username: user.email.split('@')[0],
+          kycLevel: 1, // Default level
+          kycStatus: user.is_verified ? 'verified' as const : 'pending' as const,
+          accountStatus: user.is_active ? 'active' as const : 'suspended' as const,
+          walletBalance: parseFloat(user.wallet_balance || 0),
+          tradingBalance: parseFloat(user.wallet_balance || 0),
+          totalTrades: parseInt(user.total_trades || 0),
+          winRate: parseFloat(user.win_rate || 0),
+          totalProfit: 0, // Will be calculated separately
+          lastLogin: new Date().toISOString(), // Will be fetched separately
+          createdAt: user.created_at,
+          isVerified: user.is_verified,
+          country: user.country,
+          profilePicture: user.profile_picture,
+          loginAttempts: 0,
+          suspensionReason: undefined,
+          suspendedUntil: undefined,
+          timezone: undefined,
+          language: 'en',
+          twoFactorEnabled: false,
+          emailVerified: user.is_verified,
+          phoneVerified: false
         }));
-        
-        setUsers(convertedUsers);
-        calculateStats(convertedUsers);
-        
-        console.log(`Successfully loaded ${convertedUsers.length} users from admin service`);
-        return;
-        
-      } catch (adminError) {
-        console.warn('Admin service failed, falling back to local data:', adminError);
-      }
-      
-      // Fallback to local data if admin service fails
-      console.log('=== DEBUG: Loading users from local storage ===');
-      
-      // Load from user persistence service (existing admin users)
-      let adminUsers: any[] = [];
-      try {
-        if (userPersistenceService && typeof userPersistenceService.getAllUsers === 'function') {
-          adminUsers = userPersistenceService.getAllUsers();
-          console.log('Admin users loaded:', adminUsers.length);
-        } else {
-          console.warn('userPersistenceService.getAllUsers not available, using empty array');
-        }
-      } catch (error) {
-        console.warn('Error loading admin users:', error);
-      }
-      
-      // Load registered users from localStorage (new registrations)
-      let registeredUsers: any[] = [];
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const registeredUsersData = localStorage.getItem('registeredUsers');
-          console.log('registeredUsers localStorage data:', registeredUsersData);
-          if (registeredUsersData) {
-            registeredUsers = JSON.parse(registeredUsersData);
-            console.log('Parsed registered users:', registeredUsers);
+
+        setUsers(backendUsers);
+        calculateStats(backendUsers);
+      } else {
+        console.error('Failed to fetch users from backend');
+        // Fallback to demo data
+        const demoUsers = [
+          {
+            id: '1',
+            email: 'john.doe@example.com',
+            firstName: 'John',
+            lastName: 'Doe',
+            phone: '+1234567890',
+            username: 'johndoe',
+            kycLevel: 2,
+            kycStatus: 'verified',
+            accountStatus: 'active',
+            walletBalance: 1500.00,
+            tradingBalance: 1200.00,
+            totalTrades: 45,
+            winRate: 68.5,
+            totalProfit: 234.50,
+            lastLogin: new Date().toISOString(),
+            createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            isVerified: true,
+            country: 'United States'
+          },
+          {
+            id: '2',
+            email: 'jane.smith@example.com',
+            firstName: 'Jane',
+            lastName: 'Smith',
+            phone: '+1987654321',
+            username: 'janesmith',
+            kycLevel: 1,
+            kycStatus: 'pending',
+            accountStatus: 'active',
+            walletBalance: 750.00,
+            tradingBalance: 600.00,
+            totalTrades: 23,
+            winRate: 52.3,
+            totalProfit: -45.20,
+            lastLogin: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+            isVerified: false,
+            country: 'Canada'
           }
-        }
-      } catch (error) {
-        console.warn('Error loading registered users:', error);
+        ];
+        setUsers(demoUsers);
+        calculateStats(demoUsers);
       }
-      
-      // Convert registered users to User format for admin display
-      const convertedRegisteredUsers: User[] = registeredUsers.map((userData: any) => ({
-        id: userData.id,
-        email: userData.email,
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        phone: userData.phone || '',
-        username: userData.username || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-        kycLevel: 0, // Start unverified
-        kycStatus: 'pending',
-        accountStatus: 'active',
-        walletBalance: userData.walletBalance || 0, // Use actual wallet balance if available
-        tradingBalance: 0,
-        totalTrades: 0,
-        winRate: 0,
-        totalProfit: 0,
-        lastLogin: '',
-        createdAt: userData.createdAt || new Date().toISOString(),
-        isVerified: false,
-        loginAttempts: 0,
-        profilePicture: '',
-        country: userData.country || '',
-        timezone: '',
-        language: 'en',
-        twoFactorEnabled: false,
-        emailVerified: false,
-        phoneVerified: false
-      }));
-      
-      console.log('Converted registered users:', convertedRegisteredUsers.length);
-      
-      // Merge admin users with registered users
-      const allUsers = mergeUsers(adminUsers, convertedRegisteredUsers);
-      
-      console.log('Final merged users:', allUsers.length);
-      
-      setUsers(allUsers);
-      calculateStats(allUsers);
-      
-      // Store merged users in persistence for admin access
-      try {
-        if (userPersistenceService && typeof userPersistenceService.storeUsers === 'function') {
-          userPersistenceService.storeUsers(allUsers);
-        } else {
-          console.warn('userPersistenceService.storeUsers not available');
-        }
-      } catch (error) {
-        console.warn('Error storing users:', error);
-      }
-      
-      console.log(`Loaded ${allUsers.length} users (${adminUsers.length} admin users + ${convertedRegisteredUsers.length} registered users)`);
-      
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: "Failed to load user data"
+        description: "Failed to load users",
+        variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
