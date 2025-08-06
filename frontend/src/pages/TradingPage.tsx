@@ -16,7 +16,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import tradingEngine, { TradeRequest } from "@/services/tradingEngine";
+import supabaseTradingPageService, { TradeRequest } from "@/services/supabaseTradingPageService";
 import { cryptoPriceService } from "@/services/cryptoPriceService";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";

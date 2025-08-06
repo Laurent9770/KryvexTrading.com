@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import kycService from '@/services/kycService';
 import adminDataService, { AdminKYCUser } from '@/services/adminDataService';
-import adminService from '@/services/adminService';
+import supabaseAdminService from '@/services/supabaseAdminService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,7 @@ const AdminKYCVerification = () => {
     try {
       // Try to load from admin service first
       try {
-        const adminSubmissions = await adminService.getAllKYCSubmissions();
+        const adminSubmissions = await supabaseAdminService.getAllKYCSubmissions();
         console.log('Admin service KYC submissions loaded:', adminSubmissions.length);
         
         // Convert admin service submissions to local format
@@ -83,7 +83,7 @@ const AdminKYCVerification = () => {
         setSubmissions(convertedSubmissions);
         
         // Get users from admin service
-        const adminUsers = await adminService.getAllUsers();
+        const adminUsers = await supabaseAdminService.getAllUsers();
         const kycUsers: AdminKYCUser[] = adminUsers.map((user: any) => ({
           id: user.id,
           email: user.email,
@@ -149,9 +149,9 @@ const AdminKYCVerification = () => {
               // Try to use admin service first
         try {
           if (reviewStatus === 'approved') {
-            await adminService.approveKYC(selectedSubmission.id, 'Admin approval');
+            await supabaseAdminService.approveKYC(selectedSubmission.id, 'Admin approval');
           } else {
-            await adminService.rejectKYC(selectedSubmission.id, rejectionReason || 'Admin rejection');
+                          await supabaseAdminService.rejectKYC(selectedSubmission.id, rejectionReason || 'Admin rejection');
           }
 
           // Reload data to get updated status

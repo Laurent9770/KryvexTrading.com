@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import walletService from '@/services/walletService';
+import supabaseWalletService from '@/services/supabaseWalletService';
 import { Wallet, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface WithdrawalRequestFormProps {
@@ -72,7 +72,7 @@ const WithdrawalRequestForm: React.FC<WithdrawalRequestFormProps> = ({ onRequest
     setIsSubmitting(true);
 
     try {
-      const request = walletService.createWithdrawalRequest(
+      const request = await supabaseWalletService.createWithdrawalRequest(
         user.id,
         user.username || user.email.split('@')[0],
         user.email,

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import walletService from '@/services/walletService';
+import supabaseWalletService from '@/services/supabaseWalletService';
 import adminDataService, { AdminWithdrawalRequest } from '@/services/adminDataService';
 import { 
   Clock, 
@@ -95,7 +95,7 @@ const AdminWithdrawalManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const updatedRequest = walletService.approveWithdrawal(request.id, user.email, txHash);
+      const updatedRequest = await supabaseWalletService.approveWithdrawal(request.id, user.email, txHash);
       
       if (updatedRequest) {
         toast({
@@ -129,7 +129,7 @@ const AdminWithdrawalManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const updatedRequest = walletService.rejectWithdrawal(request.id, user.email, rejectReason);
+      const updatedRequest = await supabaseWalletService.rejectWithdrawal(request.id, user.email, rejectReason);
       
       if (updatedRequest) {
         toast({
@@ -192,7 +192,21 @@ const AdminWithdrawalManager: React.FC = () => {
     return withdrawalRequests.filter(request => request.status === activeTab);
   };
 
-  const stats = walletService.getWithdrawalStats();
+  const [stats, setStats] = useState({
+    totalRequests: 0,
+    pendingRequests: 0,
+    approvedRequests: 0,
+    rejectedRequests: 0,
+    totalAmount: 0
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const statsData = await supabaseWalletService.getWithdrawalStats();
+      setStats(statsData);
+    };
+    loadStats();
+  }, [withdrawalRequests]);
 
   return (
     <div className="space-y-6">
@@ -204,7 +218,7 @@ const AdminWithdrawalManager: React.FC = () => {
               <Clock className="w-5 h-5 text-amber-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
+                <p className="text-2xl font-bold">{stats.pendingRequests}</p>
               </div>
             </div>
           </CardContent>
@@ -215,7 +229,7 @@ const AdminWithdrawalManager: React.FC = () => {
               <CheckCircle className="w-5 h-5 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Approved</p>
-                <p className="text-2xl font-bold">{stats.approved}</p>
+                <p className="text-2xl font-bold">{stats.approvedRequests}</p>
               </div>
             </div>
           </CardContent>
@@ -226,7 +240,7 @@ const AdminWithdrawalManager: React.FC = () => {
               <XCircle className="w-5 h-5 text-red-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Rejected</p>
-                <p className="text-2xl font-bold">{stats.rejected}</p>
+                <p className="text-2xl font-bold">{stats.rejectedRequests}</p>
               </div>
             </div>
           </CardContent>
@@ -258,7 +272,7 @@ const AdminWithdrawalManager: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                walletService.clearAllMockData();
+                // Clear mock data functionality removed - using Supabase now
                 loadWithdrawalRequests();
                 toast({
                   title: "Mock Data Cleared",
@@ -274,9 +288,9 @@ const AdminWithdrawalManager: React.FC = () => {
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
-              <TabsTrigger value="approved">Approved ({stats.approved})</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected ({stats.rejected})</TabsTrigger>
+              <TabsTrigger value="pending">Pending ({stats.pendingRequests})</TabsTrigger>
+              <TabsTrigger value="approved">Approved ({stats.approvedRequests})</TabsTrigger>
+              <TabsTrigger value="rejected">Rejected ({stats.rejectedRequests})</TabsTrigger>
               <TabsTrigger value="all">All ({stats.totalRequests})</TabsTrigger>
             </TabsList>
 

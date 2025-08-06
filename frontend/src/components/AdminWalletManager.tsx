@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import walletService from '@/services/walletService';
+import supabaseWalletService from '@/services/supabaseWalletService';
 import adminDataService, { AdminWalletData } from '@/services/adminDataService';
 import { 
   Plus, 
@@ -97,7 +97,7 @@ const AdminWalletManager: React.FC = () => {
     };
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     console.log('=== DEBUG: AdminWalletManager loading data ===');
     
     // Use adminDataService to get real wallet data based on actual users
@@ -105,7 +105,7 @@ const AdminWalletManager: React.FC = () => {
     console.log('User wallets loaded:', wallets.length);
     console.log('User wallets data:', wallets);
     
-    const transactions = walletService.getWalletTransactions();
+          const transactions = await supabaseWalletService.getWalletTransactions();
     console.log('Wallet transactions loaded:', transactions.length);
     console.log('Wallet transactions data:', transactions);
     
@@ -130,7 +130,7 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const success = walletService.fundUserWallet(
+      const success = await supabaseWalletService.fundUserWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,
@@ -187,7 +187,7 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const success = walletService.deductFromWallet(
+      const success = await supabaseWalletService.deductFromWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,
@@ -286,7 +286,7 @@ const AdminWalletManager: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    walletService.clearAllMockData();
+                    // Clear mock data functionality removed - using Supabase now
                     loadData();
                     toast({
                       title: "Mock Data Cleared",

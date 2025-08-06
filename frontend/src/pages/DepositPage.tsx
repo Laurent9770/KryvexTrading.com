@@ -28,7 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import walletService from "@/services/walletService";
+import supabaseWalletService from "@/services/supabaseWalletService";
 
 interface DepositRequest {
   amount: string;
@@ -284,7 +284,7 @@ const DepositPage = () => {
   useEffect(() => {
     const fetchDepositStats = async () => {
       try {
-        const stats = await walletService.getDepositStats(user?.id);
+        const stats = await supabaseWalletService.getDepositStats(user?.id);
         setDepositStats(stats);
       } catch (error) {
         console.error("Failed to fetch deposit stats:", error);
@@ -298,7 +298,7 @@ const DepositPage = () => {
 
     const fetchRecentDeposits = async () => {
       try {
-        const deposits = await walletService.getRecentDeposits(user?.id);
+        const deposits = await supabaseWalletService.getRecentDeposits(user?.id);
         setRecentDeposits(deposits);
       } catch (error) {
         console.error("Failed to fetch recent deposits:", error);

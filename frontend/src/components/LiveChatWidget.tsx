@@ -6,8 +6,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
-import chatService, { ChatMessage, ChatRoom } from '@/services/chatService';
-import websocketService from '@/services/websocketService';
+import supabaseChatService, { ChatMessage, ChatRoom } from '@/services/supabaseChatService';
 import { 
   MessageCircle, 
   X, 
@@ -76,7 +75,7 @@ const LiveChatWidget = () => {
   const loadRooms = async () => {
     try {
       // Listen for room updates from the permission system
-      chatService.on('rooms_updated', (updatedRooms: any[]) => {
+      supabaseChatService.on('rooms_updated', (updatedRooms: any[]) => {
         setRooms(updatedRooms);
         
         // Set default room based on user type and available rooms
@@ -94,8 +93,10 @@ const LiveChatWidget = () => {
         }
       });
       
-      // Get user's accessible rooms from WebSocket
-      websocketService.getUserRooms();
+      // Set user ID for chat service
+      if (user?.id) {
+        supabaseChatService.setUserId(user.id);
+      }
     } catch (error) {
       console.error('Error loading rooms:', error);
     }
@@ -106,7 +107,7 @@ const LiveChatWidget = () => {
     
     try {
       setLoadingUsers(true);
-      const chatUsers = await chatService.getUsers();
+      const chatUsers = await supabaseChatService.getUsers();
       setUsers(chatUsers);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -117,7 +118,7 @@ const LiveChatWidget = () => {
 
   const joinCurrentRoom = async () => {
     try {
-      await chatService.joinRoom(currentRoom);
+      await supabaseChatService.joinRoom(currentRoom);
     } catch (error) {
       console.error('Error joining room:', error);
     }
@@ -126,7 +127,7 @@ const LiveChatWidget = () => {
   const loadMessages = async () => {
     try {
       setLoadingMessages(true);
-      const roomMessages = await chatService.getMessages(currentRoom);
+      const roomMessages = await supabaseChatService.getMessages(currentRoom);
       setMessages(roomMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -150,7 +151,7 @@ const LiveChatWidget = () => {
       }
       
       // For admins, also show messages from general room in admin room
-      if (isAdmin && message.originalRoom === 'general' && currentRoom === 'admin') {
+      if (isAdmin && message.room === 'general' && currentRoom === 'admin') {
         setMessages(prev => [...prev, message]);
       }
       
@@ -171,12 +172,12 @@ const LiveChatWidget = () => {
       }
     };
 
-    chatService.on('message_received', handleMessageReceived);
-    chatService.on('message_sent', handleMessageSent);
+    supabaseChatService.on('message_received', handleMessageReceived);
+    supabaseChatService.on('message_sent', handleMessageSent);
 
     return () => {
-      chatService.off('message_received', handleMessageReceived);
-      chatService.off('message_sent', handleMessageSent);
+              supabaseChatService.off('message_received', handleMessageReceived);
+        supabaseChatService.off('message_sent', handleMessageSent);
     };
   };
 
@@ -196,7 +197,7 @@ const LiveChatWidget = () => {
 
     try {
       // Send the message
-      await chatService.sendMessage(
+              await supabaseChatService.sendMessage(
         messageText,
         currentRoom,
         user.email?.split('@')[0] || user.email || 'Anonymous',
@@ -206,7 +207,7 @@ const LiveChatWidget = () => {
       // Send file information if files were uploaded
       if (filesToSend.length > 0) {
         const fileNames = filesToSend.map(file => file.name).join(', ');
-        await chatService.sendMessage(
+        await supabaseChatService.sendMessage(
           `📎 Attached files: ${fileNames}`,
           currentRoom,
           user.email?.split('@')[0] || user.email || 'Anonymous',
@@ -256,9 +257,9 @@ const LiveChatWidget = () => {
 
   const changeRoom = async (roomId: string) => {
     try {
-      await chatService.leaveRoom(currentRoom);
+      await supabaseChatService.leaveRoom(currentRoom);
       setCurrentRoom(roomId);
-      await chatService.joinRoom(roomId);
+      await supabaseChatService.joinRoom(roomId);
       setMessages([]);
       
       // Load users if switching to admin channel
@@ -276,11 +277,11 @@ const LiveChatWidget = () => {
   };
 
   const formatTimestamp = (timestamp: string) => {
-    return chatService.formatTimestamp(timestamp);
+    return supabaseChatService.formatTimestamp(timestamp);
   };
 
   const isMessageFromCurrentUser = (message: ChatMessage) => {
-    return chatService.isMessageFromCurrentUser(message);
+    return supabaseChatService.isMessageFromCurrentUser(message);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
