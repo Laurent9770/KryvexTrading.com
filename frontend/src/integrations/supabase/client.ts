@@ -335,11 +335,6 @@ if (hasRealSupabase) {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'kryvex-trading-app'
-        }
       }
     })
     console.log('✅ Real Supabase client initialized')
