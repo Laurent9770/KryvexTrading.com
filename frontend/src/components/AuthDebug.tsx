@@ -1,81 +1,54 @@
 import React, { useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
 
+interface TestResults {
+  sessionTest: { success: boolean; error?: string };
+  databaseTest: { success: boolean; error?: string };
+  isMock: boolean;
+}
+
 export const AuthDebug: React.FC = () => {
   const [testResult, setTestResult] = useState<string>('');
+  const [testResults, setTestResults] = useState<TestResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const testSupabaseConnection = async () => {
-    setIsLoading(true);
     try {
-      console.log('🧪 Testing Supabase connection...');
+      setIsLoading(true);
+      console.log('🧪 Testing Supabase connection...')
       
-      // Test 1: Check if client is initialized
-      if (!supabase) {
-        setTestResult('❌ Supabase client is null');
-        return;
-      }
-
-      // Test 2: Check auth methods
-      if (!supabase.auth) {
-        setTestResult('❌ Supabase auth is not available');
-        return;
-      }
-
-      // Test 3: Try to get session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Test basic client functionality
+      const { data, error } = await supabase.auth.getSession()
+      console.log('Session test result:', { data: !!data, error })
       
-      if (sessionError) {
-        setTestResult(`❌ Session error: ${sessionError.message}`);
-        return;
-      }
-
-      // Test 4: Try to sign up a test user
-      const testEmail = `test-${Date.now()}@example.com`;
-      const testPassword = 'TestPassword123!';
+      // Test database query
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(1)
       
-      console.log('🧪 Testing registration with:', testEmail);
+      console.log('Database test result:', { 
+        hasData: !!profileData, 
+        error: profileError,
+        isMock: !supabase.auth.getSession || typeof supabase.auth.getSession !== 'function'
+      })
       
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: testEmail,
-        password: testPassword,
-        options: {
-          data: {
-            full_name: 'Test User',
-            phone: '1234567890',
-            country: 'United States'
-          }
-        }
-      });
-
-      if (signUpError) {
-        setTestResult(`❌ Sign up error: ${signUpError.message}`);
-        return;
-      }
-
-      if (signUpData.user) {
-        setTestResult(`✅ Registration successful! User ID: ${signUpData.user.id}`);
-        
-        // Clean up: Delete the test user
-        setTimeout(async () => {
-          try {
-            await supabase.auth.signOut();
-            console.log('🧹 Cleaned up test user');
-          } catch (error) {
-            console.error('Cleanup error:', error);
-          }
-        }, 5000);
-      } else {
-        setTestResult('⚠️ Sign up completed but no user data returned');
-      }
-
+      setTestResults({
+        sessionTest: { success: !error, error: error?.message },
+        databaseTest: { success: !profileError, error: profileError?.message },
+        isMock: !supabase.auth.getSession || typeof supabase.auth.getSession !== 'function'
+      })
     } catch (error) {
-      console.error('❌ Test error:', error);
-      setTestResult(`❌ Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Test failed:', error)
+      setTestResults({
+        sessionTest: { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+        databaseTest: { success: false, error: 'Test failed' },
+        isMock: true
+      })
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const testEnvironmentVariables = () => {
     const envVars = {
@@ -113,6 +86,23 @@ export const AuthDebug: React.FC = () => {
         {testResult && (
           <div className="mt-4 p-3 bg-gray-700 rounded">
             <pre className="text-sm text-white whitespace-pre-wrap">{testResult}</pre>
+          </div>
+        )}
+        
+        {testResults && (
+          <div className="mt-4 p-3 bg-gray-700 rounded">
+            <h4 className="text-md font-semibold mb-2">🧪 Test Results:</h4>
+            <div className="space-y-2 text-sm">
+              <div className={`p-2 rounded ${testResults.isMock ? 'bg-yellow-600' : 'bg-green-600'}`}>
+                <strong>Client Type:</strong> {testResults.isMock ? 'Mock Client' : 'Real Supabase Client'}
+              </div>
+              <div className={`p-2 rounded ${testResults.sessionTest.success ? 'bg-green-600' : 'bg-red-600'}`}>
+                <strong>Session Test:</strong> {testResults.sessionTest.success ? '✅ Success' : `❌ Failed: ${testResults.sessionTest.error}`}
+              </div>
+              <div className={`p-2 rounded ${testResults.databaseTest.success ? 'bg-green-600' : 'bg-red-600'}`}>
+                <strong>Database Test:</strong> {testResults.databaseTest.success ? '✅ Success' : `❌ Failed: ${testResults.databaseTest.error}`}
+              </div>
+            </div>
           </div>
         )}
       </div>

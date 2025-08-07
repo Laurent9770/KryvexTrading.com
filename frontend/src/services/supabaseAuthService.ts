@@ -105,7 +105,16 @@ class SupabaseAuthService {
 
       if (profileError) {
         console.error('Error fetching profile:', profileError)
-        // Create profile if it doesn't exist
+        
+        // Check if it's a "not found" error (which is expected for new users)
+        if (profileError.code === 'PGRST116' || profileError.message?.includes('No rows returned')) {
+          console.warn('⚠️ No profile found for user, creating one...')
+          await this.createUserProfile(user)
+          return
+        }
+        
+        // For other errors, try to create profile anyway
+        console.warn('⚠️ Profile fetch failed, attempting to create profile...')
         await this.createUserProfile(user)
         return
       }
@@ -155,6 +164,8 @@ class SupabaseAuthService {
 
   private async createUserProfile(user: User) {
     try {
+      console.log('🔧 Creating user profile for:', user.email)
+      
       const profileData: ProfileInsert = {
         user_id: user.id,
         email: user.email!,
@@ -165,6 +176,8 @@ class SupabaseAuthService {
         account_status: 'active'
       }
 
+      console.log('📝 Profile data to insert:', profileData)
+
       const { data: profile, error } = await supabase
         .from('profiles')
         .insert(profileData)
@@ -172,22 +185,42 @@ class SupabaseAuthService {
         .single()
 
       if (error) {
-        console.error('Error creating profile:', error)
+        console.error('❌ Error creating profile:', error)
+        
+        // Check if it's a duplicate key error (profile already exists)
+        if (error.code === '23505' || error.message?.includes('duplicate key')) {
+          console.log('ℹ️ Profile already exists, continuing...')
+          // Continue with the session handling
+          await this.handleUserSession(user)
+          return
+        }
+        
+        console.error('❌ Failed to create profile, aborting session setup')
         return
       }
 
+      console.log('✅ Profile created successfully:', profile)
+
       // Create user role (default to 'user')
-      await supabase
+      const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: user.id,
           role: 'user'
         })
 
+      if (roleError) {
+        console.error('❌ Error creating user role:', roleError)
+        // Don't fail the entire process for role creation error
+      } else {
+        console.log('✅ User role created successfully')
+      }
+
       // Re-fetch the profile with admin status
       await this.handleUserSession(user)
     } catch (error) {
-      console.error('Error creating user profile:', error)
+      console.error('❌ Error creating user profile:', error)
+      throw error // Re-throw to be handled by caller
     }
   }
 

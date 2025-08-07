@@ -21,31 +21,145 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Create a proper mock client with all Supabase methods
 const createMockClient = () => {
-  const mockQueryBuilder = () => ({
-    select: () => ({
-      eq: () => ({
-        single: async () => ({ data: null, error: null }),
-        order: () => ({
-          limit: async () => ({ data: [], error: null })
+  const mockQueryBuilder = (table: string) => ({
+    select: (columns?: string) => ({
+      eq: (column: string, value: any) => ({
+        single: async () => {
+          // Return a mock profile for profiles table
+          if (table === 'profiles') {
+            return { 
+              data: { 
+                id: 'mock-profile-id',
+                user_id: 'mock-user-id',
+                email: 'mock@example.com',
+                full_name: 'Mock User',
+                account_balance: 0,
+                is_verified: false,
+                kyc_status: 'pending',
+                account_status: 'active',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }, 
+              error: null 
+            }
+          }
+          // Return a mock role for user_roles table
+          if (table === 'user_roles') {
+            return { 
+              data: { 
+                id: 'mock-role-id',
+                user_id: 'mock-user-id',
+                role: 'user'
+              }, 
+              error: null 
+            }
+          }
+          return { data: null, error: null }
+        },
+        order: (column: string, options?: any) => ({
+          limit: async (count: number) => ({ data: [], error: null })
         })
       }),
-      or: () => ({
-        order: () => ({
-          limit: async () => ({ data: [], error: null })
+      or: (condition: string) => ({
+        order: (column: string, options?: any) => ({
+          limit: async (count: number) => ({ data: [], error: null })
         })
       }),
-      order: () => ({
-        limit: async () => ({ data: [], error: null })
+      order: (column: string, options?: any) => ({
+        limit: async (count: number) => ({ data: [], error: null })
       }),
-      limit: async () => ({ data: [], error: null }),
-      single: async () => ({ data: null, error: null })
+      limit: async (count: number) => ({ data: [], error: null }),
+      single: async () => {
+        // Return a mock profile for profiles table
+        if (table === 'profiles') {
+          return { 
+            data: { 
+              id: 'mock-profile-id',
+              user_id: 'mock-user-id',
+              email: 'mock@example.com',
+              full_name: 'Mock User',
+              account_balance: 0,
+              is_verified: false,
+              kyc_status: 'pending',
+              account_status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, 
+            error: null 
+          }
+        }
+        return { data: null, error: null }
+      }
     }),
-    insert: async () => ({ data: null, error: null }),
-    update: () => ({
-      eq: async () => ({ data: null, error: null })
+    insert: (data: any) => ({
+      select: (columns?: string) => ({
+        single: async () => {
+          // Return the inserted data for profiles table
+          if (table === 'profiles') {
+            return { 
+              data: { 
+                id: 'mock-profile-id',
+                user_id: data.user_id || 'mock-user-id',
+                email: data.email || 'mock@example.com',
+                full_name: data.full_name || 'Mock User',
+                account_balance: data.account_balance || 0,
+                is_verified: data.is_verified || false,
+                kyc_status: data.kyc_status || 'pending',
+                account_status: data.account_status || 'active',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }, 
+              error: null 
+            }
+          }
+          // Return the inserted data for user_roles table
+          if (table === 'user_roles') {
+            return { 
+              data: { 
+                id: 'mock-role-id',
+                user_id: data.user_id || 'mock-user-id',
+                role: data.role || 'user'
+              }, 
+              error: null 
+            }
+          }
+          return { data: null, error: null }
+        }
+      })
+    }),
+    update: (data: any) => ({
+      eq: (column: string, value: any) => ({
+        select: (columns?: string) => ({
+          single: async () => {
+            // Return updated data for profiles table
+            if (table === 'profiles') {
+              return { 
+                data: { 
+                  id: 'mock-profile-id',
+                  user_id: 'mock-user-id',
+                  email: 'mock@example.com',
+                  full_name: data.full_name || 'Mock User',
+                  account_balance: data.account_balance || 0,
+                  is_verified: data.is_verified || false,
+                  kyc_status: data.kyc_status || 'pending',
+                  account_status: data.account_status || 'active',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }, 
+                error: null 
+              }
+            }
+            return { data: null, error: null }
+          }
+        })
+      })
     }),
     delete: () => ({
-      eq: async () => ({ data: null, error: null })
+      eq: (column: string, value: any) => ({
+        select: (columns?: string) => ({
+          single: async () => ({ data: null, error: null })
+        })
+      })
     })
   })
 
@@ -54,15 +168,24 @@ const createMockClient = () => {
       getSession: async () => ({ data: { session: null }, error: null }),
       signInWithPassword: async (credentials: any) => {
         console.log('🔐 Mock signInWithPassword called with:', credentials)
-        // Mock successful login for admin@kryvex.com and sales@kryvex.com
-        if ((credentials.email === 'admin@kryvex.com' && credentials.password === 'admin123') ||
-            (credentials.email === 'sales@kryvex.com' && credentials.password === 'Kryvex.@123')) {
+        // Mock successful login for test users
+        const validUsers = [
+          { email: 'admin@kryvex.com', password: 'admin123', role: 'admin' },
+          { email: 'sales@kryvex.com', password: 'Kryvex.@123', role: 'user' },
+          { email: 'user@test.com', password: 'password123', role: 'user' },
+          { email: 'admin@test.com', password: 'admin123', role: 'admin' },
+          { email: 'mumuna@gmail.com', password: 'Mumuna@123', role: 'user' }
+        ]
+        
+        const user = validUsers.find(u => u.email === credentials.email && u.password === credentials.password)
+        
+        if (user) {
           return {
             data: {
               user: {
                 id: 'mock-user-id',
                 email: credentials.email,
-                role: credentials.email === 'admin@kryvex.com' ? 'admin' : 'user'
+                role: user.role
               },
               session: {
                 access_token: 'mock-token',
@@ -72,6 +195,8 @@ const createMockClient = () => {
             error: null
           }
         }
+        
+        console.log('❌ Mock authentication failed for:', credentials.email)
         return {
           data: null,
           error: { message: 'Invalid credentials' }
@@ -131,7 +256,11 @@ const createMockClient = () => {
 // Create Supabase client with proper configuration
 let supabase: any
 
+// Initialize client synchronously first
 try {
+  console.log('🔧 Initializing Supabase client with URL:', supabaseUrl)
+  console.log('🔧 Anon key available:', supabaseAnonKey ? 'Yes' : 'No')
+  
   // Create client with proper configuration
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -148,23 +277,23 @@ try {
   
   console.log('✅ Supabase client initialized successfully')
   
-  // Test the connection
+  // Test the connection immediately
   supabase.auth.getSession().then(({ data, error }) => {
     if (error) {
-      console.warn('⚠️ Supabase connection test failed, using mock client')
+      console.warn('⚠️ Supabase connection test failed:', error)
+      console.warn('⚠️ Switching to mock client')
       supabase = createMockClient()
     } else {
       console.log('✅ Supabase connection test successful')
     }
   }).catch((error) => {
-    console.warn('⚠️ Supabase connection test failed, using mock client:', error)
+    console.warn('⚠️ Supabase connection test failed:', error)
+    console.warn('⚠️ Switching to mock client')
     supabase = createMockClient()
   })
   
 } catch (error) {
   console.error('❌ Failed to initialize Supabase client:', error)
-  
-  // If even the basic client fails, create a proper mock client
   console.warn('⚠️ Creating fallback mock client')
   supabase = createMockClient()
 }
