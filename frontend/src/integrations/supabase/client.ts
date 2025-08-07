@@ -19,6 +19,61 @@ if (!supabaseUrl || !supabaseAnonKey) {
   })
 }
 
+// Create a proper mock client with all Supabase methods
+const createMockClient = () => {
+  const mockQueryBuilder = () => ({
+    select: () => ({
+      eq: () => ({
+        single: async () => ({ data: null, error: null }),
+        order: () => ({
+          limit: async () => ({ data: [], error: null })
+        })
+      }),
+      or: () => ({
+        order: () => ({
+          limit: async () => ({ data: [], error: null })
+        })
+      }),
+      order: () => ({
+        limit: async () => ({ data: [], error: null })
+      }),
+      limit: async () => ({ data: [], error: null }),
+      single: async () => ({ data: null, error: null })
+    }),
+    insert: async () => ({ data: null, error: null }),
+    update: () => ({
+      eq: async () => ({ data: null, error: null })
+    }),
+    delete: () => ({
+      eq: async () => ({ data: null, error: null })
+    })
+  })
+
+  return {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      signIn: async () => ({ data: null, error: { message: 'Mock client' } }),
+      signOut: async () => ({ error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      getUser: async () => ({ data: { user: null }, error: null })
+    },
+    from: mockQueryBuilder,
+    storage: {
+      from: () => ({
+        upload: async () => ({ data: null, error: null }),
+        download: async () => ({ data: null, error: null }),
+        remove: async () => ({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } })
+      })
+    },
+    channel: () => ({
+      on: () => ({
+        subscribe: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+      })
+    })
+  }
+}
+
 // Create Supabase client with minimal configuration to avoid headers error
 let supabase: any
 
@@ -30,29 +85,9 @@ try {
 } catch (error) {
   console.error('❌ Failed to initialize Supabase client:', error)
   
-  // If even the basic client fails, create a mock client
+  // If even the basic client fails, create a proper mock client
   console.warn('⚠️ Creating fallback mock client')
-  supabase = {
-    auth: {
-      getSession: async () => ({ data: { session: null }, error: null }),
-      signIn: async () => ({ data: null, error: { message: 'Mock client' } }),
-      signOut: async () => ({ error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
-    },
-    from: () => ({
-      select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
-      insert: async () => ({ data: null, error: null }),
-      update: async () => ({ data: null, error: null }),
-      delete: async () => ({ data: null, error: null })
-    }),
-    storage: {
-      from: () => ({
-        upload: async () => ({ data: null, error: null }),
-        download: async () => ({ data: null, error: null }),
-        remove: async () => ({ data: null, error: null })
-      })
-    }
-  }
+  supabase = createMockClient()
 }
 
 // Helper function to get user role

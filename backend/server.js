@@ -30,8 +30,12 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
-      connectSrc: ["'self'", "https://ftkeczodadvtnxofrwps.supabase.co", "wss://ftkeczodadvtnxofrwps.supabase.co"]
+      scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'", "https://ftkeczodadvtnxofrwps.supabase.co"],
+      connectSrc: ["'self'", "https://ftkeczodadvtnxofrwps.supabase.co", "wss://ftkeczodadvtnxofrwps.supabase.co", "https://kryvextrading-com.onrender.com"],
+      workerSrc: ["'self'", "blob:"],
+      childSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"]
     }
   }
 }));
