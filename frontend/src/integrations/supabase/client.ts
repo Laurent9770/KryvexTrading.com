@@ -83,18 +83,22 @@ const createMockClient = () => {
             }
           }),
           order: (column: string, options?: any) => ({
-            limit: async (count: number) => ({ data: [], error: null })
+            limit: async (count: number) => ({ data: [], error: null }),
+            range: async (start: number, end: number) => ({ data: [], error: null })
           })
         }),
       or: (condition: string) => ({
         order: (column: string, options?: any) => ({
-          limit: async (count: number) => ({ data: [], error: null })
+          limit: async (count: number) => ({ data: [], error: null }),
+          range: async (start: number, end: number) => ({ data: [], error: null })
         })
       }),
       order: (column: string, options?: any) => ({
-        limit: async (count: number) => ({ data: [], error: null })
+        limit: async (count: number) => ({ data: [], error: null }),
+        range: async (start: number, end: number) => ({ data: [], error: null })
       }),
       limit: async (count: number) => ({ data: [], error: null }),
+      range: async (start: number, end: number) => ({ data: [], error: null }),
       single: async () => {
         // Return a mock profile for profiles table
         if (table === 'profiles') {
@@ -315,17 +319,16 @@ const testSupabaseUrl = async (url: string): Promise<boolean> => {
 // Create Supabase client with proper configuration
 let supabase: any
 
-// Check if we're in production and have real Supabase credentials
-const isProduction = import.meta.env.PROD
+// Check if we have real Supabase credentials
 const hasRealSupabase = supabaseUrl && supabaseAnonKey && 
   supabaseUrl !== 'https://your-project.supabase.co' && 
   supabaseAnonKey !== 'your-anon-key' &&
   !supabaseUrl.includes('your-project') &&
   !supabaseAnonKey.includes('your-anon-key')
 
-// Force real Supabase in production if credentials are available
-if (isProduction && hasRealSupabase) {
-  console.log('🚀 Production mode: Using real Supabase client')
+// Always try to use real Supabase client if credentials are available
+if (hasRealSupabase) {
+  console.log('🚀 Using real Supabase client')
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -339,14 +342,14 @@ if (isProduction && hasRealSupabase) {
         }
       }
     })
-    console.log('✅ Real Supabase client initialized for production')
+    console.log('✅ Real Supabase client initialized')
   } catch (error) {
     console.error('❌ Failed to create real Supabase client:', error)
     console.warn('⚠️ Falling back to mock client')
     supabase = createMockClient()
   }
 } else {
-  console.log('🔧 Development mode: Using mock client')
+  console.log('🔧 No real Supabase credentials found, using mock client')
   supabase = createMockClient()
 }
 
