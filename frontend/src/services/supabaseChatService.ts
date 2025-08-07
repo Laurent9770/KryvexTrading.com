@@ -33,6 +33,8 @@ class SupabaseChatService {
 
   private async initializeRooms() {
     try {
+      console.log('🔧 Initializing chat rooms...')
+      
       // Get user's accessible rooms from Supabase
       const { data: rooms, error } = await supabase
         .from('chat_rooms')
@@ -40,24 +42,38 @@ class SupabaseChatService {
         .or('is_public.eq.true,participants.cs.{' + this.userId + '}');
 
       if (error) {
-        console.error('Error loading chat rooms:', error);
+        console.error('❌ Error loading chat rooms:', error);
         // Fallback to default rooms
         this.rooms = [
           { id: 'general', name: 'General Support', type: 'general', participants: [] },
           { id: 'admin', name: 'Admin Channel', type: 'admin', participants: [] }
         ];
-      } else {
+      } else if (rooms && Array.isArray(rooms)) {
         this.rooms = rooms.map(room => ({
           id: room.id,
           name: room.name,
           type: room.type || 'general',
           participants: room.participants || []
         }));
+      } else {
+        console.warn('⚠️ No rooms data returned, using default rooms')
+        // Fallback to default rooms
+        this.rooms = [
+          { id: 'general', name: 'General Support', type: 'general', participants: [] },
+          { id: 'admin', name: 'Admin Channel', type: 'admin', participants: [] }
+        ];
       }
 
+      console.log('✅ Chat rooms initialized:', this.rooms.length, 'rooms')
       this.emit('rooms_updated', this.rooms);
     } catch (error) {
-      console.error('Error initializing chat rooms:', error);
+      console.error('❌ Error initializing chat rooms:', error);
+      // Ensure we have fallback rooms even if everything fails
+      this.rooms = [
+        { id: 'general', name: 'General Support', type: 'general', participants: [] },
+        { id: 'admin', name: 'Admin Channel', type: 'admin', participants: [] }
+      ];
+      this.emit('rooms_updated', this.rooms);
     }
   }
 

@@ -138,6 +138,11 @@ try {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'kryvex-trading-app'
+      }
     }
   })
   

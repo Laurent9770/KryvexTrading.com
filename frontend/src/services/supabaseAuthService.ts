@@ -94,6 +94,8 @@ class SupabaseAuthService {
 
   private async handleUserSession(user: User) {
     try {
+      console.log('🔐 Handling user session for:', user.email)
+      
       // Get user profile from database
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -108,24 +110,33 @@ class SupabaseAuthService {
         return
       }
 
+      // Check if profile exists and has required fields
+      if (!profile) {
+        console.warn('⚠️ No profile found for user, creating one...')
+        await this.createUserProfile(user)
+        return
+      }
+
       // Check if user is admin
       const isAdmin = await isUserAdmin(user.id)
 
       const authUser: AuthUser = {
         id: user.id,
         email: user.email!,
-        fullName: profile.full_name || undefined,
-        avatar: profile.avatar_url || undefined,
-        phone: profile.phone || undefined,
-        country: profile.country || undefined,
-        accountBalance: profile.account_balance,
-        isVerified: profile.is_verified,
-        kycStatus: profile.kyc_status,
+        fullName: profile?.full_name || user.user_metadata?.full_name || user.email!.split('@')[0],
+        avatar: profile?.avatar_url || undefined,
+        phone: profile?.phone || undefined,
+        country: profile?.country || undefined,
+        accountBalance: profile?.account_balance || 0,
+        isVerified: profile?.is_verified || false,
+        kycStatus: profile?.kyc_status || 'pending',
         isAdmin,
-        accountStatus: profile.account_status,
-        createdAt: profile.created_at,
-        updatedAt: profile.updated_at
+        accountStatus: profile?.account_status || 'active',
+        createdAt: profile?.created_at || new Date().toISOString(),
+        updatedAt: profile?.updated_at || new Date().toISOString()
       }
+
+      console.log('✅ User session handled successfully:', authUser)
 
       this.updateAuthState({
         user: authUser,
@@ -137,7 +148,7 @@ class SupabaseAuthService {
       // Set up real-time subscriptions for this user
       this.setupRealtimeSubscriptions(user.id)
     } catch (error) {
-      console.error('Error handling user session:', error)
+      console.error('❌ Error handling user session:', error)
       this.updateAuthState({ user: null, isLoading: false, isAuthenticated: false, isAdmin: false })
     }
   }
