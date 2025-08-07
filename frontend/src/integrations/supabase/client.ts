@@ -210,7 +210,10 @@ const createMockClient = () => {
             user: {
               id: 'mock-new-user-id',
               email: credentials.email,
-              role: 'user'
+              role: 'user',
+              user_metadata: {
+                full_name: credentials.options?.data?.full_name || credentials.email.split('@')[0]
+              }
             },
             session: {
               access_token: 'mock-token',
@@ -253,6 +256,23 @@ const createMockClient = () => {
   }
 }
 
+// Test Supabase URL connectivity
+const testSupabaseUrl = async (url: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${url}/rest/v1/`, {
+      method: 'GET',
+      headers: {
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${supabaseAnonKey}`
+      }
+    })
+    return response.ok
+  } catch (error) {
+    console.warn('⚠️ Supabase URL test failed:', error)
+    return false
+  }
+}
+
 // Create Supabase client with proper configuration
 let supabase: any
 
@@ -261,35 +281,51 @@ try {
   console.log('🔧 Initializing Supabase client with URL:', supabaseUrl)
   console.log('🔧 Anon key available:', supabaseAnonKey ? 'Yes' : 'No')
   
-  // Create client with proper configuration
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    },
-    global: {
-      headers: {
-        'X-Client-Info': 'kryvex-trading-app'
-      }
+  // Test URL connectivity first
+  testSupabaseUrl(supabaseUrl).then(isAccessible => {
+    if (!isAccessible) {
+      console.warn('⚠️ Supabase URL not accessible, using mock client')
+      supabase = createMockClient()
+      return
     }
-  })
-  
-  console.log('✅ Supabase client initialized successfully')
-  
-  // Test the connection immediately
-  supabase.auth.getSession().then(({ data, error }) => {
-    if (error) {
+    
+    // Create client with proper configuration
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'kryvex-trading-app'
+        }
+      }
+    })
+    
+    console.log('✅ Supabase client initialized successfully')
+    
+    // Test the connection immediately with timeout
+    const connectionTest = Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      )
+    ])
+    
+    connectionTest.then(({ data, error }) => {
+      if (error) {
+        console.warn('⚠️ Supabase connection test failed:', error)
+        console.warn('⚠️ Switching to mock client')
+        supabase = createMockClient()
+      } else {
+        console.log('✅ Supabase connection test successful')
+      }
+    }).catch((error) => {
       console.warn('⚠️ Supabase connection test failed:', error)
       console.warn('⚠️ Switching to mock client')
       supabase = createMockClient()
-    } else {
-      console.log('✅ Supabase connection test successful')
-    }
-  }).catch((error) => {
-    console.warn('⚠️ Supabase connection test failed:', error)
-    console.warn('⚠️ Switching to mock client')
-    supabase = createMockClient()
+    })
   })
   
 } catch (error) {
