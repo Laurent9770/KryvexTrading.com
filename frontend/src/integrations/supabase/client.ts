@@ -25,44 +25,67 @@ const createMockClient = () => {
   const mockQueryBuilder = (table: string) => {
     console.log('🔧 Mock query builder called for table:', table)
     return {
-    select: (columns?: string) => ({
-      eq: (column: string, value: any) => ({
-        single: async () => {
-          // Return a mock profile for profiles table
-          if (table === 'profiles') {
-            return { 
-              data: { 
-                id: 'mock-profile-id',
-                user_id: 'mock-user-id',
-                email: 'mock@example.com',
-                full_name: 'Mock User',
-                account_balance: 0,
-                is_verified: false,
-                kyc_status: 'pending',
-                account_status: 'active',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }, 
-              error: null 
+          select: (columns?: string) => ({
+        eq: (column: string, value: any) => ({
+          single: async () => {
+            // Return a mock profile for profiles table
+            if (table === 'profiles') {
+              return { 
+                data: { 
+                  id: 'mock-profile-id',
+                  user_id: 'mock-user-id',
+                  email: 'mock@example.com',
+                  full_name: 'Mock User',
+                  account_balance: 0,
+                  is_verified: false,
+                  kyc_status: 'pending',
+                  account_status: 'active',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }, 
+                error: null 
+              }
             }
-          }
-          // Return a mock role for user_roles table
-          if (table === 'user_roles') {
-            return { 
-              data: { 
-                id: 'mock-role-id',
-                user_id: 'mock-user-id',
-                role: 'user'
-              }, 
-              error: null 
+            // Return a mock role for user_roles table
+            if (table === 'user_roles') {
+              return { 
+                data: { 
+                  id: 'mock-role-id',
+                  user_id: 'mock-user-id',
+                  role: 'user'
+                }, 
+                error: null 
+              }
             }
-          }
-          return { data: null, error: null }
-        },
-        order: (column: string, options?: any) => ({
-          limit: async (count: number) => ({ data: [], error: null })
-        })
-      }),
+            return { data: null, error: null }
+          },
+          eq: (column: string, value: any) => ({
+            single: async () => {
+              // Handle double eq calls
+              if (table === 'profiles') {
+                return { 
+                  data: { 
+                    id: 'mock-profile-id',
+                    user_id: 'mock-user-id',
+                    email: 'mock@example.com',
+                    full_name: 'Mock User',
+                    account_balance: 0,
+                    is_verified: false,
+                    kyc_status: 'pending',
+                    account_status: 'active',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }, 
+                  error: null 
+                }
+              }
+              return { data: null, error: null }
+            }
+          }),
+          order: (column: string, options?: any) => ({
+            limit: async (count: number) => ({ data: [], error: null })
+          })
+        }),
       or: (condition: string) => ({
         order: (column: string, options?: any) => ({
           limit: async (count: number) => ({ data: [], error: null })
@@ -255,7 +278,18 @@ const createMockClient = () => {
     },
     channel: () => ({
       on: () => ({
-        subscribe: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+        subscribe: () => {
+          console.log('🔧 Mock subscription created')
+          return { 
+            data: { 
+              subscription: { 
+                unsubscribe: () => {
+                  console.log('🔧 Mock subscription unsubscribed')
+                } 
+              } 
+            } 
+          }
+        }
       })
     })
   }
@@ -281,80 +315,37 @@ const testSupabaseUrl = async (url: string): Promise<boolean> => {
 // Create Supabase client with proper configuration
 let supabase: any
 
-// Force mock client for now to fix the Q.from error
-console.log('🔧 Forcing mock client to fix Q.from error')
-supabase = createMockClient()
-console.log('✅ Mock client initialized')
+// Check if we're in production and have real Supabase credentials
+const isProduction = import.meta.env.PROD
+const hasRealSupabase = supabaseUrl && supabaseAnonKey && 
+  supabaseUrl !== 'https://your-project.supabase.co' && 
+  supabaseAnonKey !== 'your-anon-key'
 
-// TODO: Re-enable real Supabase client when connection issues are resolved
-/*
-try {
-  console.log('🔧 Initializing Supabase client with URL:', supabaseUrl)
-  console.log('🔧 Anon key available:', supabaseAnonKey ? 'Yes' : 'No')
-  
-  // Test URL connectivity first
-  testSupabaseUrl(supabaseUrl).then(isAccessible => {
-    if (!isAccessible) {
-      console.warn('⚠️ Supabase URL not accessible, using mock client')
-      supabase = createMockClient()
-      return
-    }
-    
-    try {
-      // Create client with proper configuration
-      supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true
-        },
-        global: {
-          headers: {
-            'X-Client-Info': 'kryvex-trading-app'
-          }
+if (isProduction && hasRealSupabase) {
+  console.log('🚀 Production mode: Using real Supabase client')
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'kryvex-trading-app'
         }
-      })
-      
-      console.log('✅ Supabase client initialized successfully')
-      
-      // Test the connection immediately with timeout
-      const connectionTest = Promise.race([
-        supabase.auth.getSession(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection timeout')), 5000)
-        )
-      ])
-      
-      connectionTest.then(({ data, error }) => {
-        if (error) {
-          console.warn('⚠️ Supabase connection test failed:', error)
-          console.warn('⚠️ Switching to mock client')
-          supabase = createMockClient()
-        } else {
-          console.log('✅ Supabase connection test successful')
-        }
-      }).catch((error) => {
-        console.warn('⚠️ Supabase connection test failed:', error)
-        console.warn('⚠️ Switching to mock client')
-        supabase = createMockClient()
-      })
-    } catch (clientError) {
-      console.error('❌ Failed to create Supabase client:', clientError)
-      console.warn('⚠️ Using mock client due to client creation error')
-      supabase = createMockClient()
-    }
-  }).catch((urlError) => {
-    console.error('❌ URL test failed:', urlError)
-    console.warn('⚠️ Using mock client due to URL test failure')
+      }
+    })
+    console.log('✅ Real Supabase client initialized for production')
+  } catch (error) {
+    console.error('❌ Failed to create real Supabase client:', error)
+    console.warn('⚠️ Falling back to mock client')
     supabase = createMockClient()
-  })
-  
-} catch (error) {
-  console.error('❌ Failed to initialize Supabase client:', error)
-  console.warn('⚠️ Creating fallback mock client')
+  }
+} else {
+  console.log('🔧 Development mode: Using mock client')
   supabase = createMockClient()
 }
-*/
 
 // Helper function to get user role
 export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => {
