@@ -1,0 +1,30 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- K letter -->
+  <path d="M10 10 L10 50 L20 50 L20 35 L35 50 L45 50 L30 35 L45 10 L35 10 L20 25 L20 10 Z" fill="url(#grad1)"/>
+  
+  <!-- R letter -->
+  <path d="M50 10 L50 50 L70 50 Q75 50 75 45 L75 35 Q75 30 70 30 L60 30 L60 10 Z M60 35 L70 35 L70 40 L60 40 Z" fill="url(#grad1)"/>
+  
+  <!-- Y letter -->
+  <path d="M80 10 L80 30 L90 30 L90 50 L100 50 L100 30 L110 30 L110 10 L100 10 L100 25 L90 25 L90 10 Z" fill="url(#grad1)"/>
+  
+  <!-- V letter -->
+  <path d="M115 10 L115 50 L125 50 L130 25 L135 50 L145 50 L140 10 L135 10 L130 30 L125 10 Z" fill="url(#grad1)"/>
+  
+  <!-- E letter -->
+  <path d="M150 10 L150 50 L170 50 L170 40 L160 40 L160 35 L170 35 L170 25 L160 25 L160 20 L170 20 L170 10 Z" fill="url(#grad1)"/>
+  
+  <!-- X letter -->
+  <path d="M175 10 L175 50 L185 50 L190 35 L195 50 L205 50 L200 35 L205 10 L195 10 L190 25 L185 10 Z" fill="url(#grad1)"/>
+  
+  <!-- Trading symbol -->
+  <circle cx="180" cy="15" r="8" fill="#10B981" opacity="0.8"/>
+  <text x="180" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">₿</text>
+</svg> 

@@ -52,9 +52,45 @@ const createMockClient = () => {
   return {
     auth: {
       getSession: async () => ({ data: { session: null }, error: null }),
-      signIn: async () => ({ data: null, error: { message: 'Mock client' } }),
+      signInWithPassword: async (credentials: any) => {
+        console.log('🔐 Mock signInWithPassword called with:', credentials)
+        // Mock successful login for admin@kryvex.com
+        if (credentials.email === 'admin@kryvex.com' && credentials.password === 'admin123') {
+          return {
+            data: {
+              user: {
+                id: 'mock-user-id',
+                email: 'admin@kryvex.com',
+                role: 'admin'
+              },
+              session: {
+                access_token: 'mock-token',
+                refresh_token: 'mock-refresh-token'
+              }
+            },
+            error: null
+          }
+        }
+        return {
+          data: null,
+          error: { message: 'Invalid credentials' }
+        }
+      },
+      signUp: async () => ({ data: null, error: { message: 'Mock client' } }),
       signOut: async () => ({ error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      onAuthStateChange: (callback: any) => {
+        // Mock auth state change
+        setTimeout(() => {
+          callback('SIGNED_IN', {
+            user: {
+              id: 'mock-user-id',
+              email: 'admin@kryvex.com',
+              role: 'admin'
+            }
+          })
+        }, 100)
+        return { data: { subscription: { unsubscribe: () => {} } } }
+      },
       getUser: async () => ({ data: { user: null }, error: null })
     },
     from: mockQueryBuilder,
