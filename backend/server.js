@@ -160,69 +160,9 @@ app.get('/api/admin/trades', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/admin/withdrawals', authenticateAdmin, async (req, res) => {
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase not configured' });
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('withdrawal_requests')
-      .select('*')
-      .order('requested_at', { ascending: false });
-
-    if (error) throw error;
-    res.json({ withdrawals: data });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/admin/withdrawals/:id/approve', authenticateAdmin, async (req, res) => {
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase not configured' });
-  }
-
-  try {
-    const { id } = req.params;
-    const { data, error } = await supabase
-      .from('withdrawal_requests')
-      .update({ 
-        status: 'approved',
-        processed_at: new Date().toISOString(),
-        remarks: req.body.remarks || 'Admin approved'
-      })
-      .eq('id', id);
-
-    if (error) throw error;
-    res.json({ success: true, withdrawal: data });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/admin/withdrawals/:id/reject', authenticateAdmin, async (req, res) => {
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase not configured' });
-  }
-
-  try {
-    const { id } = req.params;
-    const { data, error } = await supabase
-      .from('withdrawal_requests')
-      .update({ 
-        status: 'rejected',
-        processed_at: new Date().toISOString(),
-        remarks: req.body.remarks || 'Admin rejected'
-      })
-      .eq('id', id);
-
-    if (error) throw error;
-    res.json({ success: true, withdrawal: data });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Import and use admin routes
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
 
 // Public API endpoints
 app.get('/api/stats', async (req, res) => {
