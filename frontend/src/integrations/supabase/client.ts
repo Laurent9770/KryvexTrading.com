@@ -94,34 +94,33 @@ const createMockClient = () => {
     insert: (data: any) => ({
       select: (columns?: string) => ({
         single: async () => {
+          console.log('🔧 Mock insert operation for table:', table, 'with data:', data)
           // Return the inserted data for profiles table
           if (table === 'profiles') {
-            return { 
-              data: { 
-                id: 'mock-profile-id',
-                user_id: data.user_id || 'mock-user-id',
-                email: data.email || 'mock@example.com',
-                full_name: data.full_name || 'Mock User',
-                account_balance: data.account_balance || 0,
-                is_verified: data.is_verified || false,
-                kyc_status: data.kyc_status || 'pending',
-                account_status: data.account_status || 'active',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }, 
-              error: null 
+            const mockProfile = { 
+              id: 'mock-profile-id',
+              user_id: data.user_id || 'mock-user-id',
+              email: data.email || 'mock@example.com',
+              full_name: data.full_name || 'Mock User',
+              account_balance: data.account_balance || 0,
+              is_verified: data.is_verified || false,
+              kyc_status: data.kyc_status || 'pending',
+              account_status: data.account_status || 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }
+            console.log('✅ Mock profile created:', mockProfile)
+            return { data: mockProfile, error: null }
           }
           // Return the inserted data for user_roles table
           if (table === 'user_roles') {
-            return { 
-              data: { 
-                id: 'mock-role-id',
-                user_id: data.user_id || 'mock-user-id',
-                role: data.role || 'user'
-              }, 
-              error: null 
+            const mockRole = { 
+              id: 'mock-role-id',
+              user_id: data.user_id || 'mock-user-id',
+              role: data.role || 'user'
             }
+            console.log('✅ Mock role created:', mockRole)
+            return { data: mockRole, error: null }
           }
           return { data: null, error: null }
         }
@@ -289,43 +288,53 @@ try {
       return
     }
     
-    // Create client with proper configuration
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'kryvex-trading-app'
+    try {
+      // Create client with proper configuration
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'kryvex-trading-app'
+          }
         }
-      }
-    })
-    
-    console.log('✅ Supabase client initialized successfully')
-    
-    // Test the connection immediately with timeout
-    const connectionTest = Promise.race([
-      supabase.auth.getSession(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout')), 5000)
-      )
-    ])
-    
-    connectionTest.then(({ data, error }) => {
-      if (error) {
+      })
+      
+      console.log('✅ Supabase client initialized successfully')
+      
+      // Test the connection immediately with timeout
+      const connectionTest = Promise.race([
+        supabase.auth.getSession(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout')), 5000)
+        )
+      ])
+      
+      connectionTest.then(({ data, error }) => {
+        if (error) {
+          console.warn('⚠️ Supabase connection test failed:', error)
+          console.warn('⚠️ Switching to mock client')
+          supabase = createMockClient()
+        } else {
+          console.log('✅ Supabase connection test successful')
+        }
+      }).catch((error) => {
         console.warn('⚠️ Supabase connection test failed:', error)
         console.warn('⚠️ Switching to mock client')
         supabase = createMockClient()
-      } else {
-        console.log('✅ Supabase connection test successful')
-      }
-    }).catch((error) => {
-      console.warn('⚠️ Supabase connection test failed:', error)
-      console.warn('⚠️ Switching to mock client')
+      })
+    } catch (clientError) {
+      console.error('❌ Failed to create Supabase client:', clientError)
+      console.warn('⚠️ Using mock client due to client creation error')
       supabase = createMockClient()
-    })
+    }
+  }).catch((urlError) => {
+    console.error('❌ URL test failed:', urlError)
+    console.warn('⚠️ Using mock client due to URL test failure')
+    supabase = createMockClient()
   })
   
 } catch (error) {
