@@ -319,8 +319,11 @@ let supabase: any
 const isProduction = import.meta.env.PROD
 const hasRealSupabase = supabaseUrl && supabaseAnonKey && 
   supabaseUrl !== 'https://your-project.supabase.co' && 
-  supabaseAnonKey !== 'your-anon-key'
+  supabaseAnonKey !== 'your-anon-key' &&
+  !supabaseUrl.includes('your-project') &&
+  !supabaseAnonKey.includes('your-anon-key')
 
+// Force real Supabase in production if credentials are available
 if (isProduction && hasRealSupabase) {
   console.log('🚀 Production mode: Using real Supabase client')
   try {
