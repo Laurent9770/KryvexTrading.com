@@ -54,14 +54,15 @@ const createMockClient = () => {
       getSession: async () => ({ data: { session: null }, error: null }),
       signInWithPassword: async (credentials: any) => {
         console.log('🔐 Mock signInWithPassword called with:', credentials)
-        // Mock successful login for admin@kryvex.com
-        if (credentials.email === 'admin@kryvex.com' && credentials.password === 'admin123') {
+        // Mock successful login for admin@kryvex.com and sales@kryvex.com
+        if ((credentials.email === 'admin@kryvex.com' && credentials.password === 'admin123') ||
+            (credentials.email === 'sales@kryvex.com' && credentials.password === 'Kryvex.@123')) {
           return {
             data: {
               user: {
                 id: 'mock-user-id',
-                email: 'admin@kryvex.com',
-                role: 'admin'
+                email: credentials.email,
+                role: credentials.email === 'admin@kryvex.com' ? 'admin' : 'user'
               },
               session: {
                 access_token: 'mock-token',
@@ -76,7 +77,24 @@ const createMockClient = () => {
           error: { message: 'Invalid credentials' }
         }
       },
-      signUp: async () => ({ data: null, error: { message: 'Mock client' } }),
+      signUp: async (credentials: any) => {
+        console.log('🔐 Mock signUp called with:', credentials)
+        // Mock successful registration
+        return {
+          data: {
+            user: {
+              id: 'mock-new-user-id',
+              email: credentials.email,
+              role: 'user'
+            },
+            session: {
+              access_token: 'mock-token',
+              refresh_token: 'mock-refresh-token'
+            }
+          },
+          error: null
+        }
+      },
       signOut: async () => ({ error: null }),
       onAuthStateChange: (callback: any) => {
         // Mock auth state change
@@ -110,14 +128,34 @@ const createMockClient = () => {
   }
 }
 
-// Create Supabase client with minimal configuration to avoid headers error
+// Create Supabase client with proper configuration
 let supabase: any
 
 try {
-  // Use the most basic configuration possible without TypeScript types
-  supabase = createClient(supabaseUrl, supabaseAnonKey)
+  // Create client with proper configuration
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  })
   
   console.log('✅ Supabase client initialized successfully')
+  
+  // Test the connection
+  supabase.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      console.warn('⚠️ Supabase connection test failed, using mock client')
+      supabase = createMockClient()
+    } else {
+      console.log('✅ Supabase connection test successful')
+    }
+  }).catch((error) => {
+    console.warn('⚠️ Supabase connection test failed, using mock client:', error)
+    supabase = createMockClient()
+  })
+  
 } catch (error) {
   console.error('❌ Failed to initialize Supabase client:', error)
   

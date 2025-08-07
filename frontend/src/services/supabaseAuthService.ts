@@ -330,6 +330,8 @@ class SupabaseAuthService {
 
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log('🔐 Attempting to sign up user:', { email: data.email, fullName: data.fullName })
+      
       const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -343,9 +345,11 @@ class SupabaseAuthService {
       })
 
       if (error) {
-        console.error('Sign up error:', error)
+        console.error('❌ Sign up error:', error)
         return { success: false, error: error.message }
       }
+
+      console.log('✅ Sign up successful:', authData)
 
       if (authData.user) {
         // Profile will be created automatically by the database trigger
@@ -353,10 +357,11 @@ class SupabaseAuthService {
         return { success: true }
       }
 
-      return { success: false, error: 'Sign up failed' }
+      console.warn('⚠️ Sign up completed but no user data returned')
+      return { success: false, error: 'Sign up failed - no user data returned' }
     } catch (error) {
-      console.error('Sign up error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Sign up error:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
     }
   }
 
