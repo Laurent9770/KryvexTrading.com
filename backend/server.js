@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
@@ -164,6 +165,9 @@ app.get('/api/admin/trades', authenticateAdmin, async (req, res) => {
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
+// Serve static files from the React frontend build
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
 // Public API endpoints
 app.get('/api/stats', async (req, res) => {
   if (!supabase) {
@@ -195,19 +199,35 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// Catch-all handler for SPA
+// Catch-all handler for SPA - serve index.html for client-side routes
 app.get('*', (req, res) => {
-  res.json({ 
-    message: 'Kryvex Trading API',
-    status: 'running',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      health: '/api/health',
-      test_supabase: '/api/test-supabase',
-      stats: '/api/stats',
-      admin_users: '/api/admin/users',
-      admin_trades: '/api/admin/trades',
-      admin_withdrawals: '/api/admin/withdrawals'
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ 
+      error: 'API endpoint not found',
+      message: 'Kryvex Trading API',
+      status: 'running',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: '/api/health',
+        test_supabase: '/api/test-supabase',
+        stats: '/api/stats',
+        admin_users: '/api/admin/users',
+        admin_trades: '/api/admin/trades',
+        admin_withdrawals: '/api/admin/withdrawals'
+      }
+    });
+  }
+  
+  // Serve index.html for all other routes (SPA routes)
+  const indexPath = path.join(__dirname, '../frontend/dist/index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(500).json({ 
+        error: 'Failed to serve frontend',
+        message: 'index.html not found. Make sure to build the frontend first.'
+      });
     }
   });
 });
