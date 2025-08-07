@@ -160,23 +160,35 @@ INSERT INTO trading_pairs (symbol, base_asset, quote_asset, current_price, chang
 ## 4. Configure Authentication
 
 1. Go to Authentication → Settings
-2. Configure your site URL (e.g., `https://your-app.vercel.app`)
+2. Configure your site URL (e.g., `https://your-app.onrender.com`)
 3. Add redirect URLs:
-   - `https://your-app.vercel.app/auth/callback`
-   - `https://your-app.vercel.app/dashboard`
+   - `https://your-app.onrender.com/auth/callback`
+   - `https://your-app.onrender.com/dashboard`
 
-## 5. Deploy to Vercel
+## 5. Deploy to Render.com
 
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com)
-3. Import your GitHub repository
-4. Add environment variables:
-   - `VITE_SUPABASE_URL`: Your Supabase project URL
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key
+1. **Push to GitHub** (if not already done):
+   ```bash
+   git push origin main
+   ```
+
+2. **Go to [render.com](https://render.com)** and:
+   - Sign up/Login with GitHub
+   - Click "New +" → "Static Site"
+   - Connect your GitHub repository
+   - Configure the service:
+     - **Name**: `kryvex-trading-frontend`
+     - **Build Command**: `cd frontend && npm install && npm run build`
+     - **Publish Directory**: `frontend/dist`
+     - **Environment Variables**:
+       - `VITE_SUPABASE_URL`: Your Supabase project URL
+       - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key
+
+3. **Deploy** - Render will automatically build and deploy your app
 
 ## 6. Test Your Deployment
 
-1. Visit your deployed app
+1. Visit your deployed app (e.g., `https://your-app.onrender.com`)
 2. Try registering a new user
 3. Check that the user appears in your Supabase dashboard
 4. Test login functionality
@@ -189,7 +201,7 @@ INSERT INTO trading_pairs (symbol, base_asset, quote_asset, current_price, chang
 
 ## Environment Variables for Production
 
-Add these to your Vercel environment variables:
+Add these to your Render environment variables:
 
 ```
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
