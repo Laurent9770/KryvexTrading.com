@@ -1,6 +1,7 @@
 import React from 'react';
 import { AuthTabs } from '@/components/AuthForms';
 import EnvChecker from '@/components/EnvChecker';
+import EnvTest from '@/components/EnvTest';
 
 const AuthPage: React.FC = () => {
   // Check if Supabase is configured
@@ -12,7 +13,10 @@ const AuthPage: React.FC = () => {
   if (!isConfigured) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <EnvChecker />
+        <div className="space-y-4">
+          <EnvTest />
+          <EnvChecker />
+        </div>
       </div>
     );
   }
