@@ -166,7 +166,12 @@ const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
 // Serve static files from the React frontend build
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// On Render.com, the frontend build is in the project root
+const staticPath = process.env.NODE_ENV === 'production' 
+  ? path.join(__dirname, '../frontend/dist')
+  : path.join(__dirname, '../frontend/dist');
+
+app.use(express.static(staticPath));
 
 // Public API endpoints
 app.get('/api/stats', async (req, res) => {
@@ -221,12 +226,16 @@ app.get('*', (req, res) => {
   
   // Serve index.html for all other routes (SPA routes)
   const indexPath = path.join(__dirname, '../frontend/dist/index.html');
+    
   res.sendFile(indexPath, (err) => {
     if (err) {
       console.error('Error serving index.html:', err);
       res.status(500).json({ 
         error: 'Failed to serve frontend',
-        message: 'index.html not found. Make sure to build the frontend first.'
+        message: 'index.html not found. Make sure to build the frontend first.',
+        path: indexPath,
+        environment: process.env.NODE_ENV,
+        dirname: __dirname
       });
     }
   });
