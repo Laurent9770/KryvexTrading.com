@@ -1,544 +1,582 @@
-import { supabase } from '@/integrations/supabase/client'
-import { Trade, TradeInsert, TradeUpdate, TradingPair, Transaction, TransactionInsert } from '@/integrations/supabase/types'
+import { supabase } from '@/integrations/supabase/client';
 
-export interface TradingStats {
-  totalTrades: number
-  winningTrades: number
-  losingTrades: number
-  winRate: number
-  totalProfit: number
-  totalLoss: number
-  netProfit: number
-  averageWin: number
-  averageLoss: number
-  largestWin: number
-  largestLoss: number
+export interface Trade {
+  id: string;
+  userId: string;
+  tradingPairId: string;
+  tradingPairSymbol: string;
+  tradeType: 'buy' | 'sell';
+  amount: number;
+  price: number;
+  totalValue: number;
+  fee: number;
+  profitLoss: number;
+  result: 'pending' | 'win' | 'loss' | 'draw';
+  status: 'open' | 'closed' | 'cancelled';
+  createdAt: string;
+  closedAt?: string;
 }
 
-export interface PortfolioData {
-  totalBalance: number
-  totalValue: number
-  totalPnL: number
-  pnlPercentage: number
-  assets: {
-    symbol: string
-    balance: number
-    value: number
-    price: number
-    change24h: number
-  }[]
+export interface TradingPair {
+  id: string;
+  symbol: string;
+  baseCurrency: string;
+  quoteCurrency: string;
+  isActive: boolean;
+  minOrderSize: number;
+  maxOrderSize: number;
+  pricePrecision: number;
+  quantityPrecision: number;
+  createdAt: string;
 }
 
-export interface RealTimePrice {
-  symbol: string
-  price: number
-  change24h: number
-  volume24h: number
-  timestamp: string
+export interface WalletBalance {
+  id: string;
+  userId: string;
+  currency: string;
+  balance: number;
+  availableBalance: number;
+  lockedBalance: number;
+  updatedAt: string;
+}
+
+export interface CreateTradeData {
+  tradingPairId: string;
+  tradeType: 'buy' | 'sell';
+  amount: number;
+  price: number;
+}
+
+export interface UpdateTradeData {
+  result?: 'win' | 'loss' | 'draw';
+  status?: 'open' | 'closed' | 'cancelled';
+  profitLoss?: number;
 }
 
 class SupabaseTradingService {
-  private priceSubscriptions: Map<string, any> = new Map()
-  private tradeSubscriptions: Map<string, any> = new Map()
-  private portfolioSubscriptions: Map<string, any> = new Map()
+  private subscriptions: any[] = [];
 
-  // Trading operations
-  async createTrade(tradeData: Omit<TradeInsert, 'id' | 'created_at'>): Promise<{ success: boolean; trade?: Trade; error?: string }> {
+  constructor() {
+    console.log('📊 Initializing Supabase Trading Service...');
+  }
+
+  // =============================================
+  // TRADING PAIRS
+  // =============================================
+
+  async getTradingPairs(): Promise<{ success: boolean; data?: TradingPair[]; error?: string }> {
     try {
-      const { data: trade, error } = await supabase
+      console.log('📊 Fetching trading pairs...');
+      
+      const { data, error } = await supabase
+        .from('trading_pairs')
+        .select('*')
+        .eq('is_active', true)
+        .order('symbol');
+
+      if (error) {
+        console.error('❌ Error fetching trading pairs:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Trading pairs fetched successfully:', data?.length);
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Unexpected error fetching trading pairs:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async getTradingPair(symbol: string): Promise<{ success: boolean; data?: TradingPair; error?: string }> {
+    try {
+      console.log('📊 Fetching trading pair:', symbol);
+      
+      const { data, error } = await supabase
+        .from('trading_pairs')
+        .select('*')
+        .eq('symbol', symbol)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching trading pair:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Trading pair fetched successfully');
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Unexpected error fetching trading pair:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // =============================================
+  // TRADES
+  // =============================================
+
+  async createTrade(tradeData: CreateTradeData): Promise<{ success: boolean; data?: Trade; error?: string }> {
+    try {
+      console.log('📊 Creating trade:', tradeData);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // Calculate total value
+      const totalValue = tradeData.amount * tradeData.price;
+      const fee = totalValue * 0.001; // 0.1% fee
+
+      // Create trade
+      const { data, error } = await supabase
         .from('trades')
         .insert({
-          ...tradeData,
-          created_at: new Date().toISOString()
+          user_id: user.id,
+          trading_pair_id: tradeData.tradingPairId,
+          trade_type: tradeData.tradeType,
+          amount: tradeData.amount,
+          price: tradeData.price,
+          total_value: totalValue,
+          fee: fee,
+          status: 'open'
         })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Create trade error:', error)
-        return { success: false, error: error.message }
-      }
-
-      return { success: true, trade }
-    } catch (error) {
-      console.error('Create trade error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
-    }
-  }
-
-  async getTrades(userId: string, limit = 50, offset = 0): Promise<{ success: boolean; trades?: Trade[]; error?: string }> {
-    try {
-      const { data: trades, error } = await supabase
-        .from('trades')
         .select(`
           *,
-          trading_pairs (
-            symbol,
-            base_currency,
-            quote_currency
-          )
+          trading_pairs!inner(symbol)
         `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1)
+        .single();
 
       if (error) {
-        console.error('Get trades error:', error)
-        return { success: false, error: error.message }
+        console.error('❌ Error creating trade:', error);
+        return { success: false, error: error.message };
       }
 
-      return { success: true, trades: trades || [] }
+      console.log('✅ Trade created successfully');
+      return { success: true, data };
     } catch (error) {
-      console.error('Get trades error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error creating trade:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  async getTradeById(tradeId: string): Promise<{ success: boolean; trade?: Trade; error?: string }> {
+  async getTrades(userId?: string): Promise<{ success: boolean; data?: Trade[]; error?: string }> {
     try {
-      const { data: trade, error } = await supabase
+      console.log('📊 Fetching trades for user:', userId);
+      
+      let query = supabase
         .from('trades')
         .select(`
           *,
-          trading_pairs (
-            symbol,
-            base_currency,
-            quote_currency
-          )
+          trading_pairs!inner(symbol)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching trades:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Trades fetched successfully:', data?.length);
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Unexpected error fetching trades:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async getTrade(tradeId: string): Promise<{ success: boolean; data?: Trade; error?: string }> {
+    try {
+      console.log('📊 Fetching trade:', tradeId);
+      
+      const { data, error } = await supabase
+        .from('trades')
+        .select(`
+          *,
+          trading_pairs!inner(symbol)
         `)
         .eq('id', tradeId)
-        .single()
+        .single();
 
       if (error) {
-        console.error('Get trade error:', error)
-        return { success: false, error: error.message }
+        console.error('❌ Error fetching trade:', error);
+        return { success: false, error: error.message };
       }
 
-      return { success: true, trade }
+      console.log('✅ Trade fetched successfully');
+      return { success: true, data };
     } catch (error) {
-      console.error('Get trade error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error fetching trade:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  async updateTrade(tradeId: string, updates: Partial<TradeUpdate>): Promise<{ success: boolean; trade?: Trade; error?: string }> {
+  async updateTrade(tradeId: string, updates: UpdateTradeData): Promise<{ success: boolean; data?: Trade; error?: string }> {
     try {
-      const { data: trade, error } = await supabase
+      console.log('📊 Updating trade:', tradeId, updates);
+      
+      const updateData: any = {};
+      if (updates.result) updateData.result = updates.result;
+      if (updates.status) updateData.status = updates.status;
+      if (updates.profitLoss !== undefined) updateData.profit_loss = updates.profitLoss;
+      
+      if (updates.status === 'closed') {
+        updateData.closed_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('trades')
+        .update(updateData)
+        .eq('id', tradeId)
+        .select(`
+          *,
+          trading_pairs!inner(symbol)
+        `)
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating trade:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Trade updated successfully');
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Unexpected error updating trade:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async closeTrade(tradeId: string, result: 'win' | 'loss' | 'draw', profitLoss: number): Promise<{ success: boolean; data?: Trade; error?: string }> {
+    try {
+      console.log('📊 Closing trade:', tradeId, result, profitLoss);
+      
+      const { data, error } = await supabase
         .from('trades')
         .update({
-          ...updates,
-          updated_at: new Date().toISOString()
+          status: 'closed',
+          result: result,
+          profit_loss: profitLoss,
+          closed_at: new Date().toISOString()
         })
         .eq('id', tradeId)
-        .select()
-        .single()
+        .select(`
+          *,
+          trading_pairs!inner(symbol)
+        `)
+        .single();
 
       if (error) {
-        console.error('Update trade error:', error)
-        return { success: false, error: error.message }
+        console.error('❌ Error closing trade:', error);
+        return { success: false, error: error.message };
       }
 
-      return { success: true, trade }
+      console.log('✅ Trade closed successfully');
+      return { success: true, data };
     } catch (error) {
-      console.error('Update trade error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error closing trade:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  // Trading pairs
-  async getTradingPairs(): Promise<{ success: boolean; pairs?: TradingPair[]; error?: string }> {
+  // =============================================
+  // WALLET BALANCES
+  // =============================================
+
+  async getWalletBalances(userId?: string): Promise<{ success: boolean; data?: WalletBalance[]; error?: string }> {
     try {
-      const { data: pairs, error } = await supabase
-        .from('trading_pairs')
+      console.log('💰 Fetching wallet balances for user:', userId);
+      
+      let query = supabase
+        .from('wallet_balances')
         .select('*')
-        .eq('is_active', true)
-        .order('symbol')
+        .order('currency');
 
-      if (error) {
-        console.error('Get trading pairs error:', error)
-        return { success: false, error: error.message }
+      if (userId) {
+        query = query.eq('user_id', userId);
       }
 
-      return { success: true, pairs: pairs || [] }
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching wallet balances:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Wallet balances fetched successfully:', data?.length);
+      return { success: true, data: data || [] };
     } catch (error) {
-      console.error('Get trading pairs error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error fetching wallet balances:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  async getTradingPairBySymbol(symbol: string): Promise<{ success: boolean; pair?: TradingPair; error?: string }> {
+  async updateWalletBalance(userId: string, currency: string, amount: number, operation: 'add' | 'subtract'): Promise<{ success: boolean; data?: WalletBalance; error?: string }> {
     try {
-      const { data: pair, error } = await supabase
-        .from('trading_pairs')
+      console.log('💰 Updating wallet balance:', { userId, currency, amount, operation });
+      
+      // Get current balance
+      const { data: currentBalance, error: fetchError } = await supabase
+        .from('wallet_balances')
         .select('*')
-        .eq('symbol', symbol)
-        .eq('is_active', true)
-        .single()
+        .eq('user_id', userId)
+        .eq('currency', currency)
+        .single();
 
-      if (error) {
-        console.error('Get trading pair error:', error)
-        return { success: false, error: error.message }
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('❌ Error fetching current balance:', fetchError);
+        return { success: false, error: fetchError.message };
       }
 
-      return { success: true, pair }
-    } catch (error) {
-      console.error('Get trading pair error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
-    }
-  }
+      let newBalance = 0;
+      let newAvailableBalance = 0;
 
-  // Transactions
-  async createTransaction(transactionData: Omit<TransactionInsert, 'id' | 'created_at'>): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
-    try {
-      const { data: transaction, error } = await supabase
-        .from('transactions')
-        .insert({
-          ...transactionData,
-          created_at: new Date().toISOString()
+      if (currentBalance) {
+        newBalance = operation === 'add' ? currentBalance.balance + amount : currentBalance.balance - amount;
+        newAvailableBalance = operation === 'add' ? currentBalance.available_balance + amount : currentBalance.available_balance - amount;
+      } else {
+        newBalance = operation === 'add' ? amount : -amount;
+        newAvailableBalance = operation === 'add' ? amount : -amount;
+      }
+
+      // Ensure balances don't go negative
+      if (newBalance < 0) {
+        return { success: false, error: 'Insufficient balance' };
+      }
+
+      if (newAvailableBalance < 0) {
+        return { success: false, error: 'Insufficient available balance' };
+      }
+
+      const { data, error } = await supabase
+        .from('wallet_balances')
+        .upsert({
+          user_id: userId,
+          currency: currency,
+          balance: newBalance,
+          available_balance: newAvailableBalance,
+          locked_balance: currentBalance?.locked_balance || 0,
+          updated_at: new Date().toISOString()
         })
         .select()
-        .single()
+        .single();
 
       if (error) {
-        console.error('Create transaction error:', error)
-        return { success: false, error: error.message }
+        console.error('❌ Error updating wallet balance:', error);
+        return { success: false, error: error.message };
       }
 
-      return { success: true, transaction }
+      console.log('✅ Wallet balance updated successfully');
+      return { success: true, data };
     } catch (error) {
-      console.error('Create transaction error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error updating wallet balance:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  async getTransactions(userId: string, limit = 50, offset = 0): Promise<{ success: boolean; transactions?: Transaction[]; error?: string }> {
+  // =============================================
+  // REAL-TIME SUBSCRIPTIONS
+  // =============================================
+
+  subscribeToTrades(userId: string, callback: (trade: Trade) => void): () => void {
     try {
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1)
-
-      if (error) {
-        console.error('Get transactions error:', error)
-        return { success: false, error: error.message }
-      }
-
-      return { success: true, transactions: transactions || [] }
-    } catch (error) {
-      console.error('Get transactions error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
-    }
-  }
-
-  // Trading statistics
-  async getTradingStats(userId: string): Promise<{ success: boolean; stats?: TradingStats; error?: string }> {
-    try {
-      const { data: trades, error } = await supabase
-        .from('trades')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'completed')
-
-      if (error) {
-        console.error('Get trading stats error:', error)
-        return { success: false, error: error.message }
-      }
-
-      const completedTrades = trades || []
-      const totalTrades = completedTrades.length
-      const winningTrades = completedTrades.filter(t => t.result === 'win')
-      const losingTrades = completedTrades.filter(t => t.result === 'loss')
+      console.log('📊 Subscribing to trades for user:', userId);
       
-      const totalProfit = winningTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0)
-      const totalLoss = losingTrades.reduce((sum, t) => sum + Math.abs(t.profit_loss || 0), 0)
-      const netProfit = totalProfit - totalLoss
-      
-      const winRate = totalTrades > 0 ? (winningTrades.length / totalTrades) * 100 : 0
-      const averageWin = winningTrades.length > 0 ? totalProfit / winningTrades.length : 0
-      const averageLoss = losingTrades.length > 0 ? totalLoss / losingTrades.length : 0
-      
-      const largestWin = winningTrades.length > 0 ? Math.max(...winningTrades.map(t => t.profit_loss || 0)) : 0
-      const largestLoss = losingTrades.length > 0 ? Math.max(...losingTrades.map(t => Math.abs(t.profit_loss || 0))) : 0
-
-      const stats: TradingStats = {
-        totalTrades,
-        winningTrades: winningTrades.length,
-        losingTrades: losingTrades.length,
-        winRate,
-        totalProfit,
-        totalLoss,
-        netProfit,
-        averageWin,
-        averageLoss,
-        largestWin,
-        largestLoss
-      }
-
-      return { success: true, stats }
-    } catch (error) {
-      console.error('Get trading stats error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
-    }
-  }
-
-  // Portfolio data
-  async getPortfolioData(userId: string): Promise<{ success: boolean; portfolio?: PortfolioData; error?: string }> {
-    try {
-      // Get user profile for account balance
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('account_balance')
-        .eq('user_id', userId)
-        .single()
-
-      if (profileError) {
-        console.error('Get profile error:', profileError)
-        return { success: false, error: profileError.message }
-      }
-
-      // Get trading pairs for current prices
-      const { data: pairs, error: pairsError } = await supabase
-        .from('trading_pairs')
-        .select('*')
-        .eq('is_active', true)
-
-      if (pairsError) {
-        console.error('Get trading pairs error:', pairsError)
-        return { success: false, error: pairsError.message }
-      }
-
-      // Calculate portfolio data
-      const totalBalance = profile.account_balance || 0
-      const assets = pairs?.map(pair => ({
-        symbol: pair.symbol,
-        balance: 0, // This would come from a separate wallet/balance table
-        value: 0,
-        price: pair.current_price,
-        change24h: pair.price_change_24h
-      })) || []
-
-      const totalValue = totalBalance + assets.reduce((sum, asset) => sum + asset.value, 0)
-      const totalPnL = 0 // This would be calculated from trade history
-      const pnlPercentage = totalValue > 0 ? (totalPnL / totalValue) * 100 : 0
-
-      const portfolio: PortfolioData = {
-        totalBalance,
-        totalValue,
-        totalPnL,
-        pnlPercentage,
-        assets
-      }
-
-      return { success: true, portfolio }
-    } catch (error) {
-      console.error('Get portfolio data error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
-    }
-  }
-
-  // Real-time subscriptions
-  subscribeToPriceUpdates(symbols: string[], callback: (price: RealTimePrice) => void): () => void {
-    const channelId = `price-updates-${Date.now()}`
-    
-    const subscription = supabase
-      .channel(channelId)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'trading_pairs',
-          filter: `symbol=in.(${symbols.join(',')})`
-        },
-        (payload) => {
-          const pair = payload.new as TradingPair
-          const price: RealTimePrice = {
-            symbol: pair.symbol,
-            price: pair.current_price,
-            change24h: pair.price_change_24h,
-            volume24h: pair.volume_24h,
-            timestamp: new Date().toISOString()
+      const subscription = supabase
+        .channel('user_trades')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'trades',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log('📊 Trade update received:', payload);
+            callback(payload.new as Trade);
           }
-          callback(price)
+        )
+        .subscribe();
+
+      this.subscriptions.push(subscription);
+      
+      return () => {
+        try {
+          subscription.unsubscribe();
+          this.subscriptions = this.subscriptions.filter(sub => sub !== subscription);
+        } catch (error) {
+          console.warn('⚠️ Error unsubscribing from trades:', error);
         }
-      )
-      .subscribe()
-
-    this.priceSubscriptions.set(channelId, subscription)
-
-    return () => {
-      subscription.unsubscribe()
-      this.priceSubscriptions.delete(channelId)
+      };
+    } catch (error) {
+      console.error('❌ Error setting up trade subscription:', error);
+      return () => {};
     }
   }
 
-  subscribeToUserTrades(userId: string, callback: (trade: Trade) => void): () => void {
-    const channelId = `user-trades-${userId}-${Date.now()}`
-    
-    const subscription = supabase
-      .channel(channelId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'trades',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          const trade = payload.new as Trade
-          callback(trade)
-        }
-      )
-      .subscribe()
-
-    this.tradeSubscriptions.set(channelId, subscription)
-
-    return () => {
-      subscription.unsubscribe()
-      this.tradeSubscriptions.delete(channelId)
-    }
-  }
-
-  subscribeToUserTransactions(userId: string, callback: (transaction: Transaction) => void): () => void {
-    const channelId = `user-transactions-${userId}-${Date.now()}`
-    
-    const subscription = supabase
-      .channel(channelId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'transactions',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          const transaction = payload.new as Transaction
-          callback(transaction)
-        }
-      )
-      .subscribe()
-
-    this.tradeSubscriptions.set(channelId, subscription)
-
-    return () => {
-      subscription.unsubscribe()
-      this.tradeSubscriptions.delete(channelId)
-    }
-  }
-
-  // Cleanup
-  cleanup() {
-    this.priceSubscriptions.forEach(sub => {
-      if (sub && typeof sub.unsubscribe === 'function') {
-        try {
-          sub.unsubscribe()
-        } catch (error) {
-          console.warn('Error unsubscribing from price subscription:', error)
-        }
-      }
-    })
-    this.tradeSubscriptions.forEach(sub => {
-      if (sub && typeof sub.unsubscribe === 'function') {
-        try {
-          sub.unsubscribe()
-        } catch (error) {
-          console.warn('Error unsubscribing from trade subscription:', error)
-        }
-      }
-    })
-    this.portfolioSubscriptions.forEach(sub => {
-      if (sub && typeof sub.unsubscribe === 'function') {
-        try {
-          sub.unsubscribe()
-        } catch (error) {
-          console.warn('Error unsubscribing from portfolio subscription:', error)
-        }
-      }
-    })
-    
-    this.priceSubscriptions.clear()
-    this.tradeSubscriptions.clear()
-    this.portfolioSubscriptions.clear()
-  }
-
-  // Utility methods
-  async simulateTrade(userId: string, symbol: string, amount: number, tradeType: 'buy' | 'sell'): Promise<{ success: boolean; trade?: Trade; error?: string }> {
+  subscribeToWalletBalances(userId: string, callback: (balance: WalletBalance) => void): () => void {
     try {
-      // Get trading pair
-      const { data: pair, error: pairError } = await supabase
-        .from('trading_pairs')
+      console.log('💰 Subscribing to wallet balances for user:', userId);
+      
+      const subscription = supabase
+        .channel('user_wallet_balances')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'wallet_balances',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log('💰 Wallet balance update received:', payload);
+            callback(payload.new as WalletBalance);
+          }
+        )
+        .subscribe();
+
+      this.subscriptions.push(subscription);
+      
+      return () => {
+        try {
+          subscription.unsubscribe();
+          this.subscriptions = this.subscriptions.filter(sub => sub !== subscription);
+        } catch (error) {
+          console.warn('⚠️ Error unsubscribing from wallet balances:', error);
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error setting up wallet balance subscription:', error);
+      return () => {};
+    }
+  }
+
+  subscribeToPriceUpdates(callback: (priceData: any) => void): () => void {
+    try {
+      console.log('📈 Subscribing to price updates...');
+      
+      const subscription = supabase
+        .channel('price_updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'price_history'
+          },
+          (payload) => {
+            console.log('📈 Price update received:', payload);
+            callback(payload.new);
+          }
+        )
+        .subscribe();
+
+      this.subscriptions.push(subscription);
+      
+      return () => {
+        try {
+          subscription.unsubscribe();
+          this.subscriptions = this.subscriptions.filter(sub => sub !== subscription);
+        } catch (error) {
+          console.warn('⚠️ Error unsubscribing from price updates:', error);
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error setting up price subscription:', error);
+      return () => {};
+    }
+  }
+
+  // =============================================
+  // UTILITY METHODS
+  // =============================================
+
+  async getLatestPrices(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      console.log('📈 Fetching latest prices...');
+      
+      const { data, error } = await supabase
+        .from('price_history')
         .select('*')
-        .eq('symbol', symbol)
-        .single()
+        .order('recorded_at', { ascending: false })
+        .limit(50);
 
-      if (pairError) {
-        return { success: false, error: 'Trading pair not found' }
+      if (error) {
+        console.error('❌ Error fetching latest prices:', error);
+        return { success: false, error: error.message };
       }
 
-      // Simulate trade result (50/50 win/loss for demo)
-      const isWin = Math.random() > 0.5
-      const result = isWin ? 'win' : 'loss'
-      const profitLoss = isWin ? amount * 0.1 : -amount * 0.05 // 10% profit or 5% loss
-
-      const tradeData: Omit<TradeInsert, 'id' | 'created_at'> = {
-        user_id: userId,
-        trading_pair_id: pair.id,
-        trade_type: tradeType,
-        amount,
-        price: pair.current_price,
-        total_value: amount * pair.current_price,
-        status: 'completed',
-        result,
-        profit_loss: profitLoss,
-        completed_at: new Date().toISOString(),
-        forced_outcome: false
-      }
-
-      return await this.createTrade(tradeData)
+      console.log('✅ Latest prices fetched successfully');
+      return { success: true, data: data || [] };
     } catch (error) {
-      console.error('Simulate trade error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error fetching latest prices:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   }
 
-  async getRecentTrades(userId: string, limit = 10): Promise<{ success: boolean; trades?: Trade[]; error?: string }> {
-    return this.getTrades(userId, limit, 0)
-  }
-
-  async getTradeHistory(userId: string, page = 1, pageSize = 20): Promise<{ success: boolean; trades?: Trade[]; total?: number; error?: string }> {
+  async getTradeStatistics(userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const offset = (page - 1) * pageSize
+      console.log('📊 Fetching trade statistics for user:', userId);
       
-      // Get total count
-      const { count, error: countError } = await supabase
+      const { data, error } = await supabase
         .from('trades')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
+        .select('*')
+        .eq('user_id', userId);
 
-      if (countError) {
-        console.error('Get trade count error:', countError)
-        return { success: false, error: countError.message }
+      if (error) {
+        console.error('❌ Error fetching trade statistics:', error);
+        return { success: false, error: error.message };
       }
 
-      // Get trades
-      const { success, trades, error } = await this.getTrades(userId, pageSize, offset)
-      
-      if (!success) {
-        return { success: false, error }
-      }
+      // Calculate statistics
+      const totalTrades = data?.length || 0;
+      const winningTrades = data?.filter(trade => trade.result === 'win').length || 0;
+      const losingTrades = data?.filter(trade => trade.result === 'loss').length || 0;
+      const totalProfitLoss = data?.reduce((sum, trade) => sum + (trade.profit_loss || 0), 0) || 0;
+      const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
-      return { success: true, trades, total: count || 0 }
+      const statistics = {
+        totalTrades,
+        winningTrades,
+        losingTrades,
+        totalProfitLoss,
+        winRate: Math.round(winRate * 100) / 100
+      };
+
+      console.log('✅ Trade statistics calculated successfully');
+      return { success: true, data: statistics };
     } catch (error) {
-      console.error('Get trade history error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error('❌ Unexpected error calculating trade statistics:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
+  }
+
+  // =============================================
+  // CLEANUP
+  // =============================================
+
+  cleanup() {
+    console.log('🧹 Cleaning up trading service...');
+    this.subscriptions.forEach(subscription => {
+      try {
+        subscription.unsubscribe();
+      } catch (error) {
+        console.warn('⚠️ Error unsubscribing:', error);
+      }
+    });
+    this.subscriptions = [];
   }
 }
 
 // Create singleton instance
-const supabaseTradingService = new SupabaseTradingService()
-export default supabaseTradingService 
+const supabaseTradingService = new SupabaseTradingService();
+
+export default supabaseTradingService; 
