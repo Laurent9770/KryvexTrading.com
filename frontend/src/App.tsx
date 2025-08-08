@@ -3,36 +3,34 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { Sidebar } from "@/components/Sidebar";
+import { MobileNav } from "@/components/MobileNav";
+import ViewOnlyDashboard from "@/pages/ViewOnlyDashboard";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
 
-// Simple test component
-const TestComponent: React.FC = () => {
-  useEffect(() => {
-    console.log('🔧 TestComponent mounted');
-    console.log('🔧 React version:', React.version);
-    console.log('🔧 Environment Variables:', {
-      VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-      VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
-      MODE: import.meta.env.MODE,
-      DEV: import.meta.env.DEV,
-      PROD: import.meta.env.PROD
-    });
-  }, []);
+// Simple ProtectedRoute component with error handling
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  try {
+    const { user } = useAuth();
+    return user ? <>{children}</> : <Navigate to="/auth" />;
+  } catch (error) {
+    console.error('ProtectedRoute error:', error);
+    return <Navigate to="/auth" />;
+  }
+};
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Kryvex Trading Platform</h1>
-        <p className="text-muted-foreground">Test Component - React is working!</p>
-        <div className="text-sm text-muted-foreground">
-          React Version: {React.version}
-        </div>
-      </div>
-    </div>
-  );
+// View-only route component with error handling
+const ViewOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  try {
+    const { user } = useAuth();
+    return <>{children}</>;
+  } catch (error) {
+    console.error('ViewOnlyRoute error:', error);
+    return <>{children}</>;
+  }
 };
 
 const AppContent: React.FC = () => {
@@ -47,10 +45,19 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-background">
-      <Routes>
-        <Route path="/" element={<TestComponent />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
+          <Routes>
+            {/* View-Only Routes (for non-authenticated users) */}
+            <Route path="/" element={<ViewOnlyRoute><ViewOnlyDashboard /></ViewOnlyRoute>} />
+            
+            {/* Redirect to dashboard for unknown routes */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <MobileNav />
+      </div>
     </div>
   );
 };
