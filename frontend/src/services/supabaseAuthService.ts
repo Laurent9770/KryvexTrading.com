@@ -10,7 +10,7 @@ export interface AuthUser {
   country?: string;
   accountBalance: number;
   isVerified: boolean;
-  kycStatus: 'pending' | 'approved' | 'rejected';
+  kycStatus: 'unverified' | 'pending' | 'approved' | 'rejected';
   isAdmin: boolean;
   accountStatus: 'active' | 'suspended' | 'blocked';
   createdAt: string;
@@ -101,49 +101,51 @@ class SupabaseAuthService {
 
   private async handleUserSession(user: User) {
     try {
-      console.log('🔐 Handling user session for:', user.email);
+      console.log('🔍 Processing user session for:', user.email);
       
-      // Get user profile from database
+      // Get user profile from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('❌ Error fetching profile:', profileError);
-        return;
+      if (profileError) {
+        console.error('❌ Error loading profile:', profileError);
       }
 
-      // Get user roles
-      const { data: roles, error: rolesError } = await supabase
+      // Get user role
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .single();
 
-      if (rolesError) {
-        console.error('❌ Error fetching roles:', rolesError);
+      if (roleError) {
+        console.error('❌ Error loading user role:', roleError);
       }
 
-      const isAdmin = roles?.some(role => role.role === 'admin') || false;
+      const isAdmin = roleData?.role === 'admin';
 
-      // Convert to AuthUser interface
+      // Create AuthUser object
       const authUser: AuthUser = {
         id: user.id,
         email: user.email || '',
-        fullName: profile?.full_name || user.user_metadata?.full_name,
+        fullName: profile?.full_name || user.user_metadata?.full_name || '',
         avatar: profile?.avatar_url || user.user_metadata?.avatar_url,
-        phone: profile?.phone,
-        country: profile?.country || 'United States',
+        phone: profile?.phone || user.user_metadata?.phone,
+        country: profile?.country || user.user_metadata?.country,
         accountBalance: profile?.account_balance || 0,
         isVerified: profile?.is_verified || false,
-        kycStatus: profile?.kyc_status || 'pending',
+        kycStatus: profile?.kyc_status || 'unverified',
         isAdmin,
         accountStatus: profile?.account_status || 'active',
         createdAt: profile?.created_at || user.created_at,
         updatedAt: profile?.updated_at || user.updated_at
       };
 
+      console.log('✅ User session processed:', authUser);
+      
       this.updateAuthState({
         user: authUser,
         isLoading: false,
@@ -151,56 +153,9 @@ class SupabaseAuthService {
         isAdmin
       });
 
-      // Set up real-time subscriptions
-      this.setupRealtimeSubscriptions(user.id);
-
     } catch (error) {
       console.error('❌ Error handling user session:', error);
       this.updateAuthState({ user: null, isLoading: false, isAuthenticated: false, isAdmin: false });
-    }
-  }
-
-  private setupRealtimeSubscriptions(userId: string) {
-    try {
-      // Subscribe to profile changes
-      const profileSubscription = supabase
-        .channel('profile_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${userId}`
-          },
-          (payload) => {
-            console.log('📊 Profile updated:', payload);
-            this.handleUserSession({ id: userId } as User);
-          }
-        )
-        .subscribe();
-
-      // Subscribe to role changes
-      const roleSubscription = supabase
-        .channel('role_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'user_roles',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            console.log('👤 Role updated:', payload);
-            this.handleUserSession({ id: userId } as User);
-          }
-        )
-        .subscribe();
-
-      this.subscriptions.push(profileSubscription, roleSubscription);
-    } catch (error) {
-      console.error('❌ Error setting up real-time subscriptions:', error);
     }
   }
 
@@ -216,12 +171,11 @@ class SupabaseAuthService {
       try {
         listener(this.authState);
       } catch (error) {
-        console.error('❌ Error in auth listener:', error);
+        console.error('❌ Error notifying listener:', error);
       }
     });
   }
 
-  // Public API methods
   async signIn(credentials: LoginCredentials): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🔐 Attempting sign in for:', credentials.email);
@@ -337,7 +291,7 @@ class SupabaseAuthService {
           country: updates.country,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('❌ Profile update error:', error);
@@ -394,10 +348,9 @@ class SupabaseAuthService {
     }
   }
 
-  // Admin functions
   async promoteToAdmin(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('👑 Promoting user to admin:', userId);
+      console.log('🔐 Promoting user to admin:', userId);
       
       const { error } = await supabase
         .from('user_roles')
@@ -421,20 +374,19 @@ class SupabaseAuthService {
 
   async demoteFromAdmin(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('👤 Demoting admin to user:', userId);
+      console.log('🔐 Demoting user from admin:', userId);
       
       const { error } = await supabase
         .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', 'admin');
+        .update({ role: 'user' })
+        .eq('user_id', userId);
 
       if (error) {
         console.error('❌ Admin demotion error:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('✅ Admin demoted successfully');
+      console.log('✅ User demoted from admin successfully');
       return { success: true };
     } catch (error) {
       console.error('❌ Unexpected admin demotion error:', error);
@@ -442,21 +394,21 @@ class SupabaseAuthService {
     }
   }
 
-  // State management
   getAuthState(): AuthState {
-    return { ...this.authState };
+    return this.authState;
   }
 
   subscribe(listener: (state: AuthState) => void): () => void {
     this.listeners.add(listener);
     
-    // Return unsubscribe function
+    // Immediately call listener with current state
+    listener(this.authState);
+    
     return () => {
       this.listeners.delete(listener);
     };
   }
 
-  // Utility methods
   isAuthenticated(): boolean {
     return this.authState.isAuthenticated;
   }
@@ -474,12 +426,9 @@ class SupabaseAuthService {
   }
 
   cleanup() {
-    console.log('🧹 Cleaning up auth service...');
     this.subscriptions.forEach(subscription => {
-      try {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
         subscription.unsubscribe();
-      } catch (error) {
-        console.warn('⚠️ Error unsubscribing:', error);
       }
     });
     this.subscriptions = [];
@@ -487,7 +436,6 @@ class SupabaseAuthService {
   }
 }
 
-// Create singleton instance
 const supabaseAuthService = new SupabaseAuthService();
 
 export default supabaseAuthService; 
