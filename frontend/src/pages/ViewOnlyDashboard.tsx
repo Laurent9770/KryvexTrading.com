@@ -1,167 +1,239 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { useCryptoPrices } from '@/hooks/useCryptoPrices'
-import { TrendingUp, TrendingDown, DollarSign, Users, Activity, Shield, Zap, Globe } from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown, DollarSign, Users, Activity, ArrowUpRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ViewOnlyDashboard: React.FC = () => {
-  const navigate = useNavigate()
-  const { getPrice } = useCryptoPrices()
+  const { isAuthenticated, user } = useAuth();
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [cryptoPrices, setCryptoPrices] = useState({
+    BTC: { price: 43250.50, change: 2.5 },
+    ETH: { price: 2650.75, change: -1.2 },
+    SOL: { price: 98.25, change: 5.8 },
+    ADA: { price: 0.485, change: 1.3 }
+  });
 
-  const handleGetStarted = () => {
-    navigate('/auth')
-  }
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
-  const cryptoData = [
-    { symbol: 'BTC', name: 'Bitcoin' },
-    { symbol: 'ETH', name: 'Ethereum' },
-    { symbol: 'BNB', name: 'Binance Coin' },
-    { symbol: 'ADA', name: 'Cardano' },
-    { symbol: 'SOL', name: 'Solana' },
-    { symbol: 'DOT', name: 'Polkadot' }
-  ]
+    return () => clearInterval(timer);
+  }, []);
 
-  const features = [
-    {
-      icon: <TrendingUp className="h-6 w-6" />,
-      title: 'Advanced Trading',
-      description: 'Spot, futures, options, and binary trading with real-time data'
-    },
-    {
-      icon: <Zap className="h-6 w-6" />,
-      title: 'Trading Bots',
-      description: 'Automated trading strategies with customizable parameters'
-    },
-    {
-      icon: <Shield className="h-6 w-6" />,
-      title: 'Secure Platform',
-      description: 'Bank-grade security with KYC verification and 2FA protection'
-    },
-    {
-      icon: <Globe className="h-6 w-6" />,
-      title: 'Global Access',
-      description: 'Trade from anywhere with our mobile-responsive platform'
-    }
-  ]
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(price);
+  };
 
-  const stats = [
-    { label: 'Active Users', value: '50K+', icon: <Users className="h-4 w-4" /> },
-    { label: 'Daily Volume', value: '$2.5B+', icon: <Activity className="h-4 w-4" /> },
-    { label: 'Countries', value: '150+', icon: <Globe className="h-4 w-4" /> },
-    { label: 'Security', value: '99.9%', icon: <Shield className="h-4 w-4" /> }
-  ]
+  const formatChange = (change: number) => {
+    const isPositive = change >= 0;
+    return (
+      <span className={`flex items-center gap-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+        {Math.abs(change).toFixed(2)}%
+      </span>
+    );
+  };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Hero Section */}
-      <div className="text-center space-y-6 py-12">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           Welcome to Kryvex Trading
         </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Experience the future of cryptocurrency trading with advanced tools, real-time data, and secure transactions.
+        <p className="text-muted-foreground">
+          Professional cryptocurrency trading platform
         </p>
-        <div className="flex justify-center space-x-4">
-          <Button size="lg" onClick={handleGetStarted} className="bg-gradient-to-r from-blue-600 to-purple-600">
-            Get Started
-          </Button>
-          <Button variant="outline" size="lg" onClick={() => navigate('/market')}>
-            View Markets
-          </Button>
+        <div className="text-sm text-muted-foreground mt-2">
+          Current time: {currentTime.toLocaleString()}
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="text-center">
-            <CardContent className="pt-6">
-              <div className="flex justify-center mb-2">
-                {stat.icon}
+      {!isAuthenticated && (
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900">Get Started</h3>
+                <p className="text-blue-700">Create an account to start trading</p>
               </div>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </CardContent>
-          </Card>
-        ))}
+              <Button asChild>
+                <a href="/auth">Sign Up Now</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$2.4M</div>
+            <p className="text-xs text-muted-foreground">
+              +20.1% from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+1,234</div>
+            <p className="text-xs text-muted-foreground">
+              +180.1% from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Trades Today</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+12,234</div>
+            <p className="text-xs text-muted-foreground">
+              +19% from yesterday
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+94.2%</div>
+            <p className="text-xs text-muted-foreground">
+              +2.1% from last month
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Live Crypto Prices */}
-      <div>
-        <h2 className="text-2xl font-bold mb-6">Live Market Prices</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cryptoData.map((crypto) => {
-            const priceData = getPrice(crypto.symbol)
-            return (
-              <Card key={crypto.symbol} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Live Crypto Prices</CardTitle>
+            <CardDescription>
+              Real-time cryptocurrency prices and market data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(cryptoPrices).map(([symbol, data]) => (
+                <div key={symbol} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="outline">{symbol}</Badge>
                     <div>
-                      <CardTitle className="text-lg">{crypto.name}</CardTitle>
-                      <CardDescription>{crypto.symbol}/USD</CardDescription>
+                      <div className="font-semibold">{formatPrice(data.price)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatChange(data.change)}
+                      </div>
                     </div>
-                    <Badge variant={priceData?.isPositive ? 'default' : 'secondary'}>
-                      {priceData?.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    </Badge>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {priceData?.price || '$--'}
-                  </div>
-                  <div className={`text-sm ${priceData?.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                    {priceData?.change || '--'}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <div>
-        <h2 className="text-2xl font-bold mb-6">Platform Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className="text-blue-600">
-                    {feature.icon}
-                  </div>
-                  <CardTitle>{feature.title}</CardTitle>
+                  <Button variant="ghost" size="sm">
+                    Trade
+                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  {feature.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Platform Features</CardTitle>
+            <CardDescription>
+              Discover what makes Kryvex Trading unique
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                <div>
+                  <h4 className="font-semibold">Advanced Trading Tools</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Professional-grade trading interface with real-time data
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                <div>
+                  <h4 className="font-semibold">Secure Wallet</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Multi-layer security with cold storage options
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                <div>
+                  <h4 className="font-semibold">24/7 Support</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Round-the-clock customer support and trading assistance
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                <div>
+                  <h4 className="font-semibold">KYC Verification</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Compliant identity verification for secure trading
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* CTA Section */}
-      <div className="text-center space-y-6 py-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-        <h2 className="text-3xl font-bold">Ready to Start Trading?</h2>
-        <p className="text-lg text-muted-foreground">
-          Join thousands of traders and experience the most advanced cryptocurrency trading platform.
-        </p>
-        <div className="flex justify-center space-x-4">
-          <Button size="lg" onClick={handleGetStarted} className="bg-gradient-to-r from-blue-600 to-purple-600">
-            Create Account
-          </Button>
-          <Button variant="outline" size="lg" onClick={() => navigate('/auth')}>
-            Sign In
-          </Button>
-        </div>
-      </div>
+      {isAuthenticated && user && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Welcome back, {user.firstName || user.email}!</CardTitle>
+            <CardDescription>
+              You're logged in and ready to trade
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4">
+              <Button asChild>
+                <a href="/trading">Start Trading</a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href="/wallet">View Wallet</a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href="/dashboard">Go to Dashboard</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default ViewOnlyDashboard
+export default ViewOnlyDashboard;

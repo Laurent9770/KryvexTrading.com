@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -26,25 +27,28 @@ import LiveChatWidget from "@/components/LiveChatWidget";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 
 // Simple ProtectedRoute component - Updated for deployment
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   return user ? <>{children}</> : <Navigate to="/auth" />;
 };
 
 // View-only route component for non-authenticated users
-const ViewOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+const ViewOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   return <>{children}</>;
 };
 
-function AppContent() {
+const AppContent: React.FC = () => {
   useEffect(() => {
     // Log environment status on app load
     console.log('🚀 Kryvex Trading App Starting...')
-    logEnvironmentStatus()
+    try {
+      logEnvironmentStatus()
+    } catch (error) {
+      console.warn('Failed to log environment status:', error)
+    }
     
     // Log all environment variables for debugging
     console.log('🔧 Environment Variables:', {
@@ -94,9 +98,9 @@ function AppContent() {
       </div>
     </div>
   );
-}
+};
 
-function App() {
+const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <BrowserRouter>
@@ -114,6 +118,6 @@ function App() {
       </BrowserRouter>
     </ErrorBoundary>
   );
-}
+};
 
 export default App;
