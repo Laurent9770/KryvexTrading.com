@@ -23,73 +23,45 @@ console.log('🔍 Detailed Environment Debug:', {
   allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 })
 
-// Create a more robust Supabase client with error handling
+// Create a robust Supabase client that always works
 let supabase: any = null
 
 try {
-  // Validate environment variables before creating client
+  // Use environment variables if available, otherwise use fallback credentials
+  const finalUrl = supabaseUrl || 'https://ftkeczodadvtnxofrwps.supabase.co'
+  const finalKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg'
+
+  // Log which credentials we're using
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("❌ Supabase environment variables are missing")
-    console.error("URL:", supabaseUrl || 'undefined')
-    console.error("Key:", supabaseAnonKey ? 'Set' : 'undefined')
-    console.error("Please check your Render.com environment variables:")
-    console.error("- VITE_SUPABASE_URL")
-    console.error("- VITE_SUPABASE_ANON_KEY")
-    
-    // Create a fallback client for development
-    if (import.meta.env.DEV) {
-      console.warn("⚠️ Creating fallback client for development")
-      supabase = createClient(
-        'https://ftkeczodadvtnxofrwps.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg',
-        {
-          auth: {
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true
-          },
-          realtime: {
-            params: {
-              eventsPerSecond: 10
-            }
-          }
-        }
-      )
-    } else {
-      throw new Error("Missing Supabase credentials")
-    }
+    console.warn("⚠️ Using fallback Supabase credentials")
   } else {
-    // Create singleton Supabase client with proper configuration
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      },
-      realtime: {
-        params: {
-          eventsPerSecond: 10
-        }
-      }
-    })
+    console.log("✅ Using environment variable Supabase credentials")
   }
+
+  // Create singleton Supabase client with proper configuration
+  supabase = createClient(finalUrl, finalKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    }
+  })
 
   console.log('✅ Supabase client created successfully')
 } catch (error) {
   console.error('❌ Failed to create Supabase client:', error)
   
-  // Create a minimal fallback client
-  if (import.meta.env.DEV) {
-    console.warn("⚠️ Creating emergency fallback client")
-    supabase = createClient(
-      'https://ftkeczodadvtnxofrwps.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg'
-    )
-  } else {
-    // In production, we need to handle this more gracefully
-    console.error('❌ Cannot create Supabase client in production')
-    supabase = null
-  }
+  // Emergency fallback - create a minimal client
+  console.warn("⚠️ Creating emergency fallback client")
+  supabase = createClient(
+    'https://ftkeczodadvtnxofrwps.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg'
+  )
 }
 
 // Helper function to test connection (call this when needed)
