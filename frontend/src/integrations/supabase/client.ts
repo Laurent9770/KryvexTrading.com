@@ -23,7 +23,7 @@ console.log('🔍 Detailed Environment Debug:', {
   allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 })
 
-// Validate environment variables
+// Validate environment variables before creating client
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error("❌ Supabase environment variables are missing")
   console.error("URL:", supabaseUrl || 'undefined')
@@ -34,7 +34,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase credentials")
 }
 
-// Create singleton Supabase client
+// Create singleton Supabase client with proper configuration
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
