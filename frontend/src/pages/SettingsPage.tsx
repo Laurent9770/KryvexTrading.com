@@ -155,17 +155,13 @@ const SettingsPage = () => {
     withdraw: false
   });
 
-  // Load persisted data from localStorage
+  // Load persisted data on component mount
   useEffect(() => {
     const loadPersistedData = () => {
       try {
-        // Load user profile data
-        const persistedProfile = localStorage.getItem('userProfile');
-        if (persistedProfile) {
-          const profileData = JSON.parse(persistedProfile);
-          setSettingsData(prev => ({ ...prev, ...profileData }));
-        }
-
+        // Clear any old mock data from localStorage
+        localStorage.removeItem('userProfile');
+        
         // Load security settings
         const persistedSecurity = localStorage.getItem('securitySettings');
         if (persistedSecurity) {
@@ -194,6 +190,7 @@ const SettingsPage = () => {
   // Sync settings data with user from AuthContext
   useEffect(() => {
     if (user) {
+      console.log('🔍 DEBUG: Settings page - User data:', user);
       setSettingsData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',

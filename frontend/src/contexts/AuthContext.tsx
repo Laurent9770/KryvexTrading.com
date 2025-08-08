@@ -234,6 +234,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               .eq('user_id', authState.user.id)
               .single();
 
+            console.log('🔍 DEBUG: AuthState user:', authState.user);
+            console.log('🔍 DEBUG: Profile data:', profile);
+            console.log('🔍 DEBUG: Profile error:', profileError);
+
             if (profileError) {
               console.error('Error loading user profile:', profileError);
             }
@@ -261,6 +265,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             };
 
+            console.log('🔍 DEBUG: Final user data:', userData);
             setUser(userData);
 
             // Update trading account with user's real balance
