@@ -227,10 +227,10 @@ export class RoomService {
           this.roomUsers = new Map(Object.entries(roomUsers));
         }
         
-        console.log('Mock room data cleared from localStorage');
+        console.log('Room data cleared from localStorage');
       }
     } catch (error) {
-      console.warn('Error clearing mock room data:', error);
+      console.warn('Error clearing room data:', error);
     }
   }
 }

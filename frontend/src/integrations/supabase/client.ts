@@ -5,12 +5,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ftkeczodadvtnx
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg'
 
 // Enhanced validation and debugging
-console.log('🔧 Supabase Configuration:', {
-  url: supabaseUrl ? '✅ Set' : '❌ Missing',
-  key: supabaseAnonKey ? '✅ Set' : '❌ Missing',
-  mode: import.meta.env.MODE,
-  dev: import.meta.env.DEV
-})
+if (import.meta.env.DEV) {
+  console.log('🔧 Supabase Configuration:', {
+    url: supabaseUrl ? '✅ Set' : '❌ Missing',
+    key: supabaseAnonKey ? '✅ Set' : '❌ Missing',
+    mode: import.meta.env.MODE
+  })
+}
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables:', {
@@ -21,9 +22,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Create a proper mock client with all Supabase methods
 const createMockClient = () => {
-  console.log('🔧 Creating mock Supabase client')
-  const mockQueryBuilder = (table: string) => {
-    console.log('🔧 Mock query builder called for table:', table)
+  if (import.meta.env.DEV) {
+    console.log('🔧 Creating mock Supabase client')
+  }
+      const mockQueryBuilder = (table: string) => {
+      if (import.meta.env.DEV) {
+        console.log('🔧 Mock query builder called for table:', table)
+      }
     return {
           select: (columns?: string) => ({
         eq: (column: string, value: any) => ({
@@ -122,7 +127,9 @@ const createMockClient = () => {
       }
     }),
     insert: (data: any) => {
-      console.log('🔧 Mock insert operation for table:', table, 'with data:', data)
+      if (import.meta.env.DEV) {
+        console.log('🔧 Mock insert operation for table:', table, 'with data:', data)
+      }
       return {
         select: (columns?: string) => ({
           single: async () => {
@@ -140,7 +147,9 @@ const createMockClient = () => {
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }
-              console.log('✅ Mock profile created:', mockProfile)
+              if (import.meta.env.DEV) {
+                console.log('✅ Mock profile created:', mockProfile)
+              }
               return { data: mockProfile, error: null }
             }
             // Return the inserted data for user_roles table
@@ -150,7 +159,9 @@ const createMockClient = () => {
                 user_id: data.user_id || 'mock-user-id',
                 role: data.role || 'user'
               }
-              console.log('✅ Mock role created:', mockRole)
+              if (import.meta.env.DEV) {
+                console.log('✅ Mock role created:', mockRole)
+              }
               return { data: mockRole, error: null }
             }
             return { data: null, error: null }
@@ -199,7 +210,9 @@ const createMockClient = () => {
     auth: {
       getSession: async () => ({ data: { session: null }, error: null }),
       signInWithPassword: async (credentials: any) => {
-        console.log('🔐 Mock signInWithPassword called with:', credentials)
+        if (import.meta.env.DEV) {
+          console.log('🔐 Mock signInWithPassword called with:', credentials)
+        }
         // Mock successful login for test users
         const validUsers = [
           { email: 'admin@kryvex.com', password: 'admin123', role: 'admin' },
@@ -228,14 +241,18 @@ const createMockClient = () => {
           }
         }
         
-        console.log('❌ Mock authentication failed for:', credentials.email)
+        if (import.meta.env.DEV) {
+          console.log('❌ Mock authentication failed for:', credentials.email)
+        }
         return {
           data: null,
           error: { message: 'Invalid credentials' }
         }
       },
       signUp: async (credentials: any) => {
-        console.log('🔐 Mock signUp called with:', credentials)
+        if (import.meta.env.DEV) {
+          console.log('🔐 Mock signUp called with:', credentials)
+        }
         // Mock successful registration
         return {
           data: {
@@ -267,7 +284,17 @@ const createMockClient = () => {
             }
           })
         }, 100)
-        return { data: { subscription: { unsubscribe: () => {} } } }
+        return { 
+          data: { 
+            subscription: { 
+              unsubscribe: () => {
+                if (import.meta.env.DEV) {
+                  console.log('🔧 Mock auth subscription unsubscribed')
+                }
+              } 
+            } 
+          } 
+        }
       },
       getUser: async () => ({ data: { user: null }, error: null })
     },
@@ -283,16 +310,16 @@ const createMockClient = () => {
     channel: () => ({
       on: () => ({
         subscribe: () => {
-          console.log('🔧 Mock subscription created')
-          return { 
-            data: { 
-              subscription: { 
-                unsubscribe: () => {
-                  console.log('🔧 Mock subscription unsubscribed')
-                } 
-              } 
-            } 
+          if (import.meta.env.DEV) {
+            console.log('🔧 Mock subscription created')
           }
+                  return { 
+          unsubscribe: () => {
+            if (import.meta.env.DEV) {
+              console.log('🔧 Mock subscription unsubscribed')
+            }
+          } 
+        }
         }
       })
     })
@@ -340,11 +367,15 @@ if (hasRealSupabase) {
     console.log('✅ Real Supabase client initialized')
   } catch (error) {
     console.error('❌ Failed to create real Supabase client:', error)
-    console.warn('⚠️ Falling back to mock client')
+    if (import.meta.env.DEV) {
+      console.warn('⚠️ Falling back to mock client')
+    }
     supabase = createMockClient()
   }
 } else {
-  console.log('🔧 No real Supabase credentials found, using mock client')
+  if (import.meta.env.DEV) {
+    console.log('🔧 No real Supabase credentials found, using mock client')
+  }
   supabase = createMockClient()
 }
 

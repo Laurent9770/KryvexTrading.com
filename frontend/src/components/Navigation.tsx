@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Wallet, Bot, Coins, Bell, User, ChevronDown, LogOut, Settings } from "lucide-react";
+import { TrendingUp, Wallet, Bot, Coins, Bell, User, ChevronDown, LogOut, Settings, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useCryptoPrices } from "@/hooks/useCryptoPrices";
@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Navigation = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const { getPrice } = useCryptoPrices();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
+    logout();
     navigate('/');
   };
 
@@ -35,7 +35,7 @@ const Navigation = () => {
         {/* Main Navigation */}
         {user ? (
           <div className="hidden lg:flex items-center space-x-8">
-            <Button variant="ghost" onClick={() => navigate('/')} className="kucoin-btn-secondary text-sm">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="kucoin-btn-secondary text-sm">
               Dashboard
             </Button>
             <Button variant="ghost" onClick={() => navigate('/market')} className="kucoin-btn-secondary text-sm">
@@ -44,9 +44,13 @@ const Navigation = () => {
             <Button variant="ghost" onClick={() => navigate('/trading')} className="kucoin-btn-secondary text-sm">
               Trading
             </Button>
-            <Button variant="ghost" onClick={() => navigate('/bots')} className="kucoin-btn-secondary text-sm">
+            <Button variant="ghost" onClick={() => navigate('/trading')} className="kucoin-btn-secondary text-sm">
               <Bot className="w-4 h-4 mr-2" />
               Bots
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/support')} className="kucoin-btn-secondary text-sm">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Support
             </Button>
             {isAdmin && (
               <Badge className="bg-kucoin-red text-white">
@@ -56,15 +60,19 @@ const Navigation = () => {
           </div>
         ) : (
           <div className="hidden lg:flex items-center space-x-8">
-            <a href="#markets" className="text-sm font-medium text-foreground hover:text-kucoin-green transition-colors">
+            <Button variant="ghost" onClick={() => navigate('/')} className="kucoin-btn-secondary text-sm">
+              Home
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/market')} className="kucoin-btn-secondary text-sm">
               Markets
-            </a>
-            <a href="#trading" className="text-sm font-medium text-foreground hover:text-kucoin-green transition-colors">
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/auth')} className="kucoin-btn-secondary text-sm">
               Trading
-            </a>
-            <a href="#features" className="text-sm font-medium text-foreground hover:text-kucoin-green transition-colors">
-              Features
-            </a>
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/auth')} className="kucoin-btn-secondary text-sm">
+              <Bot className="w-4 h-4 mr-2" />
+              Bots
+            </Button>
           </div>
         )}
 
@@ -116,7 +124,7 @@ const Navigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-border">
-                  <DropdownMenuItem onClick={() => navigate('/')}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Dashboard
                   </DropdownMenuItem>

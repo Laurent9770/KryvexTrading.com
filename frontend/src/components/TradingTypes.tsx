@@ -37,7 +37,7 @@ const TradingTypes = () => {
       icon: Zap,
       color: "text-yellow-500",
       bgColor: "bg-yellow-500/10",
-      route: "/futures",
+      route: "/trading",
       badge: "High Leverage",
       badgeColor: "bg-yellow-500"
     },
@@ -48,7 +48,7 @@ const TradingTypes = () => {
       icon: Target,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
-      route: "/options",
+      route: "/trading",
       badge: "Advanced",
       badgeColor: "bg-purple-500"
     },
@@ -59,7 +59,7 @@ const TradingTypes = () => {
       icon: Layers,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
-      route: "/binary",
+      route: "/trading",
       badge: "Fixed Risk",
       badgeColor: "bg-blue-500"
     },
@@ -70,7 +70,7 @@ const TradingTypes = () => {
       icon: Bot,
       color: "text-cyan-500",
       bgColor: "bg-cyan-500/10",
-      route: "/bots",
+      route: "/trading",
       badge: "Automated",
       badgeColor: "bg-cyan-500"
     },
@@ -81,7 +81,7 @@ const TradingTypes = () => {
       icon: BarChart3,
       color: "text-orange-500",
       bgColor: "bg-orange-500/10",
-      route: "/quant",
+      route: "/trading",
       badge: "Professional",
       badgeColor: "bg-orange-500"
     }

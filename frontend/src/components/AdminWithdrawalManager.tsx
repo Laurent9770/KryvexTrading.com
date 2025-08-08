@@ -272,16 +272,15 @@ const AdminWithdrawalManager: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                // Clear mock data functionality removed - using Supabase now
                 loadWithdrawalRequests();
                 toast({
-                  title: "Mock Data Cleared",
-                  description: "All mock withdrawal requests have been removed."
+                  title: "Data Refreshed",
+                  description: "Withdrawal request data has been refreshed."
                 });
               }}
               className="text-xs"
             >
-              Clear Mock Data
+              Refresh Data
             </Button>
           </div>
         </CardHeader>

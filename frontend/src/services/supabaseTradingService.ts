@@ -432,9 +432,33 @@ class SupabaseTradingService {
 
   // Cleanup
   cleanup() {
-    this.priceSubscriptions.forEach(sub => sub.unsubscribe())
-    this.tradeSubscriptions.forEach(sub => sub.unsubscribe())
-    this.portfolioSubscriptions.forEach(sub => sub.unsubscribe())
+    this.priceSubscriptions.forEach(sub => {
+      if (sub && typeof sub.unsubscribe === 'function') {
+        try {
+          sub.unsubscribe()
+        } catch (error) {
+          console.warn('Error unsubscribing from price subscription:', error)
+        }
+      }
+    })
+    this.tradeSubscriptions.forEach(sub => {
+      if (sub && typeof sub.unsubscribe === 'function') {
+        try {
+          sub.unsubscribe()
+        } catch (error) {
+          console.warn('Error unsubscribing from trade subscription:', error)
+        }
+      }
+    })
+    this.portfolioSubscriptions.forEach(sub => {
+      if (sub && typeof sub.unsubscribe === 'function') {
+        try {
+          sub.unsubscribe()
+        } catch (error) {
+          console.warn('Error unsubscribing from portfolio subscription:', error)
+        }
+      }
+    })
     
     this.priceSubscriptions.clear()
     this.tradeSubscriptions.clear()

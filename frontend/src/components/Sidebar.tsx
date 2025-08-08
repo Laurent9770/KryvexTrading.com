@@ -68,43 +68,31 @@ export function Sidebar() {
       shortcut: "D",
       description: "Admin dashboard and user management"
     }
-  ] : [
-    // Regular user navigation
+  ] : user ? [
+    // Authenticated user navigation
     {
       title: t('dashboard'),
-      href: "/",
+      href: "/dashboard",
       icon: LayoutDashboard,
       badge: "New",
       shortcut: "D",
       description: "View your portfolio and trading overview"
     },
+  ] : [
+    // Non-authenticated user navigation (view-only)
     {
-      title: t('trading'),
-      href: "/trading",
-      icon: TrendingUp,
-      shortcut: "T",
-      description: "All trading features: Spot, Futures, Options, Binary, Quant, Bots, Staking"
+      title: "Home",
+      href: "/",
+      icon: LayoutDashboard,
+      shortcut: "H",
+      description: "Welcome to Kryvex Trading Platform"
     },
     {
-      title: t('market'),
+      title: "Markets",
       href: "/market",
       icon: BarChart3,
       shortcut: "M",
       description: "Real-time market data and analysis"
-    },
-    {
-      title: t('wallet'),
-      href: "/wallet",
-      icon: Wallet,
-      shortcut: "W",
-      description: "Manage your funds and transactions"
-    },
-    {
-      title: "Trading History",
-      href: "/trading-history",
-      icon: History,
-      shortcut: "H",
-      description: "View your complete trading history"
     }
   ];
 
@@ -153,6 +141,16 @@ export function Sidebar() {
     const Icon = item.icon;
     const active = isActive(item.href);
     
+    const handleClick = () => {
+      // Check if user is authenticated for protected routes
+      const protectedRoutes = ['/trading', '/wallet', '/trading-history', '/settings', '/kyc', '/deposit', '/withdraw', '/support', '/dashboard'];
+      if (!user && protectedRoutes.includes(item.href)) {
+        navigate('/auth');
+        return;
+      }
+      navigate(item.href);
+    };
+    
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -166,7 +164,7 @@ export function Sidebar() {
                 : "hover:bg-muted/50 hover:text-foreground",
               "group relative overflow-hidden"
             )}
-            onClick={() => navigate(item.href)}
+            onClick={handleClick}
           >
             <Icon className={cn("h-5 w-5 transition-all", active && "scale-110")} />
             {!isCollapsed && (
@@ -206,7 +204,8 @@ export function Sidebar() {
     );
   };
 
-  if (!user) return null;
+  // Show sidebar for all users (including non-authenticated)
+  // if (!user) return null;
 
   return (
     <div
@@ -223,7 +222,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              {!isAdmin && (
+              {user && !isAdmin && (
                 <Avatar className="w-8 h-8">
                   <AvatarImage 
                     src={user?.avatar || "/placeholder.svg"} 
@@ -238,7 +237,7 @@ export function Sidebar() {
               <div className="flex flex-col">
                 <span className="text-sm font-bold text-foreground">Kryvex</span>
                 <span className="text-xs text-muted-foreground">
-                  {isAdmin ? "Admin Platform" : "Trading Platform"}
+                  {isAdmin ? "Admin Platform" : user ? "Trading Platform" : "View Mode"}
                 </span>
               </div>
             </div>
@@ -319,7 +318,7 @@ export function Sidebar() {
                     Trades
                   </Button>
                 </div>
-              ) : (
+              ) : user ? (
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
@@ -340,6 +339,27 @@ export function Sidebar() {
                     Sell
                   </Button>
                 </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs hover:bg-blue-600 hover:text-background transition-all"
+                    onClick={() => navigate('/auth')}
+                  >
+                    <User className="h-3 w-3 mr-1" />
+                    Sign Up
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs hover:bg-purple-600 hover:text-background transition-all"
+                    onClick={() => navigate('/auth')}
+                  >
+                    <LogOut className="h-3 w-3 mr-1" />
+                    Sign In
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -353,39 +373,67 @@ export function Sidebar() {
             <NavButton key={item.href} item={item} />
           ))}
           
-          {/* Sign Out */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10",
-                  isCollapsed ? "px-2" : "px-3"
-                )}
-                onClick={() => logout()}
-              >
-                <LogOut className="h-5 w-5" />
-                {!isCollapsed && (
-                  <>
-                    <span className="truncate font-medium">Sign Out</span>
-                    {showShortcuts && (
-                      <div className="ml-auto text-xs opacity-60">
-                        Ctrl+Shift+Q
-                      </div>
-                    )}
-                  </>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
-              <div className="flex flex-col gap-1">
-                <span className="font-medium">Sign Out</span>
-                <div className="text-xs font-mono bg-muted px-1 rounded">
-                  Ctrl+Shift+Q
+          {/* Sign Out / Sign In */}
+          {user ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10",
+                    isCollapsed ? "px-2" : "px-3"
+                  )}
+                  onClick={() => logout()}
+                >
+                  <LogOut className="h-5 w-5" />
+                  {!isCollapsed && (
+                    <>
+                      <span className="truncate font-medium">Sign Out</span>
+                      {showShortcuts && (
+                        <div className="ml-auto text-xs opacity-60">
+                          Ctrl+Shift+Q
+                        </div>
+                      )}
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium">Sign Out</span>
+                  <div className="text-xs font-mono bg-muted px-1 rounded">
+                    Ctrl+Shift+Q
+                  </div>
                 </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start gap-3 h-11 text-primary hover:text-primary hover:bg-primary/10",
+                    isCollapsed ? "px-2" : "px-3"
+                  )}
+                  onClick={() => navigate('/auth')}
+                >
+                  <User className="h-5 w-5" />
+                  {!isCollapsed && (
+                    <>
+                      <span className="truncate font-medium">Sign In</span>
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium">Sign In</span>
+                  <span className="text-xs text-muted-foreground">Create account or sign in</span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
 

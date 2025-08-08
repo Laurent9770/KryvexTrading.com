@@ -207,8 +207,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     return () => {
-      unsubscribe();
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from auth service:', error);
+        }
+      }
       supabaseTradingService.cleanup();
+      supabaseAuthService.cleanup();
     };
   }, []);
 

@@ -145,7 +145,15 @@ const TradingPage = () => {
       loadFuturesData();
     });
 
-    return unsubscribe;
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from crypto price service in TradingPage:', error);
+        }
+      }
+    };
   }, [selectedPair]);
 
   // Real-time order book data

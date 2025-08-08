@@ -360,7 +360,13 @@ class SupabaseChatService {
   // Cleanup method
   cleanup() {
     this.subscriptions.forEach(subscription => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from chat subscription:', error);
+        }
+      }
     });
     this.subscriptions.clear();
     this.listeners.clear();

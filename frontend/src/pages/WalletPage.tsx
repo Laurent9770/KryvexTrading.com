@@ -102,11 +102,19 @@ const WalletPage = () => {
   };
 
   const handleTransfer = () => {
-    navigate('/transfer');
+    // Transfer functionality integrated into wallet page
+    toast({
+      title: "Transfer",
+      description: "Transfer functionality is available in the wallet interface."
+    });
   };
 
   const handleConvert = () => {
-    navigate('/convert');
+    // Convert functionality integrated into wallet page
+    toast({
+      title: "Convert",
+      description: "Convert functionality is available in the wallet interface."
+    });
   };
 
   const handleTrade = () => {

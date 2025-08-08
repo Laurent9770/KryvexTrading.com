@@ -143,10 +143,10 @@ export class UserSessionService {
           this.sessions = new Map(Object.entries(sessions));
         }
         
-        console.log('Mock session data cleared from localStorage');
+        console.log('Session data cleared from localStorage');
       }
     } catch (error) {
-      console.warn('Error clearing mock session data:', error);
+      console.warn('Error clearing session data:', error);
     }
   }
 }

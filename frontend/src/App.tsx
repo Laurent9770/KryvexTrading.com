@@ -17,6 +17,9 @@ import MarketPage from "@/pages/MarketPage";
 import WalletPage from "@/pages/WalletPage";
 import TradingHistoryPage from "@/pages/TradingHistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
+import SupportPage from "@/pages/SupportPage";
+import ViewOnlyDashboard from "@/pages/ViewOnlyDashboard";
+import ViewOnlyMarketPage from "@/pages/ViewOnlyMarketPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import LiveChatWidget from "@/components/LiveChatWidget";
@@ -29,6 +32,12 @@ import { useEffect } from "react";
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   return user ? <>{children}</> : <Navigate to="/auth" />;
+};
+
+// View-only route component for non-authenticated users
+const ViewOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  return <>{children}</>;
 };
 
 function AppContent() {
@@ -57,10 +66,13 @@ function AppContent() {
             {/* Public Routes */}
             <Route path="/auth" element={<Auth />} />
             
-            {/* Protected Routes */}
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            {/* View-Only Routes (for non-authenticated users) */}
+            <Route path="/" element={<ViewOnlyRoute><ViewOnlyDashboard /></ViewOnlyRoute>} />
+            <Route path="/market" element={<ViewOnlyRoute><ViewOnlyMarketPage /></ViewOnlyRoute>} />
+            
+            {/* Protected Routes (require authentication) */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
-            <Route path="/market" element={<ProtectedRoute><MarketPage /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
             <Route path="/trading-history" element={<ProtectedRoute><TradingHistoryPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
@@ -68,9 +80,11 @@ function AppContent() {
             <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
             <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
             <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+            <Route path="/admin/trading-control/:userId" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
             
             {/* Redirect to dashboard for unknown routes */}
             <Route path="*" element={<Navigate to="/" replace />} />

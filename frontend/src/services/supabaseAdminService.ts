@@ -656,12 +656,100 @@ class SupabaseAdminService {
   // Trading control
   async setTradeOverride(userId: string, mode: 'win' | 'lose' | null): Promise<any> {
     try {
-      // This would need to be implemented based on your trading system
-      console.log(`Setting trade override for user ${userId} to ${mode}`)
-      return { success: true }
+      // Use the RPC function to set trade outcome mode
+      const { data, error } = await supabase.rpc('log_admin_action', {
+        p_admin_id: this.adminToken || '',
+        p_action_type: 'set_trade_override',
+        p_target_user_id: userId,
+        p_description: `Trade override set to: ${mode}`,
+        p_new_values: { mode }
+      })
+
+      if (error) throw error
+
+      // Update user profile with trade outcome mode
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          trade_outcome_mode: mode || 'default',
+          trade_outcome_enabled_at: new Date().toISOString(),
+          trade_outcome_enabled_by: this.adminToken
+        })
+        .eq('user_id', userId)
+
+      if (updateError) throw updateError
+
+      return { success: true, data }
     } catch (error) {
-      console.error('Set trade override error:', error)
-      throw error
+      this.handleError(error, 'setTradeOverride')
+    }
+  }
+
+  async getTradeOutcomeStats(): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_trade_outcome_stats')
+      if (error) throw error
+      return data
+    } catch (error) {
+      this.handleError(error, 'getTradeOutcomeStats')
+    }
+  }
+
+  async getUserTradeOutcomeHistory(userId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_user_trade_outcome_history', {
+        p_user_id: userId
+      })
+      if (error) throw error
+      return data
+    } catch (error) {
+      this.handleError(error, 'getUserTradeOutcomeHistory')
+    }
+  }
+
+  async applyForcedTradeOutcome(tradeId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('apply_forced_trade_outcome', {
+        p_trade_id: tradeId
+      })
+      if (error) throw error
+      return data
+    } catch (error) {
+      this.handleError(error, 'applyForcedTradeOutcome')
+    }
+  }
+
+  async checkUserRole(userId: string, role: 'admin' | 'user'): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: role
+      })
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error checking user role:', error)
+      return false
+    }
+  }
+
+  async logAdminAction(actionType: string, targetUserId?: string, targetTable?: string, targetId?: string, oldValues?: any, newValues?: any, description?: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('log_admin_action', {
+        p_admin_id: this.adminToken || '',
+        p_action_type: actionType,
+        p_target_user_id: targetUserId,
+        p_target_table: targetTable,
+        p_target_id: targetId,
+        p_old_values: oldValues,
+        p_new_values: newValues,
+        p_description: description,
+        p_ip_address: 'client-ip' // This would need to be passed from the client
+      })
+      if (error) throw error
+      return data
+    } catch (error) {
+      this.handleError(error, 'logAdminAction')
     }
   }
 

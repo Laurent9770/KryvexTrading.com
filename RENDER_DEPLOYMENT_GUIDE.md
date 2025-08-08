@@ -1,227 +1,279 @@
-# 🚀 Render.com Deployment Guide
+# Render.com Deployment Guide for Kryvex Trading Platform
 
-## 📋 Prerequisites
+## 🎯 **Overview**
 
-1. **Render.com Account**: Sign up at [render.com](https://render.com)
-2. **GitHub Repository**: Your code should be in a GitHub repository
-3. **Backend Domain**: `https://kryvextrading-com.onrender.com`
-4. **Frontend Domain**: `https://kryvex-frontend.onrender.com`
+This guide provides step-by-step instructions for deploying the Kryvex Trading Platform on **Render.com** with **Supabase** integration, ensuring proper SPA routing and no 404 refresh issues.
 
-## 🎯 Deployment Steps
+## 🚀 **Prerequisites**
 
-### Step 1: Connect GitHub Repository
+### **Required Accounts**
+- ✅ **Render.com** account
+- ✅ **Supabase** project
+- ✅ **GitHub** repository (for automatic deployments)
 
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click **"New +"** → **"Web Service"**
-3. Connect your GitHub repository
-4. Select the repository: `Laurent9770/KryvexTrading.com`
+### **Environment Variables**
+Make sure you have these Supabase environment variables ready:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-### Step 2: Configure Backend Service
+## 📋 **Deployment Steps**
 
-**Service Settings:**
-- **Name**: `kryvex-trading-backend`
-- **Environment**: `Node`
-- **Region**: Choose closest to your users
-- **Branch**: `main`
-- **Build Command**: `cd backend && npm install`
-- **Start Command**: `cd backend && npm start`
+### **Step 1: Prepare Your Repository**
 
-**Environment Variables:**
-```env
-NODE_ENV=production
-PORT=10000
-CORS_ORIGIN=https://kryvex-frontend.onrender.com
-JWT_SECRET=your_super_secret_jwt_key_here
+1. **Push to GitHub**: Ensure your code is pushed to GitHub
+2. **Verify Files**: Make sure these files are in your repository:
+   - `render.yaml` (Render configuration)
+   - `package.json` (with build scripts)
+   - `vite.config.ts` (Vite configuration)
+
+### **Step 2: Create Render Service**
+
+1. **Login to Render**: Go to [render.com](https://render.com)
+2. **New Static Site**: Click "New" → "Static Site"
+3. **Connect Repository**: Connect your GitHub repository
+4. **Configure Settings**:
+
+#### **Basic Settings**
+```
+Name: kryvex-trading-frontend
+Branch: main (or your default branch)
+Root Directory: (leave empty)
+Build Command: npm install && npm run build
+Publish Directory: dist
 ```
 
-### Step 3: Create PostgreSQL Database
-
-1. In Render Dashboard, click **"New +"** → **"PostgreSQL"**
-2. **Name**: `kryvex-trading-db`
-3. **Database**: `kryvex_trading`
-4. **User**: `kryvex_user`
-5. **Plan**: `Free`
-
-### Step 4: Link Database to Backend
-
-1. Go to your backend service
-2. Click **"Environment"** tab
-3. Add these environment variables:
-
-```env
-DB_HOST=${DB_HOST}
-DB_PORT=${DB_PORT}
-DB_NAME=${DB_NAME}
-DB_USER=${DB_USER}
-DB_PASSWORD=${DB_PASSWORD}
-DATABASE_URL=${DATABASE_URL}
+#### **Environment Variables**
+```
+VITE_SUPABASE_URL = your_supabase_url
+VITE_SUPABASE_ANON_KEY = your_supabase_anon_key
+NODE_ENV = production
 ```
 
-### Step 5: Deploy Frontend (Optional)
+### **Step 3: Advanced Settings**
 
-If you want to deploy the frontend separately:
+#### **Auto-Deploy**
+- ✅ **Auto-Deploy**: Enabled
+- ✅ **Deploy on Push**: Enabled
 
-1. Create another **Web Service**
-2. **Name**: `kryvex-trading-frontend`
-3. **Build Command**: `cd frontend && npm install && npm run build`
-4. **Start Command**: `cd frontend && npm start`
+#### **Health Check Path**
+```
+Health Check Path: /
+```
 
-## 🔧 Configuration Files
+## 🔧 **Configuration Files**
 
-### render.yaml (Auto-deployment)
+### **1. render.yaml**
 ```yaml
 services:
   - type: web
-    name: kryvex-trading-backend
-    env: node
-    plan: free
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 10000
-      - key: CORS_ORIGIN
-        value: https://kryvex-frontend.onrender.com
-      - key: JWT_SECRET
-        generateValue: true
-      - key: DB_HOST
-        fromDatabase:
-          name: kryvex-trading-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: kryvex-trading-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: kryvex-trading-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: kryvex-trading-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: kryvex-trading-db
-          property: password
-      - key: DATABASE_URL
-        fromDatabase:
-          name: kryvex-trading-db
-          property: connectionString
-
-databases:
-  - name: kryvex-trading-db
-    databaseName: kryvex_trading
-    user: kryvex_user
-    plan: free
+    name: kryvex-trading-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-XSS-Protection
+        value: "1; mode=block"
+      - path: /*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /*.js
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /*.css
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /*.ico
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /*.png
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /*.svg
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
 ```
 
-## 🌐 URLs After Deployment
+### **2. package.json Scripts**
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "node server.js"
+  }
+}
+```
 
-### Backend API
-- **Base URL**: `https://kryvextrading-com.onrender.com`
-- **Health Check**: `https://kryvextrading-com.onrender.com/api/health`
-- **WebSocket**: `wss://kryvextrading-com.onrender.com`
+### **3. vite.config.ts**
+```typescript
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    port: 8080,
+    host: true,
+  },
+  preview: {
+    port: 8080,
+    host: true,
+  },
+  base: '/',
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+        },
+      },
+    },
+  },
+})
+```
 
-### Frontend Application
-- **Main App**: `https://kryvex-frontend.onrender.com`
-- **Admin Dashboard**: `https://kryvex-frontend.onrender.com/admin`
-- **User Dashboard**: `https://kryvex-frontend.onrender.com/dashboard`
+## 🔒 **Security Configuration**
 
-### API Endpoints
-- **Auth**: `https://kryvextrading-com.onrender.com/api/auth/*`
-- **Users**: `https://kryvextrading-com.onrender.com/api/users/*`
-- **Wallets**: `https://kryvextrading-com.onrender.com/api/wallets/*`
-- **Trading**: `https://kryvextrading-com.onrender.com/api/trading/*`
-- **Admin**: `https://kryvextrading-com.onrender.com/api/admin/*`
-- **KYC**: `https://kryvextrading-com.onrender.com/api/kyc/*`
-- **Chat**: `https://kryvextrading-com.onrender.com/api/chat/*`
+### **Headers Applied**
+- ✅ **X-Content-Type-Options**: Prevents MIME type sniffing
+- ✅ **X-Frame-Options**: Prevents clickjacking attacks
+- ✅ **X-XSS-Protection**: Enables XSS protection
+- ✅ **Cache-Control**: Optimizes static asset caching
 
-## 🔐 Admin Access
+### **SPA Routing**
+- ✅ **Rewrite Rules**: All routes serve `index.html`
+- ✅ **Client-side Routing**: React Router handles navigation
+- ✅ **No 404 Errors**: Proper fallback for all routes
 
-**Admin Credentials:**
-- **Email**: `admin@kryvex.com`
-- **Password**: `Kryvex.@123`
-- **Admin Dashboard**: `https://kryvex-frontend.onrender.com/admin`
+## 📊 **Performance Optimizations**
 
-## 📊 Monitoring
+### **Build Optimizations**
+- ✅ **Code Splitting**: Manual chunks for better caching
+- ✅ **Tree Shaking**: Unused code removed
+- ✅ **Minification**: CSS and JS optimized
+- ✅ **Asset Optimization**: Images and fonts optimized
 
-### Health Checks
-- **Backend**: `https://kryvextrading-com.onrender.com/api/health`
-- **Database**: Check Render Dashboard → Database → Logs
+### **Caching Strategy**
+- ✅ **Static Assets**: 1-year cache for JS, CSS, images
+- ✅ **HTML**: No cache for dynamic content
+- ✅ **CDN Ready**: All assets optimized for CDN
 
-### Logs
-- **Backend Logs**: Render Dashboard → Service → Logs
-- **Database Logs**: Render Dashboard → Database → Logs
+## 🧪 **Testing Your Deployment**
 
-## 🚨 Troubleshooting
+### **Test Scenarios**
+1. **Direct URL Access**: Navigate to `https://your-app.onrender.com/trading`
+2. **Page Refresh**: Refresh while on `/market`
+3. **Deep Linking**: Share direct links to `/wallet`
+4. **Browser Navigation**: Use back/forward buttons
 
-### Common Issues
+### **Expected Results**
+- ✅ **No 404 errors**: All routes load correctly
+- ✅ **Fast loading**: Optimized assets load quickly
+- ✅ **Proper routing**: Each route shows correct content
+- ✅ **Authentication**: Login/logout works properly
 
-1. **Build Failures**
-   - Check `package.json` dependencies
-   - Verify Node.js version (20.x)
-   - Check build logs in Render Dashboard
+## 🔧 **Troubleshooting**
 
-2. **Database Connection Issues**
-   - Verify database environment variables
-   - Check database status in Render Dashboard
-   - Test connection with provided credentials
+### **Common Issues**
 
-3. **CORS Issues**
-   - Verify `CORS_ORIGIN` environment variable
-   - Check frontend domain matches backend CORS settings
-
-4. **WebSocket Issues**
-   - Verify WebSocket URL in frontend config
-   - Check WebSocket server is running on correct port
-
-### Debug Commands
-
+#### **1. Build Failures**
 ```bash
-# Test backend health
-curl https://kryvextrading-com.onrender.com/api/health
+# Check build locally first
+npm run build
 
-# Test database connection
-curl https://kryvextrading-com.onrender.com/api/health
-
-# Check environment variables
-echo $NODE_ENV
-echo $DATABASE_URL
+# Verify all dependencies are installed
+npm install
 ```
 
-## 🔄 Auto-Deployment
+#### **2. Environment Variables**
+- ✅ Ensure `VITE_SUPABASE_URL` is set
+- ✅ Ensure `VITE_SUPABASE_ANON_KEY` is set
+- ✅ Check Supabase project is active
 
-The `render.yaml` file enables automatic deployment:
+#### **3. Routing Issues**
+- ✅ Verify `render.yaml` has rewrite rules
+- ✅ Check that `dist/index.html` exists after build
+- ✅ Ensure all routes are properly configured
 
-1. **Push to GitHub**: Any push to `main` branch triggers deployment
-2. **Environment Variables**: Automatically configured from database
-3. **Health Checks**: Automatic monitoring and restart on failure
+### **Debug Commands**
+```bash
+# Local build test
+npm run build
 
-## 📈 Scaling
+# Check dist folder
+ls -la dist/
 
-### Free Tier Limits
-- **Backend**: 750 hours/month
-- **Database**: 90 days free trial
-- **Bandwidth**: 100GB/month
+# Test local server
+npm run serve
+```
 
-### Upgrade Options
-- **Paid Plans**: Available for higher limits
-- **Custom Domains**: Add your own domain
-- **SSL Certificates**: Automatic HTTPS
+## 📈 **Monitoring & Analytics**
 
-## 🎉 Success Indicators
+### **Render Dashboard**
+- ✅ **Build Logs**: Monitor build process
+- ✅ **Deployment History**: Track changes
+- ✅ **Performance Metrics**: Monitor response times
+- ✅ **Error Logs**: Debug issues
 
-✅ **Backend Running**: Health check returns 200 OK
-✅ **Database Connected**: No connection errors in logs
-✅ **WebSocket Working**: Real-time features functional
-✅ **Admin Access**: Can login to admin dashboard
-✅ **API Endpoints**: All endpoints responding correctly
+### **Supabase Dashboard**
+- ✅ **Database Performance**: Monitor queries
+- ✅ **Authentication**: Track user sign-ups
+- ✅ **Real-time Subscriptions**: Monitor connections
+- ✅ **Storage Usage**: Track file uploads
 
-## 📞 Support
+## 🚀 **Deployment Checklist**
 
-- **Render Support**: [support.render.com](https://support.render.com)
-- **Documentation**: [render.com/docs](https://render.com/docs)
-- **Community**: [render.com/community](https://render.com/community) 
+### **Pre-Deployment**
+- [ ] Code pushed to GitHub
+- [ ] Supabase project configured
+- [ ] Environment variables ready
+- [ ] Local build successful
+- [ ] All tests passing
+
+### **Deployment**
+- [ ] Render service created
+- [ ] Repository connected
+- [ ] Environment variables set
+- [ ] Build command configured
+- [ ] Auto-deploy enabled
+
+### **Post-Deployment**
+- [ ] All routes accessible
+- [ ] No 404 errors on refresh
+- [ ] Authentication working
+- [ ] Real-time features functional
+- [ ] Performance acceptable
+
+## 🎯 **Final Result**
+
+After following this guide, you'll have:
+
+1. **✅ Professional Deployment**: Fast, secure, and reliable
+2. **✅ No 404 Errors**: Perfect SPA routing
+3. **✅ Optimized Performance**: Fast loading times
+4. **✅ Security Headers**: Protection against attacks
+5. **✅ Auto-Deployment**: Automatic updates on code push
+6. **✅ Monitoring**: Built-in analytics and logs
+
+Your Kryvex Trading Platform will be **production-ready** on Render.com with seamless user experience and no routing issues! 🚀 

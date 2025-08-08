@@ -23,7 +23,15 @@ export const useCryptoPrices = () => {
       setLoading(false);
     }
 
-    return unsubscribe;
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from crypto price service:', error);
+        }
+      }
+    };
   }, []);
 
   const getPrice = (symbol: string): CryptoPriceFormatted | null => {

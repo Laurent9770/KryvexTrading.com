@@ -574,6 +574,21 @@ class SupabaseAuthService {
   isLoading(): boolean {
     return this.authState.isLoading
   }
+
+  // Cleanup method
+  cleanup() {
+    this.subscriptions.forEach(subscription => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from auth subscription:', error);
+        }
+      }
+    });
+    this.subscriptions = [];
+    this.listeners.clear();
+  }
 }
 
 // Create singleton instance
