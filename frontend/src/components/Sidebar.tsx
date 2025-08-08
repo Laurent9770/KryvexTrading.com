@@ -27,7 +27,8 @@ import {
   MonitorSpeaker,
   CircleDollarSign,
   Lock,
-  History
+  History,
+  Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,8 @@ interface NavItem {
   badge?: string;
   shortcut?: string;
   description?: string;
+  requiresAuth?: boolean;
+  requiresKYC?: boolean;
 }
 
 export function Sidebar() {
@@ -49,7 +52,7 @@ export function Sidebar() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isAuthenticated } = useAuth();
   const { t } = useLanguage();
 
   // Different navigation items for admin vs regular users
@@ -63,16 +66,41 @@ export function Sidebar() {
       shortcut: "D",
       description: "Admin dashboard and user management"
     }
-  ] : user ? [
+  ] : isAuthenticated ? [
     // Authenticated user navigation
     {
-      title: t('dashboard'),
+      title: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
       badge: "New",
       shortcut: "D",
-      description: "View your portfolio and trading overview"
+      description: "View your portfolio and trading overview",
+      requiresAuth: true
     },
+    {
+      title: "Trading",
+      href: "/trading",
+      icon: TrendingUp,
+      shortcut: "T",
+      description: "Advanced trading interface",
+      requiresAuth: true
+    },
+    {
+      title: "Wallet",
+      href: "/wallet",
+      icon: Wallet,
+      shortcut: "W",
+      description: "Manage your funds and transactions",
+      requiresAuth: true
+    },
+    {
+      title: "Trading History",
+      href: "/trading-history",
+      icon: History,
+      shortcut: "H",
+      description: "View your trading history",
+      requiresAuth: true
+    }
   ] : [
     // Non-authenticated user navigation (view-only)
     {
@@ -81,6 +109,13 @@ export function Sidebar() {
       icon: LayoutDashboard,
       shortcut: "H",
       description: "Welcome to Kryvex Trading Platform"
+    },
+    {
+      title: "Trading",
+      href: "/trading",
+      icon: TrendingUp,
+      shortcut: "T",
+      description: "View trading interface (sign in to trade)"
     },
     {
       title: "Markets",
@@ -99,13 +134,47 @@ export function Sidebar() {
       shortcut: "S",
       description: "Admin settings and preferences"
     }
-  ] : [
+  ] : isAuthenticated ? [
     {
-      title: t('settings'),
+      title: "Deposit",
+      href: "/deposit",
+      icon: CircleDollarSign,
+      shortcut: "D",
+      description: "Deposit funds to your account",
+      requiresAuth: true
+    },
+    {
+      title: "Withdraw",
+      href: "/withdraw",
+      icon: Send,
+      shortcut: "W",
+      description: "Withdraw funds (requires KYC)",
+      requiresAuth: true,
+      requiresKYC: true
+    },
+    {
+      title: "KYC Verification",
+      href: "/kyc",
+      icon: Shield,
+      shortcut: "K",
+      description: "Complete identity verification",
+      requiresAuth: true
+    },
+    {
+      title: "Settings",
       href: "/settings",
       icon: Settings,
       shortcut: "S",
-      description: "Account settings and preferences"
+      description: "Account settings and preferences",
+      requiresAuth: true
+    }
+  ] : [
+    {
+      title: "Sign In",
+      href: "/auth",
+      icon: User,
+      shortcut: "I",
+      description: "Sign in to your account"
     }
   ];
 
@@ -117,11 +186,17 @@ export function Sidebar() {
     
     const handleClick = () => {
       // Check if user is authenticated for protected routes
-      const protectedRoutes = ['/trading', '/wallet', '/trading-history', '/settings', '/kyc', '/deposit', '/withdraw', '/support', '/dashboard'];
-      if (!user && protectedRoutes.includes(item.href)) {
+      if (item.requiresAuth && !isAuthenticated) {
         navigate('/auth');
         return;
       }
+      
+      // Check if KYC is required for certain routes
+      if (item.requiresKYC && user?.kycStatus !== 'verified') {
+        navigate('/kyc');
+        return;
+      }
+      
       navigate(item.href);
     };
     
@@ -149,24 +224,19 @@ export function Sidebar() {
                     {item.badge}
                   </Badge>
                 )}
-                {item.shortcut && showShortcuts && (
-                  <div className="ml-auto text-xs opacity-60">
-                    Ctrl+{item.shortcut}
-                  </div>
+                {item.requiresKYC && user?.kycStatus !== 'verified' && (
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    KYC
+                  </Badge>
                 )}
               </>
             )}
-            {active && (
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
-            )}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{item.title}</span>
-            {item.description && (
-              <span className="text-xs text-muted-foreground">{item.description}</span>
-            )}
+        <TooltipContent side="right" className="max-w-xs">
+          <div className="space-y-1">
+            <p className="font-medium">{item.title}</p>
+            <p className="text-xs text-muted-foreground">{item.description}</p>
             {item.shortcut && (
               <div className="text-xs font-mono bg-muted px-1 rounded">
                 Ctrl+{item.shortcut}
@@ -179,190 +249,102 @@ export function Sidebar() {
   };
 
   return (
-    <div
-      className={cn(
-        "fixed left-0 top-0 z-50 h-screen bg-card/95 backdrop-blur-xl border-r border-border/50 transition-all duration-300 ease-in-out flex flex-col",
-        isCollapsed ? "w-16" : "w-72",
-        "animate-in slide-in-from-left",
-        // Mobile responsive: hide on small screens, show as overlay on medium+
-        "hidden md:flex"
-      )}
-    >
+    <div className={cn(
+      "flex h-full flex-col border-r bg-background transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       {/* Header */}
-      <div className="p-4 border-b border-border/50">
-        <div className="flex items-center justify-between">
+      <div className="flex h-16 items-center justify-between px-4 border-b">
+        <div className="flex items-center gap-2">
+          <KryvexLogo className="h-8 w-8" />
           {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              {user && !isAdmin && (
-                <Avatar className="w-8 h-8">
-                  <AvatarImage 
-                    src={user?.avatar || "/placeholder.svg"} 
-                    alt="Profile Picture"
-                  />
-                  <AvatarFallback className="bg-gradient-to-br from-kucoin-green to-kucoin-blue text-white text-xs">
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              <KryvexLogo size="sm" />
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-foreground">Kryvex</span>
-                <span className="text-xs text-muted-foreground">
-                  {isAdmin ? "Admin Platform" : user ? "Trading Platform" : "View Mode"}
-                </span>
-              </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold">Kryvex</span>
+              <span className="text-xs text-muted-foreground">Trading Platform</span>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 hover:bg-muted/50"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="h-8 w-8 p-0"
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto scrollbar-hide px-3 py-4">
-          {/* Main Navigation */}
-          <div className="space-y-1">
+      <div className="flex-1 overflow-y-auto py-4">
+        {/* Main Navigation */}
+        <div className="px-3">
+          <div className="mb-4">
             {!isCollapsed && (
-              <div className="px-3 py-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {isAdmin ? "Admin" : "Trading"}
-                </span>
-              </div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {isAdmin ? "ADMIN" : isAuthenticated ? "TRADING" : "EXPLORE"}
+              </h3>
             )}
-            {mainNavItems.map((item) => (
-              <NavButton key={item.href} item={item} />
-            ))}
+            <div className="space-y-1">
+              {mainNavItems.map((item) => (
+                <NavButton key={item.href} item={item} />
+              ))}
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          {!isCollapsed && (
-            <div className="mt-4 space-y-2">
-              <div className="px-3 py-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {isAdmin ? "Admin Actions" : "Quick Actions"}
-                </span>
-              </div>
-              {isAdmin ? (
-                <div className="space-y-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-3 h-9 text-xs"
-                    onClick={() => navigate('/admin')}
-                  >
-                    <User className="h-4 w-4" />
-                    <span>User Management</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-3 h-9 text-xs"
-                    onClick={() => navigate('/admin')}
-                  >
-                    <Activity className="h-4 w-4" />
-                    <span>Trade Monitoring</span>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-3 h-9 text-xs"
-                    onClick={() => navigate('/trading')}
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    <span>Start Trading</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-3 h-9 text-xs"
-                    onClick={() => navigate('/wallet')}
-                  >
-                    <Wallet className="h-4 w-4" />
-                    <span>View Wallet</span>
-                  </Button>
-                </div>
-              )}
+          {/* Bottom Navigation */}
+          <div className="mt-6">
+            {!isCollapsed && (
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {isAdmin ? "ADMIN" : isAuthenticated ? "ACCOUNT" : "AUTH"}
+              </h3>
+            )}
+            <div className="space-y-1">
+              {bottomNavItems.map((item) => (
+                <NavButton key={item.href} item={item} />
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="border-t border-border/50 p-3">
-        <div className="space-y-1">
-          {bottomNavItems.map((item) => (
-            <NavButton key={item.href} item={item} />
-          ))}
-          
-          {/* Sign Out / Sign In */}
-          {user ? (
+      {/* User Profile */}
+      {isAuthenticated && user && (
+        <div className="border-t p-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user.avatar} alt={user.firstName || user.email} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
+                {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.firstName || user.email}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.kycStatus === 'verified' ? 'Verified' : 'Unverified'}
+                </p>
+              </div>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10",
-                    isCollapsed ? "px-2" : "px-3"
-                  )}
-                  onClick={() => logout()}
+                  size="sm"
+                  onClick={logout}
+                  className="h-8 w-8 p-0"
                 >
-                  <LogOut className="h-5 w-5" />
-                  {!isCollapsed && (
-                    <>
-                      <span className="truncate font-medium">Sign Out</span>
-                    </>
-                  )}
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
+              <TooltipContent side="right">
                 <div className="flex flex-col gap-1">
                   <span className="font-medium">Sign Out</span>
                 </div>
               </TooltipContent>
             </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-3 h-11 text-primary hover:text-primary hover:bg-primary/10",
-                    isCollapsed ? "px-2" : "px-3"
-                  )}
-                  onClick={() => navigate('/auth')}
-                >
-                  <User className="h-5 w-5" />
-                  {!isCollapsed && (
-                    <>
-                      <span className="truncate font-medium">Sign In</span>
-                    </>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium">Sign In</span>
-                  <span className="text-xs text-muted-foreground">Create account or sign in</span>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

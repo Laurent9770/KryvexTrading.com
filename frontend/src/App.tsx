@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
 import Dashboard from "@/pages/Dashboard";
 import TradingPage from "@/pages/TradingPage";
+import ViewOnlyTradingPage from "@/pages/ViewOnlyTradingPage";
 import Auth from "@/pages/Auth";
 import KYCPage from "@/pages/KYCPage";
 import DepositPage from "@/pages/DepositPage";
@@ -49,6 +50,57 @@ const ViewOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 };
 
+// Trading route that shows view-only for non-authenticated users
+const TradingRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  try {
+    const { user, isAuthenticated } = useAuth();
+    
+    // If not authenticated, show view-only trading page
+    if (!isAuthenticated) {
+      return <ViewOnlyTradingPage />;
+    }
+    
+    // If authenticated but KYC pending, show view-only with KYC prompt
+    if (user?.kycStatus === 'pending' || user?.kycStatus === 'unverified') {
+      return <ViewOnlyTradingPage />;
+    }
+    
+    // If authenticated and KYC verified, show full trading page
+    return <>{children}</>;
+  } catch (error) {
+    console.error('TradingRoute error:', error);
+    return <ViewOnlyTradingPage />;
+  }
+};
+
+// Withdraw route that requires KYC verification
+const WithdrawRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  try {
+    const { user, isAuthenticated } = useAuth();
+    
+    // If not authenticated, redirect to auth
+    if (!isAuthenticated) {
+      return <Navigate to="/auth" />;
+    }
+    
+    // If KYC not verified, redirect to KYC page
+    if (user?.kycStatus === 'pending' || user?.kycStatus === 'unverified') {
+      return <Navigate to="/kyc" />;
+    }
+    
+    // If KYC rejected, show error and redirect to KYC
+    if (user?.kycStatus === 'rejected') {
+      return <Navigate to="/kyc" />;
+    }
+    
+    // If KYC verified, allow access
+    return <>{children}</>;
+  } catch (error) {
+    console.error('WithdrawRoute error:', error);
+    return <Navigate to="/auth" />;
+  }
+};
+
 const AppContent: React.FC = () => {
   useEffect(() => {
     console.log('🚀 Kryvex Trading App Starting...')
@@ -72,16 +124,21 @@ const AppContent: React.FC = () => {
             <Route path="/" element={<ViewOnlyRoute><ViewOnlyDashboard /></ViewOnlyRoute>} />
             <Route path="/market" element={<ViewOnlyRoute><ViewOnlyMarketPage /></ViewOnlyRoute>} />
 
+            {/* Trading Route (view-only for non-authenticated, full for authenticated) */}
+            <Route path="/trading" element={<TradingRoute><TradingPage /></TradingRoute>} />
+
             {/* Protected Routes (require authentication) */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
             <Route path="/trading-history" element={<ProtectedRoute><TradingHistoryPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
             <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
-            <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
-            <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
+            
+            {/* Withdraw Routes (require KYC verification) */}
+            <Route path="/withdraw" element={<WithdrawRoute><WithdrawPage /></WithdrawRoute>} />
+            <Route path="/withdrawal-request" element={<WithdrawRoute><WithdrawalRequestPage /></WithdrawRoute>} />
+            
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
 
             {/* Admin Routes */}
