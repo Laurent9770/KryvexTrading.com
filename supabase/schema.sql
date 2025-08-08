@@ -2,7 +2,16 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Create custom types
+-- Create custom types (drop and recreate to ensure consistency)
+DROP TYPE IF EXISTS user_role CASCADE;
+DROP TYPE IF EXISTS kyc_status CASCADE;
+DROP TYPE IF EXISTS account_status CASCADE;
+DROP TYPE IF EXISTS trade_type CASCADE;
+DROP TYPE IF EXISTS trade_result CASCADE;
+DROP TYPE IF EXISTS trade_status CASCADE;
+DROP TYPE IF EXISTS transaction_type CASCADE;
+DROP TYPE IF EXISTS notification_type CASCADE;
+
 CREATE TYPE user_role AS ENUM ('user', 'admin');
 CREATE TYPE kyc_status AS ENUM ('pending', 'approved', 'rejected');
 CREATE TYPE account_status AS ENUM ('active', 'suspended', 'banned');
@@ -11,6 +20,24 @@ CREATE TYPE trade_result AS ENUM ('pending', 'win', 'loss', 'draw');
 CREATE TYPE trade_status AS ENUM ('open', 'closed', 'cancelled');
 CREATE TYPE transaction_type AS ENUM ('deposit', 'withdrawal', 'trade', 'fee', 'bonus');
 CREATE TYPE notification_type AS ENUM ('info', 'success', 'warning', 'error');
+
+-- Drop existing triggers first
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
+DROP TRIGGER IF EXISTS update_wallet_balances_updated_at ON wallet_balances;
+DROP TRIGGER IF EXISTS update_deposits_updated_at ON deposits;
+DROP TRIGGER IF EXISTS update_withdrawals_updated_at ON withdrawals;
+DROP TRIGGER IF EXISTS update_support_tickets_updated_at ON support_tickets;
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP TRIGGER IF EXISTS on_auth_user_admin_setup ON auth.users;
+
+-- Drop existing functions
+DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
+DROP FUNCTION IF EXISTS handle_new_user() CASCADE;
+DROP FUNCTION IF EXISTS log_user_activity(UUID, TEXT, TEXT, JSONB) CASCADE;
+DROP FUNCTION IF EXISTS has_role(UUID, user_role) CASCADE;
+DROP FUNCTION IF EXISTS log_admin_action(UUID, TEXT, UUID, TEXT, JSONB) CASCADE;
+DROP FUNCTION IF EXISTS setup_admin_user(UUID) CASCADE;
+DROP FUNCTION IF EXISTS auto_setup_admin() CASCADE;
 
 -- Create profiles table
 CREATE TABLE IF NOT EXISTS profiles (
@@ -466,6 +493,60 @@ INSERT INTO staking_pools (name, symbol, apy, min_stake) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Row Level Security (RLS) Policies
+
+-- Drop existing policies first
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can view own roles" ON user_roles;
+DROP POLICY IF EXISTS "Admins can view all roles" ON user_roles;
+DROP POLICY IF EXISTS "Users can view own KYC submissions" ON kyc_submissions;
+DROP POLICY IF EXISTS "Users can create own KYC submissions" ON kyc_submissions;
+DROP POLICY IF EXISTS "Admins can view all KYC submissions" ON kyc_submissions;
+DROP POLICY IF EXISTS "Users can view own KYC documents" ON kyc_documents;
+DROP POLICY IF EXISTS "Users can upload own KYC documents" ON kyc_documents;
+DROP POLICY IF EXISTS "Admins can view all KYC documents" ON kyc_documents;
+DROP POLICY IF EXISTS "Anyone can view trading pairs" ON trading_pairs;
+DROP POLICY IF EXISTS "Users can view own trades" ON trades;
+DROP POLICY IF EXISTS "Users can create own trades" ON trades;
+DROP POLICY IF EXISTS "Users can update own trades" ON trades;
+DROP POLICY IF EXISTS "Admins can view all trades" ON trades;
+DROP POLICY IF EXISTS "Users can view own wallet balances" ON wallet_balances;
+DROP POLICY IF EXISTS "Users can update own wallet balances" ON wallet_balances;
+DROP POLICY IF EXISTS "Admins can view all wallet balances" ON wallet_balances;
+DROP POLICY IF EXISTS "Users can view own deposits" ON deposits;
+DROP POLICY IF EXISTS "Users can create own deposits" ON deposits;
+DROP POLICY IF EXISTS "Admins can view all deposits" ON deposits;
+DROP POLICY IF EXISTS "Users can view own withdrawals" ON withdrawals;
+DROP POLICY IF EXISTS "Users can create own withdrawals" ON withdrawals;
+DROP POLICY IF EXISTS "Admins can view all withdrawals" ON withdrawals;
+DROP POLICY IF EXISTS "Anyone can view staking pools" ON staking_pools;
+DROP POLICY IF EXISTS "Users can view own staking positions" ON staking_positions;
+DROP POLICY IF EXISTS "Users can create own staking positions" ON staking_positions;
+DROP POLICY IF EXISTS "Admins can view all staking positions" ON staking_positions;
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can update own notification read status" ON notifications;
+DROP POLICY IF EXISTS "Admins can manage notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can view own support tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Users can create own support tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Users can update own support tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Admins can view all support tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Users can view messages in own tickets" ON support_messages;
+DROP POLICY IF EXISTS "Users can create messages in own tickets" ON support_messages;
+DROP POLICY IF EXISTS "Admins can view all support messages" ON support_messages;
+DROP POLICY IF EXISTS "Users can view own activities" ON user_activities;
+DROP POLICY IF EXISTS "Admins can view all user activities" ON user_activities;
+DROP POLICY IF EXISTS "Admins can view admin actions" ON admin_actions;
+DROP POLICY IF EXISTS "Admins can create admin actions" ON admin_actions;
+DROP POLICY IF EXISTS "Admins can view admin notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Admins can update admin notifications" ON admin_notifications;
+DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
+DROP POLICY IF EXISTS "Admins can view all transactions" ON transactions;
+DROP POLICY IF EXISTS "Users can view own sessions" ON user_sessions;
+DROP POLICY IF EXISTS "Users can manage own sessions" ON user_sessions;
+DROP POLICY IF EXISTS "Users can view own wallet adjustments" ON wallet_adjustments;
+DROP POLICY IF EXISTS "Admins can create wallet adjustments" ON wallet_adjustments;
+DROP POLICY IF EXISTS "Anyone can view price history" ON price_history;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
