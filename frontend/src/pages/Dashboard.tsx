@@ -214,7 +214,9 @@ const Dashboard = () => {
             </Avatar>
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">Kryvex Trading Platform</h1>
-              <p className="text-sm sm:text-base text-slate-400">Welcome back, {user?.firstName || "John"}!</p>
+              <p className="text-sm sm:text-base text-slate-400">
+                Welcome back, {user?.firstName || user?.email?.split('@')[0] || 'User'}!
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
