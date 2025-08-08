@@ -52,15 +52,12 @@ const ViewOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 const AppContent: React.FC = () => {
   useEffect(() => {
-    // Log environment status on app load
     console.log('🚀 Kryvex Trading App Starting...')
     try {
       logEnvironmentStatus()
     } catch (error) {
       console.warn('Failed to log environment status:', error)
     }
-    
-    // Log all environment variables for debugging
     console.log('🔧 Environment Variables:', {
       VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
       VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
@@ -77,14 +74,9 @@ const AppContent: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            {/* Public Routes */}
             <Route path="/auth" element={<Auth />} />
-            
-            {/* View-Only Routes (for non-authenticated users) */}
             <Route path="/" element={<ViewOnlyRoute><ViewOnlyDashboard /></ViewOnlyRoute>} />
             <Route path="/market" element={<ViewOnlyRoute><ViewOnlyMarketPage /></ViewOnlyRoute>} />
-            
-            {/* Protected Routes (require authentication) */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
@@ -95,12 +87,8 @@ const AppContent: React.FC = () => {
             <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
             <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
-            
-            {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
             <Route path="/admin/trading-control/:userId" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-            
-            {/* Redirect to dashboard for unknown routes */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -112,9 +100,9 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
-        <TooltipProvider>
+    <BrowserRouter>
+      <TooltipProvider>
+        <ErrorBoundary>
           <AuthProvider>
             <LanguageProvider>
               <AppContent />
@@ -124,9 +112,9 @@ const App: React.FC = () => {
               <WhatsAppButton />
             </LanguageProvider>
           </AuthProvider>
-        </TooltipProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
+        </ErrorBoundary>
+      </TooltipProvider>
+    </BrowserRouter>
   );
 };
 

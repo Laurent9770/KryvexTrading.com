@@ -21,6 +21,18 @@ const TestComponent: React.FC = () => {
             <li>✅ KYC Verification</li>
           </ul>
         </div>
+        <div className="p-4 bg-card rounded-lg">
+          <h2 className="font-semibold">Debug Info</h2>
+          <p className="text-sm text-muted-foreground">
+            React Version: {React.version}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Environment: {import.meta.env.MODE}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Supabase URL: {import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing'}
+          </p>
+        </div>
       </div>
     </div>
   );

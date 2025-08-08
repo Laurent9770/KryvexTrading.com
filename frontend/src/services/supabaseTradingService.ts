@@ -68,11 +68,25 @@ class SupabaseTradingService {
     try {
       console.log('📊 Fetching trading pairs...');
       
-      const { data, error } = await supabase
+      // Check if supabase is properly initialized
+      if (!supabase || typeof supabase.from !== 'function') {
+        console.error('❌ Supabase client not properly initialized');
+        return { success: false, error: 'Supabase client not initialized' };
+      }
+      
+      let query = supabase
         .from('trading_pairs')
         .select('*')
-        .eq('is_active', true)
         .order('symbol');
+
+      // Only add the eq filter if the query supports it
+      if (typeof query.eq === 'function') {
+        query = query.eq('is_active', true);
+      } else {
+        console.warn('⚠️ Query does not support .eq method, skipping active filter');
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('❌ Error fetching trading pairs:', error);
@@ -91,12 +105,17 @@ class SupabaseTradingService {
     try {
       console.log('📊 Fetching trading pair:', symbol);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('trading_pairs')
-        .select('*')
-        .eq('symbol', symbol)
-        .eq('is_active', true)
-        .single();
+        .select('*');
+
+      // Add filters only if the query supports them
+      if (typeof query.eq === 'function') {
+        query = query.eq('symbol', symbol);
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query.single();
 
       if (error) {
         console.error('❌ Error fetching trading pair:', error);
@@ -165,6 +184,12 @@ class SupabaseTradingService {
     try {
       console.log('📊 Fetching trades for user:', userId);
       
+      // Check if supabase is properly initialized
+      if (!supabase || typeof supabase.from !== 'function') {
+        console.error('❌ Supabase client not properly initialized');
+        return { success: false, error: 'Supabase client not initialized' };
+      }
+      
       let query = supabase
         .from('trades')
         .select(`
@@ -173,8 +198,11 @@ class SupabaseTradingService {
         `)
         .order('created_at', { ascending: false });
 
-      if (userId) {
+      // Only add the eq filter if userId is provided and the query supports it
+      if (userId && typeof query.eq === 'function') {
         query = query.eq('user_id', userId);
+      } else if (userId) {
+        console.warn('⚠️ Query does not support .eq method, skipping user filter');
       }
 
       const { data, error } = await query;
