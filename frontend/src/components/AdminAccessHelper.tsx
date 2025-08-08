@@ -2,18 +2,10 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, User, LogIn } from 'lucide-react';
+import { Shield, User, LogIn, AlertTriangle } from 'lucide-react';
 
 const AdminAccessHelper: React.FC = () => {
-  const { login, isAuthenticated, isAdmin, user } = useAuth();
-
-  const handleAdminLogin = async () => {
-    try {
-      await login('admin@kryvex.com', 'Kryvex.@123', true);
-    } catch (error) {
-      console.error('Admin login failed:', error);
-    }
-  };
+  const { isAuthenticated, isAdmin, user } = useAuth();
 
   if (isAuthenticated && isAdmin) {
     return (
@@ -61,14 +53,9 @@ const AdminAccessHelper: React.FC = () => {
             <p>Current user: <span className="text-white">{user?.email}</span></p>
             <p className="mt-2">To access admin features, you need admin credentials.</p>
           </div>
-          <Button 
-            variant="outline"
-            className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
-            onClick={handleAdminLogin}
-          >
-            <LogIn className="w-4 h-4 mr-2" />
-            Login as Admin
-          </Button>
+          <div className="text-center text-xs text-slate-500">
+            <p>Contact system administrator for admin access</p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -78,25 +65,24 @@ const AdminAccessHelper: React.FC = () => {
     <Card className="w-full max-w-md mx-auto mt-8">
       <CardHeader className="text-center">
         <div className="mx-auto w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
-          <Shield className="w-6 h-6 text-blue-400" />
+          <AlertTriangle className="w-6 h-6 text-blue-400" />
         </div>
-        <CardTitle className="text-white">Admin Access Helper</CardTitle>
+        <CardTitle className="text-white">Admin Access</CardTitle>
         <CardDescription className="text-slate-400">
-          Quick admin login for testing
+          Please log in to access admin features
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-center text-sm text-slate-400">
-          <p>Admin Credentials:</p>
-          <p className="text-white font-mono text-xs mt-1">Email: admin@kryvex.com</p>
-          <p className="text-white font-mono text-xs">Password: Kryvex.@123</p>
+          <p>Admin credentials are required for access.</p>
+          <p className="mt-2">Contact your system administrator.</p>
         </div>
         <Button 
           className="w-full bg-blue-600 hover:bg-blue-700"
-          onClick={handleAdminLogin}
+          onClick={() => window.location.href = '/auth'}
         >
           <LogIn className="w-4 h-4 mr-2" />
-          Login as Admin
+          Go to Login
         </Button>
       </CardContent>
     </Card>

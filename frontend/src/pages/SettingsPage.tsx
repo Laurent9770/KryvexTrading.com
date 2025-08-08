@@ -42,6 +42,7 @@ import {
   Plus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -86,6 +87,7 @@ interface PasswordChangeData {
 
 const SettingsPage = () => {
   const { user, updateUserProfile, isAdmin } = useAuth();
+  const { profile } = useUserProfile();
   const { t, currentLanguage, setLanguage, getAvailableLanguages } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -555,20 +557,39 @@ const SettingsPage = () => {
         {/* Header */}
         <div className="flex items-center gap-6 mb-8">
           <Avatar className="w-20 h-20">
-            <AvatarImage src="/placeholder.svg" />
+            <AvatarImage src={profile?.avatar_url || user?.avatar} />
             <AvatarFallback className="text-2xl bg-gradient-to-br from-kucoin-green to-kucoin-blue text-white">
-              {user?.email?.charAt(0).toUpperCase() || 'U'}
+              {profile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           <div>
             <h1 className="text-3xl font-bold text-foreground">{t('profileSettings')}</h1>
             <p className="text-muted-foreground">Manage your account settings and preferences</p>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-kucoin-green/10 text-kucoin-green">
-                <CheckCircle className="w-3 h-3 mr-1" />
-                Verified
-              </Badge>
-              <Badge className="bg-kucoin-blue/10 text-kucoin-blue">Pro Trader</Badge>
+              {profile?.kyc_status === 'approved' && (
+                <Badge className="bg-kucoin-green/10 text-kucoin-green">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Verified
+                </Badge>
+              )}
+              {profile?.kyc_status === 'pending' && (
+                <Badge className="bg-yellow-500/10 text-yellow-600">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Pending Verification
+                </Badge>
+              )}
+              {profile?.kyc_status === 'rejected' && (
+                <Badge className="bg-red-500/10 text-red-600">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Verification Rejected
+                </Badge>
+              )}
+              {(!profile?.kyc_status || profile?.kyc_status === 'unverified') && (
+                <Badge className="bg-gray-500/10 text-gray-600">
+                  <Shield className="w-3 h-3 mr-1" />
+                  Unverified
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -592,17 +613,27 @@ const SettingsPage = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="firstName">{t('firstName')}</Label>
-                      <Input id="firstName" placeholder="John" value={settingsData.firstName} onChange={(e) => setSettingsData({...settingsData, firstName: e.target.value})} />
+                      <Input 
+                        id="firstName" 
+                        placeholder="John" 
+                        value={profile?.full_name?.split(' ')[0] || settingsData.firstName} 
+                        onChange={(e) => setSettingsData({...settingsData, firstName: e.target.value})} 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="lastName">{t('lastName')}</Label>
-                      <Input id="lastName" placeholder="Doe" value={settingsData.lastName} onChange={(e) => setSettingsData({...settingsData, lastName: e.target.value})} />
+                      <Input 
+                        id="lastName" 
+                        placeholder="Doe" 
+                        value={profile?.full_name?.split(' ').slice(1).join(' ') || settingsData.lastName} 
+                        onChange={(e) => setSettingsData({...settingsData, lastName: e.target.value})} 
+                      />
                     </div>
                   </div>
                   
                   <div>
                     <Label htmlFor="email">{t('email')}</Label>
-                    <Input id="email" type="email" value={settingsData.email} disabled />
+                    <Input id="email" type="email" value={user?.email || settingsData.email} disabled />
                   </div>
                   
                   <div>
@@ -610,14 +641,14 @@ const SettingsPage = () => {
                     <Input 
                       id="phone" 
                       placeholder="Enter your phone number" 
-                      value={settingsData.phone} 
+                      value={profile?.phone || settingsData.phone} 
                       onChange={(e) => setSettingsData({...settingsData, phone: e.target.value})} 
                     />
                   </div>
                   
                   <div>
                     <Label htmlFor="country">{t('country')}</Label>
-                    <Select value={settingsData.country} onValueChange={(value) => setSettingsData({...settingsData, country: value})}>
+                    <Select value={profile?.country || settingsData.country} onValueChange={(value) => setSettingsData({...settingsData, country: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>

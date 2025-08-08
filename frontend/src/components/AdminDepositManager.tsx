@@ -19,10 +19,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import supabaseWalletService from '@/services/supabaseWalletService';
 import supabaseAdminDataService, { AdminDepositRequest } from '@/services/supabaseAdminDataService';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDepositManager = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [depositRequests, setDepositRequests] = useState<AdminDepositRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<AdminDepositRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,73 +117,62 @@ const AdminDepositManager = () => {
     setFilteredRequests(filtered);
   }, [depositRequests, searchTerm, statusFilter, networkFilter]);
 
-  const handleApprove = async (request: AdminDepositRequest) => {
-    setIsProcessing(true);
+  const handleApproveDeposit = async (depositId: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const updatedRequests = depositRequests.map(req => 
-        req.id === request.id 
-          ? { 
-              ...req, 
-              status: 'approved' as const,
-              processedAt: new Date().toISOString(),
-              processedBy: 'admin@kryvex.com'
-            }
-          : req
-      );
-
-      setDepositRequests(updatedRequests);
-
+      const { error } = await supabase
+        .from('deposits')
+        .update({
+          status: 'approved',
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', depositId);
+      
+      if (error) throw error;
+      
       toast({
-        title: "Deposit approved",
-        description: `Deposit request ${request.id} has been approved`,
+        title: "Deposit Approved",
+        description: "The deposit has been approved successfully.",
       });
-
+      
+      // Refresh deposits list
+      fetchDeposits();
     } catch (error) {
+      console.error('Error approving deposit:', error);
       toast({
         title: "Error",
-        description: "Failed to approve deposit request",
+        description: "Failed to approve deposit.",
         variant: "destructive"
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
-  const handleReject = async (request: AdminDepositRequest) => {
-    setIsProcessing(true);
+  const handleRejectDeposit = async (depositId: string, reason: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const updatedRequests = depositRequests.map(req => 
-        req.id === request.id 
-          ? { 
-              ...req, 
-              status: 'rejected' as const,
-              processedAt: new Date().toISOString(),
-              processedBy: 'admin@kryvex.com'
-            }
-          : req
-      );
-
-      setDepositRequests(updatedRequests);
-
+      const { error } = await supabase
+        .from('deposits')
+        .update({
+          status: 'rejected',
+          processed_at: new Date().toISOString(),
+          remarks: reason
+        })
+        .eq('id', depositId);
+      
+      if (error) throw error;
+      
       toast({
-        title: "Deposit rejected",
-        description: `Deposit request ${request.id} has been rejected`,
+        title: "Deposit Rejected",
+        description: "The deposit has been rejected.",
       });
-
+      
+      // Refresh deposits list
+      fetchDeposits();
     } catch (error) {
+      console.error('Error rejecting deposit:', error);
       toast({
         title: "Error",
-        description: "Failed to reject deposit request",
+        description: "Failed to reject deposit.",
         variant: "destructive"
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -325,7 +317,7 @@ const AdminDepositManager = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleApprove(request)}
+                          onClick={() => handleApproveDeposit(request.id)}
                           disabled={isProcessing}
                           className="text-green-600 border-green-600 hover:bg-green-50"
                         >
@@ -335,7 +327,7 @@ const AdminDepositManager = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleReject(request)}
+                          onClick={() => handleRejectDeposit(request.id, 'Rejected by admin')}
                           disabled={isProcessing}
                           className="text-red-600 border-red-600 hover:bg-red-50"
                         >
@@ -458,7 +450,7 @@ const AdminDepositManager = () => {
               {selectedRequest.status === 'pending' && (
                 <div className="flex gap-2 pt-4">
                   <Button
-                    onClick={() => handleApprove(selectedRequest)}
+                    onClick={() => handleApproveDeposit(selectedRequest.id)}
                     disabled={isProcessing}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
@@ -466,7 +458,7 @@ const AdminDepositManager = () => {
                     Approve Deposit
                   </Button>
                   <Button
-                    onClick={() => handleReject(selectedRequest)}
+                    onClick={() => handleRejectDeposit(selectedRequest.id, 'Rejected by admin')}
                     disabled={isProcessing}
                     variant="destructive"
                     className="flex-1"
