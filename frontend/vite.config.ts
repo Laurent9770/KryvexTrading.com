@@ -97,8 +97,8 @@ export default defineConfig({
           // Validation and schemas
           'validation': ['zod'],
           
-          // Utilities
-          'utilities': ['cmdk', 'input-otp', 'lovable-tagger', 'react-hotkeys-hook', 'react-resizable-panels', 'sonner', 'vaul'],
+          // Utilities (removed problematic packages)
+          'utilities': ['cmdk', 'input-otp', 'react-hotkeys-hook', 'react-resizable-panels', 'sonner', 'vaul'],
         },
       },
     },
