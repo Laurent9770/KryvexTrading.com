@@ -5,13 +5,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Enhanced validation and debugging
-if (import.meta.env.DEV) {
-  console.log('🔧 Supabase Configuration:', {
-    url: supabaseUrl ? '✅ Set' : '❌ Missing',
-    key: supabaseAnonKey ? '✅ Set' : '❌ Missing',
-    mode: import.meta.env.MODE
-  })
-}
+console.log('🔧 Supabase Configuration Check:', {
+  url: supabaseUrl ? '✅ Set' : '❌ Missing',
+  key: supabaseAnonKey ? '✅ Set' : '❌ Missing',
+  mode: import.meta.env.MODE,
+  dev: import.meta.env.DEV,
+  prod: import.meta.env.PROD
+})
 
 // Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -22,7 +22,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   
   // In production, we should throw an error
   if (import.meta.env.PROD) {
-    throw new Error('Missing Supabase environment variables. Please check your .env file.')
+    console.error('❌ Production environment missing Supabase credentials')
   }
 }
 
@@ -31,6 +31,7 @@ let supabase: any
 
 try {
   if (supabaseUrl && supabaseAnonKey) {
+    console.log('🔧 Creating Supabase client with URL:', supabaseUrl)
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
