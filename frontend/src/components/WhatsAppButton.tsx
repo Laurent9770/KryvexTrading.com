@@ -2,7 +2,7 @@ import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const WhatsAppButton = () => {
-  const whatsappNumber = "+17153046643";
+  const whatsappNumber = "+15716295850";
   const message = "Hello! I need help with my Kryvex trading account.";
   
   const handleWhatsAppClick = () => {
@@ -13,7 +13,7 @@ const WhatsAppButton = () => {
   return (
     <Button
       onClick={handleWhatsAppClick}
-      className="whatsapp-float group"
+      className="whatsapp-float group fixed bottom-20 right-4 z-50 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full w-14 h-14"
       size="icon"
       aria-label="Contact WhatsApp Support"
     >

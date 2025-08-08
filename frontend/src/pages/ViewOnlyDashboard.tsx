@@ -4,16 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, Users, Activity, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import realTimePriceService, { CryptoPrice } from '@/services/realTimePriceService';
 
 const ViewOnlyDashboard: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [cryptoPrices, setCryptoPrices] = useState({
-    BTC: { price: 43250.50, change: 2.5 },
-    ETH: { price: 2650.75, change: -1.2 },
-    SOL: { price: 98.25, change: 5.8 },
-    ADA: { price: 0.485, change: 1.3 }
-  });
+  const [cryptoPrices, setCryptoPrices] = useState<Map<string, CryptoPrice>>(new Map());
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -21,6 +17,17 @@ const ViewOnlyDashboard: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    // Subscribe to real-time price updates
+    const unsubscribe = realTimePriceService.subscribe((prices) => {
+      setCryptoPrices(prices);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const formatPrice = (price: number) => {
@@ -136,14 +143,14 @@ const ViewOnlyDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {Object.entries(cryptoPrices).map(([symbol, data]) => (
-                <div key={symbol} className="flex items-center justify-between p-3 border rounded-lg">
+              {Array.from(cryptoPrices.values()).map((data) => (
+                <div key={data.symbol} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <Badge variant="outline">{symbol}</Badge>
+                    <Badge variant="outline">{data.symbol}</Badge>
                     <div>
                       <div className="font-semibold">{formatPrice(data.price)}</div>
                       <div className="text-sm text-muted-foreground">
-                        {formatChange(data.change)}
+                        {formatChange(data.change24h)}
                       </div>
                     </div>
                   </div>

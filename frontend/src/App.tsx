@@ -23,6 +23,8 @@ import ViewOnlyDashboard from "@/pages/ViewOnlyDashboard";
 import ViewOnlyMarketPage from "@/pages/ViewOnlyMarketPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
+import LiveChatWidget from "@/components/LiveChatWidget";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
 
@@ -107,6 +109,8 @@ const App: React.FC = () => {
               <AppContent />
               <Toaster />
               <Sonner />
+              <LiveChatWidget />
+              <WhatsAppButton />
             </LanguageProvider>
           </AuthProvider>
         </ErrorBoundary>
