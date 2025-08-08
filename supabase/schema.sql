@@ -504,6 +504,36 @@ CREATE TRIGGER on_auth_user_admin_setup
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION auto_setup_admin();
 
+-- Add missing columns to existing tables (if they don't exist)
+DO $$
+BEGIN
+    -- Add missing columns to trading_pairs if they don't exist
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trading_pairs') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trading_pairs' AND column_name = 'min_order_size') THEN
+            ALTER TABLE trading_pairs ADD COLUMN min_order_size DECIMAL(20,8) DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trading_pairs' AND column_name = 'max_order_size') THEN
+            ALTER TABLE trading_pairs ADD COLUMN max_order_size DECIMAL(20,8) DEFAULT 999999999;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trading_pairs' AND column_name = 'price_precision') THEN
+            ALTER TABLE trading_pairs ADD COLUMN price_precision INTEGER DEFAULT 8;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trading_pairs' AND column_name = 'quantity_precision') THEN
+            ALTER TABLE trading_pairs ADD COLUMN quantity_precision INTEGER DEFAULT 8;
+        END IF;
+    END IF;
+    
+    -- Add missing columns to staking_pools if they don't exist
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_pools') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'staking_pools' AND column_name = 'max_stake') THEN
+            ALTER TABLE staking_pools ADD COLUMN max_stake DECIMAL(20,8);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'staking_pools' AND column_name = 'total_staked') THEN
+            ALTER TABLE staking_pools ADD COLUMN total_staked DECIMAL(20,8) DEFAULT 0;
+        END IF;
+    END IF;
+END $$;
+
 -- Insert initial data
 INSERT INTO trading_pairs (symbol, base_currency, quote_currency, is_active, min_order_size, max_order_size) VALUES
 ('BTC/USDT', 'BTC', 'USDT', true, 0.001, 100),
