@@ -13,6 +13,16 @@ console.log('🔧 Supabase Configuration Check:', {
   prod: import.meta.env.PROD
 })
 
+// Detailed environment variable debugging
+console.log('🔍 Detailed Environment Debug:', {
+  supabaseUrl: supabaseUrl || 'undefined',
+  supabaseUrlLength: supabaseUrl ? supabaseUrl.length : 0,
+  supabaseAnonKey: supabaseAnonKey ? `Set (${supabaseAnonKey.length} chars)` : 'undefined',
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
+})
+
 // Create a fallback client for when Supabase fails to initialize
 const createFallbackClient = () => {
   console.warn('⚠️ Using fallback Supabase client')
@@ -61,6 +71,8 @@ let supabase: any
 try {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error("❌ Supabase environment variables are missing")
+    console.error("URL:", supabaseUrl || 'undefined')
+    console.error("Key:", supabaseAnonKey ? 'Set' : 'undefined')
     console.error("Please check your Render.com environment variables:")
     console.error("- VITE_SUPABASE_URL")
     console.error("- VITE_SUPABASE_ANON_KEY")
