@@ -270,7 +270,28 @@ class SupabaseAuthService {
       }
 
       if (authData.user) {
-        console.log('✅ Sign up successful');
+        console.log('✅ Sign up successful, creating profile...');
+        
+        // Ensure profile is created immediately
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: authData.user.id,
+            email: authData.user.email,
+            full_name: data.fullName,
+            phone: data.phone,
+            country: data.country,
+            kyc_status: 'unverified',
+            account_balance: 0,
+            is_verified: false
+          });
+
+        if (profileError) {
+          console.error('❌ Profile creation error:', profileError);
+          // Don't fail registration if profile creation fails, as the trigger should handle it
+        }
+
+        console.log('✅ Registration complete');
         return { success: true };
       }
 

@@ -400,6 +400,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!success) {
         throw new Error(error || 'Registration failed');
       }
+      
+      // Immediately load the user data after successful registration
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        // Load profile data immediately
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', authUser.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error loading profile after registration:', profileError);
+        }
+
+        // Set user data immediately
+        const userData: User = {
+          id: authUser.id,
+          email: authUser.email,
+          username: authUser.email.split('@')[0],
+          firstName: profile?.full_name?.split(' ')[0] || firstName,
+          lastName: profile?.full_name?.split(' ').slice(1).join(' ') || lastName,
+          phone: profile?.phone || phone,
+          country: profile?.country || 'United States',
+          bio: '',
+          avatar: profile?.avatar_url || authUser.avatar,
+          walletBalance: profile?.account_balance || 0,
+          kycStatus: profile?.kyc_status || 'unverified',
+          kycLevel1: {
+            status: profile?.is_verified ? 'verified' : 'unverified'
+          },
+          kycLevel2: {
+            status: profile?.kyc_status === 'approved' ? 'approved' : 
+                    profile?.kyc_status === 'rejected' ? 'rejected' : 
+                    profile?.kyc_status === 'pending' ? 'pending' : 'not_started'
+          }
+        };
+
+        setUser(userData);
+        setIsAuthenticated(true);
+      }
+
       toast({
         title: "Registration Successful",
         description: "Welcome to Kryvex Trading! Your account has been created.",
