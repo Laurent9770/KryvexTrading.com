@@ -20,6 +20,16 @@ const AuthPage: React.FC = () => {
             <AuthTabs />
           </div>
         )}
+        {!isConfigured && (
+          <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+              ⚠️ Supabase Not Configured
+            </h3>
+            <p className="text-sm text-yellow-700">
+              Please check your Render.com environment variables and redeploy.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
