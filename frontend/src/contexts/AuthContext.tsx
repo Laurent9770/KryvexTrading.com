@@ -231,13 +231,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             id: authState.user.id,
             email: authState.user.email,
             username: authState.user.email.split('@')[0],
-            firstName: authState.user.fullName?.split(' ')[0] || 'John',
-            lastName: authState.user.fullName?.split(' ').slice(1).join(' ') || 'Trader',
-            phone: authState.user.phone || '+1 (555) 123-4567',
-            country: authState.user.country || 'United States',
-            bio: 'Professional crypto trader with 5+ years of experience.',
+            firstName: authState.user.fullName?.split(' ')[0] || '',
+            lastName: authState.user.fullName?.split(' ').slice(1).join(' ') || '',
+            phone: authState.user.phone || '',
+            country: authState.user.country || '',
+            bio: '',
             avatar: authState.user.avatar,
-            walletBalance: authState.user.accountBalance,
+            walletBalance: authState.user.accountBalance || 0,
             kycStatus: authState.user.kycStatus === 'approved' ? 'verified' : authState.user.kycStatus,
             kycLevel1: {
               status: authState.user.isVerified ? 'verified' : 'unverified'
@@ -251,8 +251,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           setUser(userData);
 
-          // Update trading account with user's balance
-          if (authState.user.accountBalance > 0) {
+          // Update trading account with user's real balance
+          if (authState.user.accountBalance && authState.user.accountBalance > 0) {
             setTradingAccount(prev => ({
               ...prev,
               USDT: {

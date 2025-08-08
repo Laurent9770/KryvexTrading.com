@@ -28,9 +28,48 @@ class RealTimePriceService {
     this.startRealTimeUpdates();
   }
 
-  private initializePrices() {
-    // Initialize with sample data
-    const initialPrices: CryptoPrice[] = [
+  private async initializePrices() {
+    try {
+      // Fetch real market data from CoinGecko API
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true');
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        const symbols = {
+          bitcoin: 'BTC',
+          ethereum: 'ETH',
+          solana: 'SOL',
+          cardano: 'ADA',
+          bnb: 'BNB'
+        };
+
+        Object.entries(data).forEach(([id, priceData]: [string, any]) => {
+          const symbol = symbols[id as keyof typeof symbols];
+          if (symbol && priceData.usd) {
+            this.prices.set(symbol, {
+              symbol,
+              price: priceData.usd,
+              change24h: priceData.usd_24h_change || 0,
+              volume24h: priceData.usd_24h_vol || 0,
+              marketCap: priceData.usd_market_cap || 0,
+              lastUpdated: new Date().toISOString()
+            });
+          }
+        });
+      } else {
+        console.warn('⚠️ Failed to fetch real market data, using fallback');
+        this.initializeFallbackPrices();
+      }
+    } catch (error) {
+      console.error('❌ Error fetching real market data:', error);
+      this.initializeFallbackPrices();
+    }
+  }
+
+  private initializeFallbackPrices() {
+    // Fallback prices (only used if API fails)
+    const fallbackPrices: CryptoPrice[] = [
       {
         symbol: 'BTC',
         price: 43250.50,
@@ -73,16 +112,16 @@ class RealTimePriceService {
       }
     ];
 
-    initialPrices.forEach(price => {
+    fallbackPrices.forEach(price => {
       this.prices.set(price.symbol, price);
     });
   }
 
   private startRealTimeUpdates() {
-    // Update prices every 5 seconds to simulate real-time data
+    // Update prices every 30 seconds with real market data
     this.updateInterval = setInterval(() => {
       this.updatePrices();
-    }, 5000);
+    }, 30000);
 
     // Also try to connect to Supabase real-time for actual live data
     this.connectToSupabaseRealtime();
@@ -134,25 +173,41 @@ class RealTimePriceService {
     }
   }
 
-  private updatePrices() {
-    // Simulate price movements
-    this.prices.forEach((price, symbol) => {
-      const volatility = 0.02; // 2% max change
-      const randomChange = (Math.random() - 0.5) * volatility;
-      const newPrice = price.price * (1 + randomChange);
-      const newChange24h = price.change24h + (Math.random() - 0.5) * 0.5;
+  private async updatePrices() {
+    try {
+      // Fetch updated real market data
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true');
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        const symbols = {
+          bitcoin: 'BTC',
+          ethereum: 'ETH',
+          solana: 'SOL',
+          cardano: 'ADA',
+          bnb: 'BNB'
+        };
 
-      const updatedPrice: CryptoPrice = {
-        ...price,
-        price: newPrice,
-        change24h: newChange24h,
-        lastUpdated: new Date().toISOString()
-      };
+        Object.entries(data).forEach(([id, priceData]: [string, any]) => {
+          const symbol = symbols[id as keyof typeof symbols];
+          if (symbol && priceData.usd) {
+            this.prices.set(symbol, {
+              symbol,
+              price: priceData.usd,
+              change24h: priceData.usd_24h_change || 0,
+              volume24h: priceData.usd_24h_vol || 0,
+              marketCap: priceData.usd_market_cap || 0,
+              lastUpdated: new Date().toISOString()
+            });
+          }
+        });
 
-      this.prices.set(symbol, updatedPrice);
-    });
-
-    this.notifySubscribers();
+        this.notifySubscribers();
+      }
+    } catch (error) {
+      console.error('❌ Error updating real market data:', error);
+    }
   }
 
   private notifySubscribers() {
