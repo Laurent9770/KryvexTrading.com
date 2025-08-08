@@ -13,19 +13,6 @@ console.log('🔧 Supabase Configuration Check:', {
   prod: import.meta.env.PROD
 })
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables:', {
-    url: supabaseUrl ? 'set' : 'missing',
-    key: supabaseAnonKey ? 'set' : 'missing'
-  })
-  
-  // In production, we should throw an error
-  if (import.meta.env.PROD) {
-    console.error('❌ Production environment missing Supabase credentials')
-  }
-}
-
 // Create Supabase client with proper configuration
 let supabase: any
 
@@ -47,6 +34,7 @@ try {
     
     console.log('✅ Supabase client created successfully')
   } else {
+    console.error('❌ Missing Supabase credentials')
     throw new Error('Missing Supabase credentials')
   }
 } catch (error) {
@@ -97,8 +85,8 @@ try {
   }
 }
 
-// Test the client by making a simple query
-const testConnection = async () => {
+// Helper function to test connection (call this when needed)
+export const testConnection = async () => {
   try {
     const { data, error } = await supabase.from('users').select('count').limit(1)
     if (error) {
@@ -112,9 +100,6 @@ const testConnection = async () => {
     return false
   }
 }
-
-// Test connection on initialization
-testConnection()
 
 // Helper function to get user role
 export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => {

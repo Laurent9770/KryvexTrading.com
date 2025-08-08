@@ -9,19 +9,20 @@ const AuthPage: React.FC = () => {
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const isConfigured = supabaseUrl && supabaseAnonKey;
 
-  // If Supabase is not configured, show the environment checker
-  if (!isConfigured) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="space-y-4">
-          <EnvTest />
-          <EnvChecker />
-        </div>
+  // Always show environment test components first for debugging
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="space-y-4">
+        <EnvTest />
+        <EnvChecker />
+        {isConfigured && (
+          <div className="mt-8">
+            <AuthTabs />
+          </div>
+        )}
       </div>
-    );
-  }
-
-  return <AuthTabs />;
+    </div>
+  );
 };
 
 export default AuthPage;

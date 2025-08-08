@@ -146,85 +146,101 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔐 Initializing AuthContext...');
       
+      // Check if Supabase client is available
+      if (!supabase || !supabase.auth) {
+        console.error('❌ Supabase client not available');
+        setIsLoading(false);
+        return;
+      }
+      
       // Subscribe to auth state changes
-      const unsubscribe = supabaseAuthService.subscribe((authState: AuthState) => {
-        console.log('🔍 AuthContext received auth state:', authState);
-        
-        if (authState.user) {
-          // Convert AuthUser to User interface
-          const userData: User = {
-            id: authState.user.id,
-            email: authState.user.email,
-            username: authState.user.email.split('@')[0],
-            firstName: authState.user.fullName?.split(' ')[0] || '',
-            lastName: authState.user.fullName?.split(' ').slice(1).join(' ') || '',
-            phone: authState.user.phone || '',
-            country: authState.user.country || '',
-            bio: '',
-            avatar: authState.user.avatar,
-            walletBalance: authState.user.accountBalance,
-            kycStatus: authState.user.kycStatus === 'approved' ? 'verified' : authState.user.kycStatus,
-            kycLevel1: {
-              status: authState.user.isVerified ? 'verified' : 'unverified'
-            },
-            kycLevel2: {
-              status: authState.user.kycStatus === 'approved' ? 'approved' : 
-                      authState.user.kycStatus === 'rejected' ? 'rejected' : 
-                      authState.user.kycStatus === 'pending' ? 'pending' : 'not_started'
-            }
-          };
-
-          console.log('✅ User data processed:', userData);
-          setUser(userData);
-          setIsAuthenticated(true);
-          setIsAdmin(authState.isAdmin);
-          setIsLoading(false);
-
-          // Update trading account with user's balance
-          if (authState.user.accountBalance > 0) {
-            setTradingAccount(prev => ({
-              ...prev,
-              USDT: {
-                balance: authState.user.accountBalance.toFixed(8),
-                usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
-                available: authState.user.accountBalance.toFixed(8)
+      let unsubscribe: (() => void) | null = null;
+      
+      try {
+        unsubscribe = supabaseAuthService.subscribe((authState: AuthState) => {
+          console.log('🔍 AuthContext received auth state:', authState);
+          
+          if (authState.user) {
+            // Convert AuthUser to User interface
+            const userData: User = {
+              id: authState.user.id,
+              email: authState.user.email,
+              username: authState.user.email.split('@')[0],
+              firstName: authState.user.fullName?.split(' ')[0] || '',
+              lastName: authState.user.fullName?.split(' ').slice(1).join(' ') || '',
+              phone: authState.user.phone || '',
+              country: authState.user.country || '',
+              bio: '',
+              avatar: authState.user.avatar,
+              walletBalance: authState.user.accountBalance,
+              kycStatus: authState.user.kycStatus === 'approved' ? 'verified' : authState.user.kycStatus,
+              kycLevel1: {
+                status: authState.user.isVerified ? 'verified' : 'unverified'
+              },
+              kycLevel2: {
+                status: authState.user.kycStatus === 'approved' ? 'approved' : 
+                        authState.user.kycStatus === 'rejected' ? 'rejected' : 
+                        authState.user.kycStatus === 'pending' ? 'pending' : 'not_started'
               }
-            }));
+            };
+
+            console.log('✅ User data processed:', userData);
+            setUser(userData);
+            setIsAuthenticated(true);
+            setIsAdmin(authState.isAdmin);
+            setIsLoading(false);
+
+            // Update trading account with user's balance
+            if (authState.user.accountBalance > 0) {
+              setTradingAccount(prev => ({
+                ...prev,
+                USDT: {
+                  balance: authState.user.accountBalance.toFixed(8),
+                  usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
+                  available: authState.user.accountBalance.toFixed(8)
+                }
+              }));
+            }
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setIsLoading(false);
+            
+            // Reset trading account
+            setTradingAccount({
+              USDT: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+              BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+              ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
+            });
+            
+            setFundingAccount({
+              USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
+            });
+            
+            setActivityFeed([]);
+            setTradingHistory([]);
+            setPortfolioStats({
+              totalBalance: '$0.00',
+              totalPnl: '$0.00',
+              pnlPercentage: '0.0%',
+              totalTrades: 0,
+              winRate: '0.0%',
+              activePositions: 0
+            });
+            setRealTimePrices({});
           }
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-          setIsLoading(false);
-          
-          // Reset trading account
-          setTradingAccount({
-            USDT: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
-            BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
-            ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
-          });
-          
-          setFundingAccount({
-            USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
-          });
-          
-          setActivityFeed([]);
-          setTradingHistory([]);
-          setPortfolioStats({
-            totalBalance: '$0.00',
-            totalPnl: '$0.00',
-            pnlPercentage: '0.0%',
-            totalTrades: 0,
-            winRate: '0.0%',
-            activePositions: 0
-          });
-          setRealTimePrices({});
-        }
-      });
+        });
+      } catch (error) {
+        console.error('❌ Error subscribing to auth service:', error);
+        setIsLoading(false);
+      }
 
       return () => {
         try {
-          unsubscribe();
+          if (unsubscribe) {
+            unsubscribe();
+          }
         } catch (error) {
           console.warn('Error unsubscribing from auth:', error);
         }
