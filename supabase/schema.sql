@@ -21,12 +21,26 @@ CREATE TYPE trade_status AS ENUM ('open', 'closed', 'cancelled');
 CREATE TYPE transaction_type AS ENUM ('deposit', 'withdrawal', 'trade', 'fee', 'bonus');
 CREATE TYPE notification_type AS ENUM ('info', 'success', 'warning', 'error');
 
--- Drop existing triggers first
-DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
-DROP TRIGGER IF EXISTS update_wallet_balances_updated_at ON wallet_balances;
-DROP TRIGGER IF EXISTS update_deposits_updated_at ON deposits;
-DROP TRIGGER IF EXISTS update_withdrawals_updated_at ON withdrawals;
-DROP TRIGGER IF EXISTS update_support_tickets_updated_at ON support_tickets;
+-- Drop existing triggers first (only if tables exist)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+        DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_balances') THEN
+        DROP TRIGGER IF EXISTS update_wallet_balances_updated_at ON wallet_balances;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deposits') THEN
+        DROP TRIGGER IF EXISTS update_deposits_updated_at ON deposits;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawals') THEN
+        DROP TRIGGER IF EXISTS update_withdrawals_updated_at ON withdrawals;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_tickets') THEN
+        DROP TRIGGER IF EXISTS update_support_tickets_updated_at ON support_tickets;
+    END IF;
+END $$;
+
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP TRIGGER IF EXISTS on_auth_user_admin_setup ON auth.users;
 
@@ -347,21 +361,34 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create trigger for updating updated_at
-CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_wallet_balances_updated_at BEFORE UPDATE ON wallet_balances
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_deposits_updated_at BEFORE UPDATE ON deposits
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_withdrawals_updated_at BEFORE UPDATE ON withdrawals
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON support_tickets
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create trigger for updating updated_at (only if table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+        CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_balances') THEN
+        CREATE TRIGGER update_wallet_balances_updated_at BEFORE UPDATE ON wallet_balances
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deposits') THEN
+        CREATE TRIGGER update_deposits_updated_at BEFORE UPDATE ON deposits
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawals') THEN
+        CREATE TRIGGER update_withdrawals_updated_at BEFORE UPDATE ON withdrawals
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_tickets') THEN
+        CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON support_tickets
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Function to handle new user registration
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -427,8 +454,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION log_admin_action(
     p_admin_id UUID,
     p_action_type TEXT,
-    p_target_user_id UUID DEFAULT NULL,
     p_description TEXT,
+    p_target_user_id UUID DEFAULT NULL,
     p_metadata JSONB DEFAULT NULL
 )
 RETURNS UUID AS $$
@@ -455,7 +482,7 @@ BEGIN
     ON CONFLICT (user_id, role) DO NOTHING;
     
     -- Log admin setup
-    PERFORM log_admin_action(p_user_id, 'admin_setup', p_user_id, 'User promoted to admin');
+    PERFORM log_admin_action(p_user_id, 'admin_setup', 'User promoted to admin', p_user_id);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -494,177 +521,354 @@ ON CONFLICT DO NOTHING;
 
 -- Row Level Security (RLS) Policies
 
--- Drop existing policies first
-DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
-DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
-DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
-DROP POLICY IF EXISTS "Users can view own roles" ON user_roles;
-DROP POLICY IF EXISTS "Admins can view all roles" ON user_roles;
-DROP POLICY IF EXISTS "Users can view own KYC submissions" ON kyc_submissions;
-DROP POLICY IF EXISTS "Users can create own KYC submissions" ON kyc_submissions;
-DROP POLICY IF EXISTS "Admins can view all KYC submissions" ON kyc_submissions;
-DROP POLICY IF EXISTS "Users can view own KYC documents" ON kyc_documents;
-DROP POLICY IF EXISTS "Users can upload own KYC documents" ON kyc_documents;
-DROP POLICY IF EXISTS "Admins can view all KYC documents" ON kyc_documents;
-DROP POLICY IF EXISTS "Anyone can view trading pairs" ON trading_pairs;
-DROP POLICY IF EXISTS "Users can view own trades" ON trades;
-DROP POLICY IF EXISTS "Users can create own trades" ON trades;
-DROP POLICY IF EXISTS "Users can update own trades" ON trades;
-DROP POLICY IF EXISTS "Admins can view all trades" ON trades;
-DROP POLICY IF EXISTS "Users can view own wallet balances" ON wallet_balances;
-DROP POLICY IF EXISTS "Users can update own wallet balances" ON wallet_balances;
-DROP POLICY IF EXISTS "Admins can view all wallet balances" ON wallet_balances;
-DROP POLICY IF EXISTS "Users can view own deposits" ON deposits;
-DROP POLICY IF EXISTS "Users can create own deposits" ON deposits;
-DROP POLICY IF EXISTS "Admins can view all deposits" ON deposits;
-DROP POLICY IF EXISTS "Users can view own withdrawals" ON withdrawals;
-DROP POLICY IF EXISTS "Users can create own withdrawals" ON withdrawals;
-DROP POLICY IF EXISTS "Admins can view all withdrawals" ON withdrawals;
-DROP POLICY IF EXISTS "Anyone can view staking pools" ON staking_pools;
-DROP POLICY IF EXISTS "Users can view own staking positions" ON staking_positions;
-DROP POLICY IF EXISTS "Users can create own staking positions" ON staking_positions;
-DROP POLICY IF EXISTS "Admins can view all staking positions" ON staking_positions;
-DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can update own notification read status" ON notifications;
-DROP POLICY IF EXISTS "Admins can manage notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can view own support tickets" ON support_tickets;
-DROP POLICY IF EXISTS "Users can create own support tickets" ON support_tickets;
-DROP POLICY IF EXISTS "Users can update own support tickets" ON support_tickets;
-DROP POLICY IF EXISTS "Admins can view all support tickets" ON support_tickets;
-DROP POLICY IF EXISTS "Users can view messages in own tickets" ON support_messages;
-DROP POLICY IF EXISTS "Users can create messages in own tickets" ON support_messages;
-DROP POLICY IF EXISTS "Admins can view all support messages" ON support_messages;
-DROP POLICY IF EXISTS "Users can view own activities" ON user_activities;
-DROP POLICY IF EXISTS "Admins can view all user activities" ON user_activities;
-DROP POLICY IF EXISTS "Admins can view admin actions" ON admin_actions;
-DROP POLICY IF EXISTS "Admins can create admin actions" ON admin_actions;
-DROP POLICY IF EXISTS "Admins can view admin notifications" ON admin_notifications;
-DROP POLICY IF EXISTS "Admins can update admin notifications" ON admin_notifications;
-DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
-DROP POLICY IF EXISTS "Admins can view all transactions" ON transactions;
-DROP POLICY IF EXISTS "Users can view own sessions" ON user_sessions;
-DROP POLICY IF EXISTS "Users can manage own sessions" ON user_sessions;
-DROP POLICY IF EXISTS "Users can view own wallet adjustments" ON wallet_adjustments;
-DROP POLICY IF EXISTS "Admins can create wallet adjustments" ON wallet_adjustments;
-DROP POLICY IF EXISTS "Anyone can view price history" ON price_history;
+-- Drop existing policies first (only if tables exist)
+DO $$
+BEGIN
+    -- Profiles policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+        DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+        DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+        DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
+    END IF;
+    
+    -- User roles policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
+        DROP POLICY IF EXISTS "Users can view own roles" ON user_roles;
+        DROP POLICY IF EXISTS "Admins can view all roles" ON user_roles;
+    END IF;
+    
+    -- KYC submissions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_submissions') THEN
+        DROP POLICY IF EXISTS "Users can view own KYC submissions" ON kyc_submissions;
+        DROP POLICY IF EXISTS "Users can create own KYC submissions" ON kyc_submissions;
+        DROP POLICY IF EXISTS "Admins can view all KYC submissions" ON kyc_submissions;
+    END IF;
+    
+    -- KYC documents policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_documents') THEN
+        DROP POLICY IF EXISTS "Users can view own KYC documents" ON kyc_documents;
+        DROP POLICY IF EXISTS "Users can upload own KYC documents" ON kyc_documents;
+        DROP POLICY IF EXISTS "Admins can view all KYC documents" ON kyc_documents;
+    END IF;
+    
+    -- Trading pairs policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trading_pairs') THEN
+        DROP POLICY IF EXISTS "Anyone can view trading pairs" ON trading_pairs;
+    END IF;
+    
+    -- Trades policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trades') THEN
+        DROP POLICY IF EXISTS "Users can view own trades" ON trades;
+        DROP POLICY IF EXISTS "Users can create own trades" ON trades;
+        DROP POLICY IF EXISTS "Users can update own trades" ON trades;
+        DROP POLICY IF EXISTS "Admins can view all trades" ON trades;
+    END IF;
+    
+    -- Wallet balances policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_balances') THEN
+        DROP POLICY IF EXISTS "Users can view own wallet balances" ON wallet_balances;
+        DROP POLICY IF EXISTS "Users can update own wallet balances" ON wallet_balances;
+        DROP POLICY IF EXISTS "Admins can view all wallet balances" ON wallet_balances;
+    END IF;
+    
+    -- Deposits policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deposits') THEN
+        DROP POLICY IF EXISTS "Users can view own deposits" ON deposits;
+        DROP POLICY IF EXISTS "Users can create own deposits" ON deposits;
+        DROP POLICY IF EXISTS "Admins can view all deposits" ON deposits;
+    END IF;
+    
+    -- Withdrawals policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawals') THEN
+        DROP POLICY IF EXISTS "Users can view own withdrawals" ON withdrawals;
+        DROP POLICY IF EXISTS "Users can create own withdrawals" ON withdrawals;
+        DROP POLICY IF EXISTS "Admins can view all withdrawals" ON withdrawals;
+    END IF;
+    
+    -- Staking pools policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_pools') THEN
+        DROP POLICY IF EXISTS "Anyone can view staking pools" ON staking_pools;
+    END IF;
+    
+    -- Staking positions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_positions') THEN
+        DROP POLICY IF EXISTS "Users can view own staking positions" ON staking_positions;
+        DROP POLICY IF EXISTS "Users can create own staking positions" ON staking_positions;
+        DROP POLICY IF EXISTS "Admins can view all staking positions" ON staking_positions;
+    END IF;
+    
+    -- Notifications policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications') THEN
+        DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+        DROP POLICY IF EXISTS "Users can update own notification read status" ON notifications;
+        DROP POLICY IF EXISTS "Admins can manage notifications" ON notifications;
+    END IF;
+    
+    -- Support tickets policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_tickets') THEN
+        DROP POLICY IF EXISTS "Users can view own support tickets" ON support_tickets;
+        DROP POLICY IF EXISTS "Users can create own support tickets" ON support_tickets;
+        DROP POLICY IF EXISTS "Users can update own support tickets" ON support_tickets;
+        DROP POLICY IF EXISTS "Admins can view all support tickets" ON support_tickets;
+    END IF;
+    
+    -- Support messages policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_messages') THEN
+        DROP POLICY IF EXISTS "Users can view messages in own tickets" ON support_messages;
+        DROP POLICY IF EXISTS "Users can create messages in own tickets" ON support_messages;
+        DROP POLICY IF EXISTS "Admins can view all support messages" ON support_messages;
+    END IF;
+    
+    -- User activities policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_activities') THEN
+        DROP POLICY IF EXISTS "Users can view own activities" ON user_activities;
+        DROP POLICY IF EXISTS "Admins can view all user activities" ON user_activities;
+    END IF;
+    
+    -- Admin actions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_actions') THEN
+        DROP POLICY IF EXISTS "Admins can view admin actions" ON admin_actions;
+        DROP POLICY IF EXISTS "Admins can create admin actions" ON admin_actions;
+    END IF;
+    
+    -- Admin notifications policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_notifications') THEN
+        DROP POLICY IF EXISTS "Admins can view admin notifications" ON admin_notifications;
+        DROP POLICY IF EXISTS "Admins can update admin notifications" ON admin_notifications;
+    END IF;
+    
+    -- Transactions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
+        DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
+        DROP POLICY IF EXISTS "Admins can view all transactions" ON transactions;
+    END IF;
+    
+    -- User sessions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_sessions') THEN
+        DROP POLICY IF EXISTS "Users can view own sessions" ON user_sessions;
+        DROP POLICY IF EXISTS "Users can manage own sessions" ON user_sessions;
+    END IF;
+    
+    -- Wallet adjustments policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_adjustments') THEN
+        DROP POLICY IF EXISTS "Users can view own wallet adjustments" ON wallet_adjustments;
+        DROP POLICY IF EXISTS "Admins can create wallet adjustments" ON wallet_adjustments;
+    END IF;
+    
+    -- Price history policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'price_history') THEN
+        DROP POLICY IF EXISTS "Anyone can view price history" ON price_history;
+    END IF;
+END $$;
 
--- Profiles policies
-CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+-- Create policies (only if tables exist)
+DO $$
+BEGIN
+    -- Profiles policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+        CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- User roles policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
+        CREATE POLICY "Users can view own roles" ON user_roles FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all roles" ON user_roles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- KYC submissions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_submissions') THEN
+        CREATE POLICY "Users can view own KYC submissions" ON kyc_submissions FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can create own KYC submissions" ON kyc_submissions FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- KYC documents policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_documents') THEN
+        CREATE POLICY "Users can view own KYC documents" ON kyc_documents FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can upload own KYC documents" ON kyc_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all KYC documents" ON kyc_documents FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Trading pairs policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trading_pairs') THEN
+        CREATE POLICY "Anyone can view trading pairs" ON trading_pairs FOR SELECT USING (true);
+    END IF;
+    
+    -- Trades policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trades') THEN
+        CREATE POLICY "Users can view own trades" ON trades FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can create own trades" ON trades FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Users can update own trades" ON trades FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all trades" ON trades FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Wallet balances policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_balances') THEN
+        CREATE POLICY "Users can view own wallet balances" ON wallet_balances FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can update own wallet balances" ON wallet_balances FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all wallet balances" ON wallet_balances FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Deposits policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deposits') THEN
+        CREATE POLICY "Users can view own deposits" ON deposits FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can create own deposits" ON deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all deposits" ON deposits FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Withdrawals policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawals') THEN
+        CREATE POLICY "Users can view own withdrawals" ON withdrawals FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can create own withdrawals" ON withdrawals FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all withdrawals" ON withdrawals FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Staking pools policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_pools') THEN
+        CREATE POLICY "Anyone can view staking pools" ON staking_pools FOR SELECT USING (true);
+    END IF;
+    
+    -- Staking positions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_positions') THEN
+        CREATE POLICY "Users can view own staking positions" ON staking_positions FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can create own staking positions" ON staking_positions FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all staking positions" ON staking_positions FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Notifications policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications') THEN
+        CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can update own notification read status" ON notifications FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can manage notifications" ON notifications FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Support tickets policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_tickets') THEN
+        CREATE POLICY "Users can view own support tickets" ON support_tickets FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can create own support tickets" ON support_tickets FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Users can update own support tickets" ON support_tickets FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all support tickets" ON support_tickets FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Support messages policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_messages') THEN
+        CREATE POLICY "Users can view messages in own tickets" ON support_messages FOR SELECT USING (
+            EXISTS (SELECT 1 FROM support_tickets WHERE id = support_messages.ticket_id AND user_id = auth.uid())
+        );
+        CREATE POLICY "Users can create messages in own tickets" ON support_messages FOR INSERT WITH CHECK (
+            EXISTS (SELECT 1 FROM support_tickets WHERE id = support_messages.ticket_id AND user_id = auth.uid())
+        );
+        CREATE POLICY "Admins can view all support messages" ON support_messages FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- User activities policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_activities') THEN
+        CREATE POLICY "Users can view own activities" ON user_activities FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all user activities" ON user_activities FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Admin actions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_actions') THEN
+        CREATE POLICY "Admins can view admin actions" ON admin_actions FOR SELECT USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can create admin actions" ON admin_actions FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Admin notifications policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_notifications') THEN
+        CREATE POLICY "Admins can view admin notifications" ON admin_notifications FOR SELECT USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can update admin notifications" ON admin_notifications FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Transactions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
+        CREATE POLICY "Users can view own transactions" ON transactions FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all transactions" ON transactions FOR ALL USING (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- User sessions policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_sessions') THEN
+        CREATE POLICY "Users can view own sessions" ON user_sessions FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can manage own sessions" ON user_sessions FOR ALL USING (auth.uid() = user_id);
+    END IF;
+    
+    -- Wallet adjustments policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_adjustments') THEN
+        CREATE POLICY "Users can view own wallet adjustments" ON wallet_adjustments FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can create wallet adjustments" ON wallet_adjustments FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+    END IF;
+    
+    -- Price history policies
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'price_history') THEN
+        CREATE POLICY "Anyone can view price history" ON price_history FOR SELECT USING (true);
+    END IF;
+END $$;
 
--- User roles policies
-CREATE POLICY "Users can view own roles" ON user_roles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all roles" ON user_roles FOR SELECT USING (has_role(auth.uid(), 'admin'));
-
--- KYC submissions policies
-CREATE POLICY "Users can view own KYC submissions" ON kyc_submissions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own KYC submissions" ON kyc_submissions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- KYC documents policies
-CREATE POLICY "Users can view own KYC documents" ON kyc_documents FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can upload own KYC documents" ON kyc_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all KYC documents" ON kyc_documents FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Trading pairs policies
-CREATE POLICY "Anyone can view trading pairs" ON trading_pairs FOR SELECT USING (true);
-
--- Trades policies
-CREATE POLICY "Users can view own trades" ON trades FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own trades" ON trades FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own trades" ON trades FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all trades" ON trades FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Wallet balances policies
-CREATE POLICY "Users can view own wallet balances" ON wallet_balances FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own wallet balances" ON wallet_balances FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all wallet balances" ON wallet_balances FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Deposits policies
-CREATE POLICY "Users can view own deposits" ON deposits FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own deposits" ON deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all deposits" ON deposits FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Withdrawals policies
-CREATE POLICY "Users can view own withdrawals" ON withdrawals FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own withdrawals" ON withdrawals FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all withdrawals" ON withdrawals FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Staking pools policies
-CREATE POLICY "Anyone can view staking pools" ON staking_pools FOR SELECT USING (true);
-
--- Staking positions policies
-CREATE POLICY "Users can view own staking positions" ON staking_positions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own staking positions" ON staking_positions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all staking positions" ON staking_positions FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Notifications policies
-CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own notification read status" ON notifications FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can manage notifications" ON notifications FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Support tickets policies
-CREATE POLICY "Users can view own support tickets" ON support_tickets FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own support tickets" ON support_tickets FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own support tickets" ON support_tickets FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all support tickets" ON support_tickets FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Support messages policies
-CREATE POLICY "Users can view messages in own tickets" ON support_messages FOR SELECT USING (
-    EXISTS (SELECT 1 FROM support_tickets WHERE id = support_messages.ticket_id AND user_id = auth.uid())
-);
-CREATE POLICY "Users can create messages in own tickets" ON support_messages FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM support_tickets WHERE id = support_messages.ticket_id AND user_id = auth.uid())
-);
-CREATE POLICY "Admins can view all support messages" ON support_messages FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- User activities policies
-CREATE POLICY "Users can view own activities" ON user_activities FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all user activities" ON user_activities FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- Admin actions policies
-CREATE POLICY "Admins can view admin actions" ON admin_actions FOR SELECT USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can create admin actions" ON admin_actions FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-
--- Admin notifications policies
-CREATE POLICY "Admins can view admin notifications" ON admin_notifications FOR SELECT USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can update admin notifications" ON admin_notifications FOR UPDATE USING (has_role(auth.uid(), 'admin'));
-
--- Transactions policies
-CREATE POLICY "Users can view own transactions" ON transactions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all transactions" ON transactions FOR ALL USING (has_role(auth.uid(), 'admin'));
-
--- User sessions policies
-CREATE POLICY "Users can view own sessions" ON user_sessions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage own sessions" ON user_sessions FOR ALL USING (auth.uid() = user_id);
-
--- Wallet adjustments policies
-CREATE POLICY "Users can view own wallet adjustments" ON wallet_adjustments FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can create wallet adjustments" ON wallet_adjustments FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-
--- Price history policies
-CREATE POLICY "Anyone can view price history" ON price_history FOR SELECT USING (true);
-
--- Enable RLS on all tables
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kyc_submissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kyc_documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE trading_pairs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wallet_balances ENABLE ROW LEVEL SECURITY;
-ALTER TABLE deposits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE withdrawals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staking_pools ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staking_positions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_activities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wallet_adjustments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on all tables (only if they exist)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+        ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
+        ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_submissions') THEN
+        ALTER TABLE kyc_submissions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_documents') THEN
+        ALTER TABLE kyc_documents ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trading_pairs') THEN
+        ALTER TABLE trading_pairs ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trades') THEN
+        ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_balances') THEN
+        ALTER TABLE wallet_balances ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deposits') THEN
+        ALTER TABLE deposits ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawals') THEN
+        ALTER TABLE withdrawals ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_pools') THEN
+        ALTER TABLE staking_pools ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_positions') THEN
+        ALTER TABLE staking_positions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications') THEN
+        ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_tickets') THEN
+        ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'support_messages') THEN
+        ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_activities') THEN
+        ALTER TABLE user_activities ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_actions') THEN
+        ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_notifications') THEN
+        ALTER TABLE admin_notifications ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
+        ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_sessions') THEN
+        ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_adjustments') THEN
+        ALTER TABLE wallet_adjustments ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'price_history') THEN
+        ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
+    END IF;
+END $$;
