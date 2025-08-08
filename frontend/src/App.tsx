@@ -28,16 +28,26 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
 
-// Simple ProtectedRoute component - Updated for deployment
+// Simple ProtectedRoute component with error handling
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  return user ? <>{children}</> : <Navigate to="/auth" />;
+  try {
+    const { user } = useAuth();
+    return user ? <>{children}</> : <Navigate to="/auth" />;
+  } catch (error) {
+    console.error('ProtectedRoute error:', error);
+    return <Navigate to="/auth" />;
+  }
 };
 
-// View-only route component for non-authenticated users
+// View-only route component with error handling
 const ViewOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  return <>{children}</>;
+  try {
+    const { user } = useAuth();
+    return <>{children}</>;
+  } catch (error) {
+    console.error('ViewOnlyRoute error:', error);
+    return <>{children}</>;
+  }
 };
 
 const AppContent: React.FC = () => {

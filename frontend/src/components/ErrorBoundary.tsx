@@ -3,11 +3,12 @@ import React from 'react';
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
+  errorInfo?: React.ErrorInfo;
 }
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
-  fallback?: React.ComponentType<{ error?: Error }>;
+  fallback?: React.ComponentType<{ error?: Error; errorInfo?: React.ErrorInfo }>;
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -17,18 +18,31 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // Log the error for debugging
+    console.error('🚨 React Error caught by boundary:', error);
+    console.error('🔍 Error stack:', error.stack);
+    
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error('🚨 Error caught by boundary:', error);
+    console.error('🔍 Error info:', errorInfo);
+    console.error('📍 Component stack:', errorInfo.componentStack);
+    
+    // Update state with error info
+    this.setState({ error, errorInfo });
+    
+    // Log additional debugging information
+    console.log('🔧 Current React version:', React.version);
+    console.log('🔧 Error boundary state:', this.state);
   }
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error} />;
+        return <FallbackComponent error={this.state.error} errorInfo={this.state.errorInfo} />;
       }
 
       return (
@@ -46,15 +60,29 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 </summary>
                 <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
                   {this.state.error.message}
+                  {this.state.errorInfo && (
+                    <>
+                      {'\n\nComponent Stack:'}
+                      {this.state.errorInfo.componentStack}
+                    </>
+                  )}
                 </pre>
               </details>
             )}
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
-            >
-              Refresh Page
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Refresh Page
+              </button>
+              <button
+                onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}
+                className="flex-1 bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       );
