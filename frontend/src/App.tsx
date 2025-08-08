@@ -118,11 +118,16 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // If not authenticated, show landing page
+  // If not authenticated, show landing page or auth page based on route
   if (!isAuthenticated) {
     return (
       <>
-        <LandingPage />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/trading" element={<ViewOnlyTradingPage />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
         <LiveChatWidget />
         <WhatsAppButton />
       </>
