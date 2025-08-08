@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
+import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
 import TradingPage from "@/pages/TradingPage";
 import ViewOnlyTradingPage from "@/pages/ViewOnlyTradingPage";
@@ -31,11 +32,11 @@ import { logEnvironmentStatus } from "@/integrations/supabase/client";
 // Simple ProtectedRoute component with error handling
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   try {
-    const { user } = useAuth();
-    return user ? <>{children}</> : <Navigate to="/auth" />;
+    const { user, isAuthenticated } = useAuth();
+    return isAuthenticated && user ? <>{children}</> : <Navigate to="/" />;
   } catch (error) {
     console.error('ProtectedRoute error:', error);
-    return <Navigate to="/auth" />;
+    return <Navigate to="/" />;
   }
 };
 
@@ -101,77 +102,83 @@ const WithdrawRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 };
 
+// Main app content with proper routing
 const AppContent: React.FC = () => {
-  useEffect(() => {
-    console.log('🚀 Kryvex Trading App Starting...')
-    try {
-      logEnvironmentStatus()
-    } catch (error) {
-      console.warn('Failed to log environment status:', error)
-    }
-  }, [])
+  const { isAuthenticated, isLoading } = useAuth();
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading Kryvex Trading Platform...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show landing page
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LandingPage />
+        <LiveChatWidget />
+        <WhatsAppButton />
+      </>
+    );
+  }
+
+  // If authenticated, show the main app with sidebar
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            {/* Public Routes */}
-            <Route path="/auth" element={<Auth />} />
-
-            {/* View-Only Routes (for non-authenticated users) */}
-            <Route path="/" element={<ViewOnlyRoute><ViewOnlyDashboard /></ViewOnlyRoute>} />
-            <Route path="/market" element={<ViewOnlyRoute><ViewOnlyMarketPage /></ViewOnlyRoute>} />
-
-            {/* Trading Route (view-only for non-authenticated, full for authenticated) */}
-            <Route path="/trading" element={<TradingRoute><TradingPage /></TradingRoute>} />
-
-            {/* Protected Routes (require authentication) */}
+            <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/trading" element={<TradingRoute><TradingPage /></TradingRoute>} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
+            <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
+            <Route path="/withdraw" element={<WithdrawRoute><WithdrawPage /></WithdrawRoute>} />
+            <Route path="/withdrawal-request" element={<WithdrawRoute><WithdrawalRequestPage /></WithdrawRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
             <Route path="/trading-history" element={<ProtectedRoute><TradingHistoryPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
-            <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
-            
-            {/* Withdraw Routes (require KYC verification) */}
-            <Route path="/withdraw" element={<WithdrawRoute><WithdrawPage /></WithdrawRoute>} />
-            <Route path="/withdrawal-request" element={<WithdrawRoute><WithdrawalRequestPage /></WithdrawRoute>} />
-            
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
-
-            {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-            <Route path="/admin/trading-control/:userId" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-
-            {/* Redirect to dashboard for unknown routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </main>
-        <MobileNav />
       </div>
+      <MobileNav />
+      <LiveChatWidget />
+      <WhatsAppButton />
     </div>
   );
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    logEnvironmentStatus();
+  }, []);
+
   return (
-    <BrowserRouter>
-      <TooltipProvider>
-        <ErrorBoundary>
-          <AuthProvider>
-            <LanguageProvider>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <LanguageProvider>
+            <TooltipProvider>
               <AppContent />
               <Toaster />
               <Sonner />
-              <LiveChatWidget />
-              <WhatsAppButton />
-            </LanguageProvider>
-          </AuthProvider>
-        </ErrorBoundary>
-      </TooltipProvider>
-    </BrowserRouter>
+            </TooltipProvider>
+          </LanguageProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

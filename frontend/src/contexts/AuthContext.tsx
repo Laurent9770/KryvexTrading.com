@@ -318,9 +318,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setActivityFeed(activities);
 
       // Load trading history
-      const { success, trades } = await supabaseTradingService.getTrades(userId);
-      if (success && trades) {
-        setTradingHistory(trades);
+      const { success, data } = await supabaseTradingService.getTrades(userId);
+      if (success && data) {
+        setTradingHistory(data);
       }
 
       // Update portfolio stats
@@ -379,15 +379,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [toast]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     try {
-      supabaseAuthService.signOut();
+      // Clear all user data first
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      
+      // Clear all trading data
+      setTradingAccount({
+        USDT: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+        BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+        ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
+      });
+      setFundingAccount({
+        USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
+      });
+      setActivityFeed([]);
+      setTradingHistory([]);
+      setPortfolioStats({
+        totalBalance: '$0.00',
+        totalPnl: '$0.00',
+        pnlPercentage: '0.0%',
+        totalTrades: 0,
+        winRate: '0.0%',
+        activePositions: 0
+      });
+      setRealTimePrices({});
+
+      // Sign out from Supabase
+      await supabaseAuthService.signOut();
+      
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
       });
     } catch (error) {
       console.error('Logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "There was an error during logout. Please try again.",
+        variant: "destructive"
+      });
     }
   }, [toast]);
 
@@ -439,27 +472,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (isAuthenticated && user) {
       try {
-        // Subscribe to price updates for major trading pairs
+        // Subscribe to price updates
         const unsubscribePrices = supabaseTradingService.subscribeToPriceUpdates(
-          ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ADA/USDT'],
           (price) => {
             updateRealTimePrice(price.symbol, price.price, price.change24h, price.volume24h);
           }
         );
 
         // Subscribe to user's trades
-        const unsubscribeTrades = supabaseTradingService.subscribeToUserTrades(
+        const unsubscribeTrades = supabaseTradingService.subscribeToTrades(
           user.id,
           (trade) => {
             addTrade({
               id: trade.id,
               symbol: 'BTC/USDT', // Default symbol since we don't have trading_pairs relation
-              type: trade.trade_type,
+              type: trade.tradeType,
               amount: trade.amount,
               price: trade.price,
-              pnl: trade.profit_loss,
+              pnl: trade.profitLoss,
               status: trade.result,
-              timestamp: trade.created_at
+              timestamp: trade.createdAt
             });
           }
         );
