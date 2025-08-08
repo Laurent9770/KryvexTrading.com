@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useHotkeys } from "react-hotkeys-hook";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -52,10 +51,6 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
   const { t } = useLanguage();
-
-  // Keyboard shortcuts
-  useHotkeys('ctrl+k', () => setShowShortcuts(!showShortcuts));
-  useHotkeys('escape', () => setShowShortcuts(false));
 
   // Different navigation items for admin vs regular users
   const mainNavItems: NavItem[] = isAdmin ? [
@@ -113,27 +108,6 @@ export function Sidebar() {
       description: "Account settings and preferences"
     }
   ];
-
-  // Navigation shortcuts
-  mainNavItems.forEach(item => {
-    if (item.shortcut) {
-      useHotkeys(`ctrl+${item.shortcut.toLowerCase()}`, () => navigate(item.href));
-    }
-  });
-  
-  bottomNavItems.forEach(item => {
-    if (item.shortcut) {
-      useHotkeys(`ctrl+${item.shortcut.toLowerCase()}`, () => navigate(item.href));
-    }
-  });
-  
-  // Admin-specific shortcuts
-  if (isAdmin) {
-    useHotkeys('ctrl+u', () => navigate('/admin')); // Users
-    useHotkeys('ctrl+t', () => navigate('/admin')); // Trades
-  }
-
-  useHotkeys('ctrl+shift+q', () => logout());
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -204,9 +178,6 @@ export function Sidebar() {
     );
   };
 
-  // Show sidebar for all users (including non-authenticated)
-  // if (!user) return null;
-
   return (
     <div
       className={cn(
@@ -274,21 +245,6 @@ export function Sidebar() {
             ))}
           </div>
 
-          {/* Keyboard Shortcuts Toggle */}
-          <div className="mt-6 pt-6 border-t border-border/50">
-            {!isCollapsed && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowShortcuts(!showShortcuts)}
-                className="w-full justify-start gap-3 h-9 text-xs"
-              >
-                <Keyboard className="h-4 w-4" />
-                <span>{showShortcuts ? "Hide" : "Show"} Shortcuts</span>
-              </Button>
-            )}
-          </div>
-
           {/* Quick Actions */}
           {!isCollapsed && (
             <div className="mt-4 space-y-2">
@@ -298,66 +254,45 @@ export function Sidebar() {
                 </span>
               </div>
               {isAdmin ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="h-8 text-xs hover:bg-blue-600 hover:text-background transition-all"
+                    className="w-full justify-start gap-3 h-9 text-xs"
                     onClick={() => navigate('/admin')}
                   >
-                    <Shield className="h-3 w-3 mr-1" />
-                    Users
+                    <User className="h-4 w-4" />
+                    <span>User Management</span>
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="h-8 text-xs hover:bg-purple-600 hover:text-background transition-all"
+                    className="w-full justify-start gap-3 h-9 text-xs"
                     onClick={() => navigate('/admin')}
                   >
-                    <Activity className="h-3 w-3 mr-1" />
-                    Trades
-                  </Button>
-                </div>
-              ) : user ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs hover:bg-crypto-green hover:text-background transition-all"
-                    onClick={() => navigate('/trading')}
-                  >
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Buy
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs hover:bg-crypto-red hover:text-background transition-all"
-                    onClick={() => navigate('/trading')}
-                  >
-                    <Activity className="h-3 w-3 mr-1" />
-                    Sell
+                    <Activity className="h-4 w-4" />
+                    <span>Trade Monitoring</span>
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="h-8 text-xs hover:bg-blue-600 hover:text-background transition-all"
-                    onClick={() => navigate('/auth')}
+                    className="w-full justify-start gap-3 h-9 text-xs"
+                    onClick={() => navigate('/trading')}
                   >
-                    <User className="h-3 w-3 mr-1" />
-                    Sign Up
+                    <TrendingUp className="h-4 w-4" />
+                    <span>Start Trading</span>
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="h-8 text-xs hover:bg-purple-600 hover:text-background transition-all"
-                    onClick={() => navigate('/auth')}
+                    className="w-full justify-start gap-3 h-9 text-xs"
+                    onClick={() => navigate('/wallet')}
                   >
-                    <LogOut className="h-3 w-3 mr-1" />
-                    Sign In
+                    <Wallet className="h-4 w-4" />
+                    <span>View Wallet</span>
                   </Button>
                 </div>
               )}
@@ -389,11 +324,6 @@ export function Sidebar() {
                   {!isCollapsed && (
                     <>
                       <span className="truncate font-medium">Sign Out</span>
-                      {showShortcuts && (
-                        <div className="ml-auto text-xs opacity-60">
-                          Ctrl+Shift+Q
-                        </div>
-                      )}
                     </>
                   )}
                 </Button>
@@ -401,9 +331,6 @@ export function Sidebar() {
               <TooltipContent side="right" className={cn(!isCollapsed && "hidden")}>
                 <div className="flex flex-col gap-1">
                   <span className="font-medium">Sign Out</span>
-                  <div className="text-xs font-mono bg-muted px-1 rounded">
-                    Ctrl+Shift+Q
-                  </div>
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -436,23 +363,6 @@ export function Sidebar() {
           )}
         </div>
       </div>
-
-      {/* Keyboard Shortcuts Help */}
-      {showShortcuts && !isCollapsed && (
-        <div className="absolute bottom-20 left-3 right-3 bg-popover border border-border rounded-lg p-3 shadow-lg animate-in slide-in-from-bottom">
-          <div className="text-xs space-y-1">
-            <div className="font-semibold mb-2">Keyboard Shortcuts</div>
-            <div className="flex justify-between">
-              <span>Toggle Sidebar</span>
-              <span className="font-mono bg-muted px-1 rounded">Ctrl+B</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Show Shortcuts</span>
-              <span className="font-mono bg-muted px-1 rounded">Ctrl+Shift+/</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
