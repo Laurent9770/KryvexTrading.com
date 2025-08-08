@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, DollarSign, Users, Activity, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, Activity, ArrowUpRight, Shield, UserCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import realTimePriceService, { CryptoPrice } from '@/services/realTimePriceService';
 
 const ViewOnlyDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [cryptoPrices, setCryptoPrices] = useState<Map<string, CryptoPrice>>(new Map());
@@ -66,13 +68,46 @@ const ViewOnlyDashboard: React.FC = () => {
       {!isAuthenticated && (
         <Card className="mb-6 border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-blue-900">Get Started</h3>
                 <p className="text-blue-700">Create an account to start trading</p>
               </div>
-              <Button asChild>
-                <a href="/auth">Sign Up Now</a>
+              <div className="flex gap-2">
+                <Button variant="outline" asChild>
+                  <a href="/auth">Sign In</a>
+                </Button>
+                <Button asChild>
+                  <a href="/auth">Sign Up Now</a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isAuthenticated && user && user.kycStatus === 'pending' && (
+        <Card className="mb-6 border-orange-200 bg-orange-50">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <UserCheck className="w-6 h-6 text-orange-600" />
+                <div>
+                  <h3 className="text-lg font-semibold text-orange-900">Complete KYC Verification</h3>
+                  <p className="text-orange-700">Your account requires verification to access all trading features</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-sm text-orange-600">KYC Status:</span>
+                    <Badge variant="outline" className="border-orange-500 text-orange-600">
+                      pending
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <Button 
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => navigate('/kyc')}
+              >
+                Complete Verification
               </Button>
             </div>
           </CardContent>
@@ -154,7 +189,7 @@ const ViewOnlyDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/trading')}>
                     Trade
                   </Button>
                 </div>
@@ -225,7 +260,7 @@ const ViewOnlyDashboard: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               <Button asChild>
                 <a href="/trading">Start Trading</a>
               </Button>
@@ -235,6 +270,12 @@ const ViewOnlyDashboard: React.FC = () => {
               <Button variant="outline" asChild>
                 <a href="/dashboard">Go to Dashboard</a>
               </Button>
+              {user.kycStatus === 'pending' && (
+                <Button variant="outline" onClick={() => navigate('/kyc')}>
+                  <Shield className="w-4 h-4 mr-2" />
+                  Complete KYC
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

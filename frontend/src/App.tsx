@@ -14,7 +14,6 @@ import KYCPage from "@/pages/KYCPage";
 import DepositPage from "@/pages/DepositPage";
 import WithdrawPage from "@/pages/WithdrawPage";
 import WithdrawalRequestPage from "@/pages/WithdrawalRequestPage";
-import MarketPage from "@/pages/MarketPage";
 import WalletPage from "@/pages/WalletPage";
 import TradingHistoryPage from "@/pages/TradingHistoryPage";
 import SettingsPage from "@/pages/SettingsPage";

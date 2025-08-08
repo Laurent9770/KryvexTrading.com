@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, Shield } from 'lucide-react';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
@@ -92,24 +92,42 @@ const Auth: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Welcome to Kryvex Trading</CardTitle>
+        <div className="mb-6 text-center">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/')}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </Button>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Shield className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl font-bold">Kryvex Trading</h1>
+          </div>
+          <p className="text-muted-foreground">Professional cryptocurrency trading platform</p>
+        </div>
+
+        <Card className="shadow-lg">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-xl font-bold">
+              {isLogin ? 'Welcome Back' : 'Create Account'}
+            </CardTitle>
             <CardDescription>
-              {isLogin ? 'Sign in to your account' : 'Create your account'}
+              {isLogin ? 'Sign in to your account to continue trading' : 'Join thousands of traders worldwide'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={isLogin ? 'login' : 'register'} onValueChange={(value) => setIsLogin(value === 'login')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+            <Tabs value={isLogin ? 'login' : 'register'} onValueChange={(value) => setIsLogin(value === 'login')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login" className="text-sm font-medium">Sign In</TabsTrigger>
+                <TabsTrigger value="register" className="text-sm font-medium">Sign Up</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="login">
+              <TabsContent value="login" className="space-y-4">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email">Email Address</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -149,17 +167,19 @@ const Auth: React.FC = () => {
                     </div>
                   </div>
                   
-                                     <div className="flex items-center space-x-2">
-                     <input
-                       type="checkbox"
-                       id="remember-me"
-                       checked={rememberMe}
-                       onChange={(e) => setRememberMe(e.target.checked)}
-                       className="rounded border-gray-300"
-                       aria-label="Remember me"
-                     />
-                     <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
-                   </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="remember-me"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="rounded border-gray-300"
+                        aria-label="Remember me"
+                      />
+                      <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
+                    </div>
+                  </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
@@ -167,7 +187,7 @@ const Auth: React.FC = () => {
                 </form>
               </TabsContent>
               
-              <TabsContent value="register">
+              <TabsContent value="register" className="space-y-4">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -204,7 +224,7 @@ const Auth: React.FC = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
+                    <Label htmlFor="register-email">Email Address</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -242,7 +262,7 @@ const Auth: React.FC = () => {
                       <Input
                         id="register-password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password"
+                        placeholder="Create a password (min 8 characters)"
                         value={registerPassword}
                         onChange={(e) => setRegisterPassword(e.target.value)}
                         className="pl-10 pr-10"
@@ -292,10 +312,8 @@ const Auth: React.FC = () => {
               </TabsContent>
             </Tabs>
             
-            <div className="mt-6 text-center">
-              <Button variant="link" onClick={() => navigate('/')}>
-                Back to Home
-              </Button>
+            <div className="mt-6 text-center text-sm text-muted-foreground">
+              <p>By creating an account, you agree to our Terms of Service and Privacy Policy</p>
             </div>
           </CardContent>
         </Card>
