@@ -326,24 +326,7 @@ const createMockClient = () => {
   }
 }
 
-// Test Supabase URL connectivity
-const testSupabaseUrl = async (url: string): Promise<boolean> => {
-  try {
-    const response = await fetch(`${url}/rest/v1/`, {
-      method: 'GET',
-      headers: {
-        'apikey': supabaseAnonKey,
-        'Authorization': `Bearer ${supabaseAnonKey}`
-      }
-    })
-    return response.ok
-  } catch (error) {
-    console.warn('⚠️ Supabase URL test failed:', error)
-    return false
-  }
-}
-
-// Create Supabase client with proper configuration
+// Create Supabase client with proper error handling
 let supabase: any
 
 // Check if we have real Supabase credentials
@@ -357,25 +340,48 @@ const hasRealSupabase = supabaseUrl && supabaseAnonKey &&
 if (hasRealSupabase) {
   console.log('🚀 Using real Supabase client')
   try {
+    // Create client with proper configuration
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
       }
     })
-    console.log('✅ Real Supabase client initialized')
+    
+    // Test the client by making a simple query
+    const testQuery = async () => {
+      try {
+        const { data, error } = await supabase.from('profiles').select('count').limit(1)
+        if (error) {
+          console.warn('⚠️ Supabase connection test failed:', error)
+          throw error
+        }
+        console.log('✅ Real Supabase client initialized and tested')
+      } catch (testError) {
+        console.error('❌ Supabase client test failed:', testError)
+        throw testError
+      }
+    }
+    
+    // Run the test
+    testQuery().catch(() => {
+      console.warn('⚠️ Falling back to mock client due to connection issues')
+      supabase = createMockClient()
+    })
+    
   } catch (error) {
     console.error('❌ Failed to create real Supabase client:', error)
-    if (import.meta.env.DEV) {
-      console.warn('⚠️ Falling back to mock client')
-    }
+    console.warn('⚠️ Falling back to mock client')
     supabase = createMockClient()
   }
 } else {
-  if (import.meta.env.DEV) {
-    console.log('🔧 No real Supabase credentials found, using mock client')
-  }
+  console.log('🔧 No real Supabase credentials found, using mock client')
   supabase = createMockClient()
 }
 
