@@ -103,18 +103,18 @@ class SupabaseAuthService {
     try {
       console.log('🔍 Processing user session for:', user.email);
       
-      // Get user profile from profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+      // Get user profile from users table
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (profileError) {
-        console.error('❌ Error loading profile:', profileError);
+        console.error('❌ Error loading user profile:', profileError);
       }
 
-      // Get user role
+      // Get user role (if you have a user_roles table)
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -130,18 +130,20 @@ class SupabaseAuthService {
       // Create AuthUser object
       const authUser: AuthUser = {
         id: user.id,
-        email: user.email || '',
-        fullName: profile?.full_name || user.user_metadata?.full_name || '',
-        avatar: profile?.avatar_url || user.user_metadata?.avatar_url,
-        phone: profile?.phone || user.user_metadata?.phone,
-        country: profile?.country || user.user_metadata?.country,
-        accountBalance: profile?.account_balance || 0,
-        isVerified: profile?.is_verified || false,
-        kycStatus: profile?.kyc_status || 'unverified',
+        email: user.email,
+        fullName: userProfile?.first_name && userProfile?.last_name ? 
+          `${userProfile.first_name} ${userProfile.last_name}` : 
+          user.user_metadata?.full_name || '',
+        avatar: user.user_metadata?.avatar_url,
+        phone: userProfile?.phone || user.user_metadata?.phone,
+        country: user.user_metadata?.country,
+        accountBalance: 0, // You can add this field to users table if needed
+        isVerified: userProfile?.kyc_status === 'verified',
+        kycStatus: userProfile?.kyc_status || 'unverified',
         isAdmin,
-        accountStatus: profile?.account_status || 'active',
-        createdAt: profile?.created_at || user.created_at,
-        updatedAt: profile?.updated_at || user.updated_at
+        accountStatus: 'active',
+        createdAt: userProfile?.created_at || user.created_at,
+        updatedAt: userProfile?.created_at || user.updated_at
       };
 
       console.log('✅ User session processed:', authUser);
@@ -211,7 +213,8 @@ class SupabaseAuthService {
         password: data.password,
         options: {
           data: {
-            full_name: data.fullName,
+            first_name: data.fullName.split(' ')[0],
+            last_name: data.fullName.split(' ').slice(1).join(' '),
             phone: data.phone,
             country: data.country
           }
@@ -224,27 +227,11 @@ class SupabaseAuthService {
       }
 
       if (authData.user) {
-        console.log('✅ Sign up successful, creating profile...');
+        console.log('✅ Sign up successful, user profile will be created automatically by trigger');
         
-        // Ensure profile is created immediately
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: authData.user.id,
-            email: authData.user.email,
-            full_name: data.fullName,
-            phone: data.phone,
-            country: data.country,
-            kyc_status: 'unverified',
-            account_balance: 0,
-            is_verified: false
-          });
-
-        if (profileError) {
-          console.error('❌ Profile creation error:', profileError);
-          // Don't fail registration if profile creation fails, as the trigger should handle it
-        }
-
+        // The trigger will automatically create the user profile
+        // No need to manually insert into users table
+        
         console.log('✅ Registration complete');
         return { success: true };
       }
@@ -283,15 +270,14 @@ class SupabaseAuthService {
       console.log('📝 Updating profile for user:', user.id);
 
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({
-          full_name: updates.fullName,
-          avatar_url: updates.avatar,
+          first_name: updates.fullName?.split(' ')[0],
+          last_name: updates.fullName?.split(' ').slice(1).join(' '),
           phone: updates.phone,
-          country: updates.country,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
 
       if (error) {
         console.error('❌ Profile update error:', error);
