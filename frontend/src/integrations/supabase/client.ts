@@ -13,32 +13,93 @@ if (import.meta.env.DEV) {
   })
 }
 
+// Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables:', {
     url: supabaseUrl ? 'set' : 'missing',
     key: supabaseAnonKey ? 'set' : 'missing'
   })
-  throw new Error('Missing Supabase environment variables. Please check your .env file.')
+  
+  // In production, we should throw an error
+  if (import.meta.env.PROD) {
+    throw new Error('Missing Supabase environment variables. Please check your .env file.')
+  }
 }
 
 // Create Supabase client with proper configuration
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
+let supabase: any
+
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    })
+    
+    console.log('✅ Supabase client created successfully')
+  } else {
+    throw new Error('Missing Supabase credentials')
   }
-})
+} catch (error) {
+  console.error('❌ Failed to create Supabase client:', error)
+  
+  // Create a fallback client for development
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ Using fallback client for development')
+    supabase = {
+      auth: {
+        getSession: async () => ({ data: { session: null }, error: null }),
+        signInWithPassword: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+        signUp: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+        signOut: async () => ({ error: null }),
+        onAuthStateChange: (callback: any) => {
+          return { 
+            data: { 
+              subscription: { 
+                unsubscribe: () => {} 
+              } 
+            } 
+          }
+        },
+        getUser: async () => ({ data: { user: null }, error: null })
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: async () => ({ data: null, error: { message: 'Supabase not configured' } })
+          })
+        }),
+        insert: () => ({
+          select: () => ({
+            single: async () => ({ data: null, error: { message: 'Supabase not configured' } })
+          })
+        }),
+        update: () => ({
+          eq: () => ({
+            select: () => ({
+              single: async () => ({ data: null, error: { message: 'Supabase not configured' } })
+            })
+          })
+        })
+      })
+    }
+  } else {
+    throw error
+  }
+}
 
 // Test the client by making a simple query
 const testConnection = async () => {
   try {
-    const { data, error } = await supabase.from('profiles').select('count').limit(1)
+    const { data, error } = await supabase.from('users').select('count').limit(1)
     if (error) {
       console.warn('⚠️ Supabase connection test failed:', error)
       return false
