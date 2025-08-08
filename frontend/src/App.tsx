@@ -7,7 +7,22 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
+import Dashboard from "@/pages/Dashboard";
+import TradingPage from "@/pages/TradingPage";
+import Auth from "@/pages/Auth";
+import KYCPage from "@/pages/KYCPage";
+import DepositPage from "@/pages/DepositPage";
+import WithdrawPage from "@/pages/WithdrawPage";
+import WithdrawalRequestPage from "@/pages/WithdrawalRequestPage";
+import MarketPage from "@/pages/MarketPage";
+import WalletPage from "@/pages/WalletPage";
+import TradingHistoryPage from "@/pages/TradingHistoryPage";
+import SettingsPage from "@/pages/SettingsPage";
+import SupportPage from "@/pages/SupportPage";
 import ViewOnlyDashboard from "@/pages/ViewOnlyDashboard";
+import ViewOnlyMarketPage from "@/pages/ViewOnlyMarketPage";
+import AdminDashboard from "@/pages/AdminDashboard";
+import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
 
@@ -49,9 +64,29 @@ const AppContent: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           <Routes>
+            {/* Public Routes */}
+            <Route path="/auth" element={<Auth />} />
+
             {/* View-Only Routes (for non-authenticated users) */}
             <Route path="/" element={<ViewOnlyRoute><ViewOnlyDashboard /></ViewOnlyRoute>} />
-            
+            <Route path="/market" element={<ViewOnlyRoute><ViewOnlyMarketPage /></ViewOnlyRoute>} />
+
+            {/* Protected Routes (require authentication) */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+            <Route path="/trading-history" element={<ProtectedRoute><TradingHistoryPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
+            <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
+            <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
+            <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+            <Route path="/admin/trading-control/:userId" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+
             {/* Redirect to dashboard for unknown routes */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
