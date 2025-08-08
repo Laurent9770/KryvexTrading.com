@@ -23,81 +23,32 @@ console.log('🔍 Detailed Environment Debug:', {
   allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 })
 
-// Create a fallback client for when Supabase fails to initialize
-const createFallbackClient = () => {
-  console.warn('⚠️ Using fallback Supabase client')
-  return {
-    auth: {
-      getSession: async () => ({ data: { session: null }, error: null }),
-      signInWithPassword: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      signUp: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      signOut: async () => ({ error: null }),
-      onAuthStateChange: (callback: any) => {
-        return { 
-          data: { 
-            subscription: { 
-              unsubscribe: () => {} 
-            } 
-          } 
-        }
-      },
-      getUser: async () => ({ data: { user: null }, error: null })
-    },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          single: async () => ({ data: null, error: { message: 'Supabase not configured' } })
-        })
-      }),
-      insert: () => ({
-        select: () => ({
-          single: async () => ({ data: null, error: { message: 'Supabase not configured' } })
-        })
-      }),
-      update: () => ({
-        eq: () => ({
-          select: () => ({
-            single: async () => ({ data: null, error: { message: 'Supabase not configured' } })
-          })
-        })
-      })
-    })
-  }
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("❌ Supabase environment variables are missing")
+  console.error("URL:", supabaseUrl || 'undefined')
+  console.error("Key:", supabaseAnonKey ? 'Set' : 'undefined')
+  console.error("Please check your Render.com environment variables:")
+  console.error("- VITE_SUPABASE_URL")
+  console.error("- VITE_SUPABASE_ANON_KEY")
+  throw new Error("Missing Supabase credentials")
 }
 
-// Try to create the real Supabase client, fallback if it fails
-let supabase: any
-
-try {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("❌ Supabase environment variables are missing")
-    console.error("URL:", supabaseUrl || 'undefined')
-    console.error("Key:", supabaseAnonKey ? 'Set' : 'undefined')
-    console.error("Please check your Render.com environment variables:")
-    console.error("- VITE_SUPABASE_URL")
-    console.error("- VITE_SUPABASE_ANON_KEY")
-    supabase = createFallbackClient()
-  } else {
-    console.log('🔧 Creating Supabase client with URL:', supabaseUrl)
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      },
-      realtime: {
-        params: {
-          eventsPerSecond: 10
-        }
-      }
-    })
-    console.log('✅ Supabase client created successfully')
+// Create singleton Supabase client
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
-} catch (error) {
-  console.error('❌ Failed to create Supabase client:', error)
-  console.warn('⚠️ Using fallback client due to initialization error')
-  supabase = createFallbackClient()
-}
+})
+
+console.log('✅ Supabase client created successfully')
 
 // Helper function to test connection (call this when needed)
 export const testConnection = async () => {
@@ -168,5 +119,5 @@ export const logEnvironmentStatus = (): void => {
   })
 }
 
-// Export the supabase client
+// Export the singleton supabase client
 export { supabase }
