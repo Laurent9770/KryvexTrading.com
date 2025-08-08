@@ -698,27 +698,27 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
         CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- User roles policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
         CREATE POLICY "Users can view own roles" ON user_roles FOR SELECT USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all roles" ON user_roles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all roles" ON user_roles FOR SELECT USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- KYC submissions policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_submissions') THEN
         CREATE POLICY "Users can view own KYC submissions" ON kyc_submissions FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can create own KYC submissions" ON kyc_submissions FOR INSERT WITH CHECK (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- KYC documents policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kyc_documents') THEN
         CREATE POLICY "Users can view own KYC documents" ON kyc_documents FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can upload own KYC documents" ON kyc_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all KYC documents" ON kyc_documents FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all KYC documents" ON kyc_documents FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Trading pairs policies
@@ -731,28 +731,28 @@ BEGIN
         CREATE POLICY "Users can view own trades" ON trades FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can create own trades" ON trades FOR INSERT WITH CHECK (auth.uid() = user_id);
         CREATE POLICY "Users can update own trades" ON trades FOR UPDATE USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all trades" ON trades FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all trades" ON trades FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Wallet balances policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_balances') THEN
         CREATE POLICY "Users can view own wallet balances" ON wallet_balances FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can update own wallet balances" ON wallet_balances FOR UPDATE USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all wallet balances" ON wallet_balances FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all wallet balances" ON wallet_balances FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Deposits policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deposits') THEN
         CREATE POLICY "Users can view own deposits" ON deposits FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can create own deposits" ON deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all deposits" ON deposits FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all deposits" ON deposits FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Withdrawals policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawals') THEN
         CREATE POLICY "Users can view own withdrawals" ON withdrawals FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can create own withdrawals" ON withdrawals FOR INSERT WITH CHECK (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all withdrawals" ON withdrawals FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all withdrawals" ON withdrawals FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Staking pools policies
@@ -764,14 +764,14 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staking_positions') THEN
         CREATE POLICY "Users can view own staking positions" ON staking_positions FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can create own staking positions" ON staking_positions FOR INSERT WITH CHECK (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all staking positions" ON staking_positions FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all staking positions" ON staking_positions FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Notifications policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications') THEN
         CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can update own notification read status" ON notifications FOR UPDATE USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can manage notifications" ON notifications FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can manage notifications" ON notifications FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Support tickets policies
@@ -779,7 +779,7 @@ BEGIN
         CREATE POLICY "Users can view own support tickets" ON support_tickets FOR SELECT USING (auth.uid() = user_id);
         CREATE POLICY "Users can create own support tickets" ON support_tickets FOR INSERT WITH CHECK (auth.uid() = user_id);
         CREATE POLICY "Users can update own support tickets" ON support_tickets FOR UPDATE USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all support tickets" ON support_tickets FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all support tickets" ON support_tickets FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Support messages policies
@@ -790,31 +790,31 @@ BEGIN
         CREATE POLICY "Users can create messages in own tickets" ON support_messages FOR INSERT WITH CHECK (
             EXISTS (SELECT 1 FROM support_tickets WHERE id = support_messages.ticket_id AND user_id = auth.uid())
         );
-        CREATE POLICY "Admins can view all support messages" ON support_messages FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all support messages" ON support_messages FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- User activities policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_activities') THEN
         CREATE POLICY "Users can view own activities" ON user_activities FOR SELECT USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all user activities" ON user_activities FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all user activities" ON user_activities FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Admin actions policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_actions') THEN
-        CREATE POLICY "Admins can view admin actions" ON admin_actions FOR SELECT USING (has_role(auth.uid(), 'admin'));
-        CREATE POLICY "Admins can create admin actions" ON admin_actions FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view admin actions" ON admin_actions FOR SELECT USING (has_role(auth.uid(), 'admin'::user_role));
+        CREATE POLICY "Admins can create admin actions" ON admin_actions FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Admin notifications policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admin_notifications') THEN
-        CREATE POLICY "Admins can view admin notifications" ON admin_notifications FOR SELECT USING (has_role(auth.uid(), 'admin'));
-        CREATE POLICY "Admins can update admin notifications" ON admin_notifications FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view admin notifications" ON admin_notifications FOR SELECT USING (has_role(auth.uid(), 'admin'::user_role));
+        CREATE POLICY "Admins can update admin notifications" ON admin_notifications FOR UPDATE USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Transactions policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
         CREATE POLICY "Users can view own transactions" ON transactions FOR SELECT USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can view all transactions" ON transactions FOR ALL USING (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can view all transactions" ON transactions FOR ALL USING (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- User sessions policies
@@ -826,7 +826,7 @@ BEGIN
     -- Wallet adjustments policies
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallet_adjustments') THEN
         CREATE POLICY "Users can view own wallet adjustments" ON wallet_adjustments FOR SELECT USING (auth.uid() = user_id);
-        CREATE POLICY "Admins can create wallet adjustments" ON wallet_adjustments FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+        CREATE POLICY "Admins can create wallet adjustments" ON wallet_adjustments FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'::user_role));
     END IF;
     
     -- Price history policies
