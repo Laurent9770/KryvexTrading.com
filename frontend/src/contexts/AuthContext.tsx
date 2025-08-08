@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import supabaseAuthService, { AuthUser, AuthState } from '@/services/supabaseAuthService';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 
 interface User {
   id: string;
@@ -147,6 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🔐 Initializing AuthContext...');
       
       // Check if Supabase client is available
+      const supabase = getSupabaseClient();
       if (!supabase || !supabase.auth) {
         console.error('❌ Supabase client not available');
         setIsLoading(false);
