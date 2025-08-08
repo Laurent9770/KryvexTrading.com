@@ -259,8 +259,8 @@ export function Sidebar() {
           <KryvexLogo className="h-8 w-8" />
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">Kryvex</span>
-              <span className="text-xs text-muted-foreground">Trading Platform</span>
+              <span className="text-sm font-semibold">Trading</span>
+              <span className="text-xs text-muted-foreground">Platform</span>
             </div>
           )}
         </div>
@@ -319,9 +319,16 @@ export function Sidebar() {
             </Avatar>
             {!isCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user.firstName || user.email}</p>
+                <p className="text-sm font-medium truncate">
+                  {user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}` 
+                    : user.firstName 
+                    ? user.firstName 
+                    : user.email?.split('@')[0] || 'User'
+                  }
+                </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {user.kycStatus === 'verified' ? 'Verified' : 'Unverified'}
+                  {user.kycStatus === 'verified' ? '✅ Verified' : '⏳ Unverified'}
                 </p>
               </div>
             )}

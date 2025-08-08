@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { ActivityItem } from '@/services/supabaseActivityService';
-import supabaseActivityService from '@/services/supabaseActivityService';
-
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import supabaseKYCService from '../services/supabaseKYCService';
 import supabaseAuthService, { AuthUser, LoginCredentials, RegisterData, ProfileUpdateData } from '@/services/supabaseAuthService';
+import supabaseActivityService, { ActivityItem } from '@/services/supabaseActivityService';
 import supabaseTradingService from '@/services/supabaseTradingService';
+import supabaseKYCService from '../services/supabaseKYCService';
+import { supabase } from '@/integrations/supabase/client';
+import realTimePriceService from '@/services/realTimePriceService';
 
 interface User {
   id: string;
@@ -220,59 +220,95 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize Supabase auth with error handling
   useEffect(() => {
     try {
-      const unsubscribe = supabaseAuthService.subscribe((authState) => {
+      const unsubscribe = supabaseAuthService.subscribe(async (authState) => {
         setIsLoading(authState.isLoading);
         setIsAuthenticated(authState.isAuthenticated);
         setIsAdmin(authState.isAdmin);
 
         if (authState.user) {
-          // Convert AuthUser to User interface
-          const userData: User = {
-            id: authState.user.id,
-            email: authState.user.email,
-            username: authState.user.email.split('@')[0],
-            firstName: authState.user.fullName?.split(' ')[0] || '',
-            lastName: authState.user.fullName?.split(' ').slice(1).join(' ') || '',
-            phone: authState.user.phone || '',
-            country: authState.user.country || '',
-            bio: '',
-            avatar: authState.user.avatar,
-            walletBalance: authState.user.accountBalance || 0,
-            kycStatus: authState.user.kycStatus === 'approved' ? 'verified' : authState.user.kycStatus,
-            kycLevel1: {
-              status: authState.user.isVerified ? 'verified' : 'unverified'
-            },
-            kycLevel2: {
-              status: authState.user.kycStatus === 'approved' ? 'approved' : 
-                      authState.user.kycStatus === 'rejected' ? 'rejected' : 
-                      authState.user.kycStatus === 'pending' ? 'pending' : 'not_started'
+          try {
+            // Load real user profile data from Supabase
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', authState.user.id)
+              .single();
+
+            if (profileError) {
+              console.error('Error loading user profile:', profileError);
             }
-          };
 
-          setUser(userData);
-
-          // Update trading account with user's real balance
-          if (authState.user.accountBalance && authState.user.accountBalance > 0) {
-            setTradingAccount(prev => ({
-              ...prev,
-              USDT: {
-                balance: authState.user.accountBalance.toFixed(8),
-                usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
-                available: authState.user.accountBalance.toFixed(8)
+            // Convert AuthUser to User interface with real data
+            const userData: User = {
+              id: authState.user.id,
+              email: authState.user.email,
+              username: authState.user.email.split('@')[0],
+              firstName: profile?.full_name?.split(' ')[0] || '',
+              lastName: profile?.full_name?.split(' ').slice(1).join(' ') || '',
+              phone: profile?.phone || '',
+              country: profile?.country || '',
+              bio: '',
+              avatar: profile?.avatar_url || authState.user.avatar,
+              walletBalance: profile?.account_balance || 0,
+              kycStatus: profile?.kyc_status === 'approved' ? 'verified' : profile?.kyc_status || 'unverified',
+              kycLevel1: {
+                status: profile?.is_verified ? 'verified' : 'unverified'
+              },
+              kycLevel2: {
+                status: profile?.kyc_status === 'approved' ? 'approved' : 
+                        profile?.kyc_status === 'rejected' ? 'rejected' : 
+                        profile?.kyc_status === 'pending' ? 'pending' : 'not_started'
               }
-            }));
+            };
 
-            setFundingAccount(prev => ({
-              USDT: {
-                balance: authState.user.accountBalance.toFixed(2),
-                usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
-                available: authState.user.accountBalance.toFixed(2)
+            setUser(userData);
+
+            // Update trading account with user's real balance
+            if (profile?.account_balance && profile.account_balance > 0) {
+              setTradingAccount(prev => ({
+                ...prev,
+                USDT: {
+                  balance: profile.account_balance.toFixed(8),
+                  usdValue: `$${profile.account_balance.toFixed(2)}`,
+                  available: profile.account_balance.toFixed(8)
+                }
+              }));
+
+              setFundingAccount(prev => ({
+                USDT: {
+                  balance: profile.account_balance.toFixed(2),
+                  usdValue: `$${profile.account_balance.toFixed(2)}`,
+                  available: profile.account_balance.toFixed(2)
+                }
+              }));
+            }
+
+            // Load user activities and trading data
+            loadUserData(authState.user.id);
+          } catch (error) {
+            console.error('Error processing user data:', error);
+            // Fallback to basic user data if profile loading fails
+            const userData: User = {
+              id: authState.user.id,
+              email: authState.user.email,
+              username: authState.user.email.split('@')[0],
+              firstName: '',
+              lastName: '',
+              phone: '',
+              country: '',
+              bio: '',
+              avatar: authState.user.avatar,
+              walletBalance: 0,
+              kycStatus: 'unverified',
+              kycLevel1: {
+                status: 'unverified'
+              },
+              kycLevel2: {
+                status: 'not_started'
               }
-            }));
+            };
+            setUser(userData);
           }
-
-          // Load user activities and trading data
-          loadUserData(authState.user.id);
         } else {
           setUser(null);
           setTradingAccount({
