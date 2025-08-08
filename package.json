@@ -1,22 +1,15 @@
 {
   "name": "kryvex-trading-platform",
   "version": "1.0.0",
-  "description": "Kryvex Trading Platform - Full Stack Trading Application",
-  "main": "fallback-server.js",
+  "description": "Kryvex Trading Platform - Frontend with Supabase Backend",
   "homepage": "https://kryvextrading.com",
   "scripts": {
-    "start": "node fallback-server.js",
     "build": "cd frontend && npm install && npm run build",
     "build:check": "cd frontend && npm run build && echo 'Build completed successfully'",
     "dev": "cd frontend && npm run dev",
     "install-deps": "cd frontend && npm install",
     "postinstall": "npm run build",
-    "health": "curl http://localhost:$PORT/api/health"
-  },
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "express": "^4.18.2",
-    "pg": "^8.16.3"
+    "preview": "cd frontend && npm run preview"
   },
   "engines": {
     "node": "20.x"
@@ -31,6 +24,7 @@
     "react",
     "typescript",
     "tailwindcss",
+    "supabase",
     "kryvextrading.com"
   ],
   "author": "Kryvex Team",

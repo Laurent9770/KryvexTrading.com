@@ -1,17 +1,15 @@
 services:
-  # Combined Frontend + Backend Service
+  # Frontend-only Service (Supabase handles backend)
   - type: web
     name: kryvex-trading-app
-    env: node
+    env: static
     buildCommand: |
       echo "🔧 Installing frontend dependencies..."
       cd frontend && npm install
       echo "🏗️ Building frontend..."
       npm run build
-      echo "🔧 Installing backend dependencies..."
-      cd ../backend && npm install
       echo "✅ Build completed successfully"
-    startCommand: cd backend && npm start
+    startCommand: cd frontend && npm run preview
     staticPublishPath: frontend/dist
     envVars:
       - key: NODE_ENV
@@ -20,15 +18,4 @@ services:
         value: https://ftkeczodadvtnxofrwps.supabase.co
       - key: VITE_SUPABASE_ANON_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg
-      - key: SUPABASE_URL
-        value: https://ftkeczodadvtnxofrwps.supabase.co
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg
-      - key: CORS_ORIGIN
-        value: https://kryvex-trading-app.onrender.com
-      - key: JWT_SECRET
-        sync: false
-    healthCheckPath: /api/health
     autoDeploy: true 
