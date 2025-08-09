@@ -285,14 +285,25 @@ class SupabaseAuthService {
         return { success: false, error: result.error };
       }
 
-      // Create a demo user object for phone authentication
-      const userData: AuthUser = {
-        id: 'phone_' + phoneNumber.replace(/\D/g, ''), // Simple ID based on phone
-        email: '', // No email for phone auth
-        fullName: 'Phone User', // Default name
+      // Phone OTP verified - create real user in Supabase
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         phone: phoneNumber,
-        accountBalance: 1000, // Demo balance
-        isVerified: true, // Phone is verified
+        password: 'temp_' + Math.random().toString(36).substring(7) // Temporary password
+      });
+
+      if (signUpError || !authData.user) {
+        console.error('❌ Failed to create user in Supabase:', signUpError);
+        return { success: false, error: 'Failed to create user account' };
+      }
+
+      // Create user profile in database
+      const userData: AuthUser = {
+        id: authData.user.id,
+        email: authData.user.email || '',
+        fullName: 'Phone User',
+        phone: phoneNumber,
+        accountBalance: 0, // Real balance starts at 0
+        isVerified: true,
         kycStatus: 'unverified',
         isAdmin: false,
         accountStatus: 'active',

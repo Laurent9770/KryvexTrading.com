@@ -1,144 +1,106 @@
-// ULTRA-SIMPLE Production Supabase Client - Zero Dependencies on Node.js APIs
-import { createClient } from '@supabase/supabase-js';
+// BULLETPROOF Supabase Client - Step by Step Creation
+console.log('🚀 STARTING SUPABASE CLIENT INITIALIZATION...');
 
-// Comprehensive polyfills to prevent ANY Node.js reference errors
+// Step 1: Essential polyfills FIRST
 if (typeof window !== 'undefined') {
-  // Polyfill global
-  if (!(window as any).global) {
-    (window as any).global = window;
-  }
+  console.log('🔧 Setting up browser polyfills...');
+  (window as any).global = window;
+  (window as any).process = { env: {}, version: 'browser', platform: 'browser' };
   
-  // Polyfill process completely
-  if (!(window as any).process) {
-    (window as any).process = {
-      env: {},
-      version: 'v18.0.0',
-      versions: { node: '18.0.0' },
-      platform: 'browser',
-      nextTick: (fn: Function) => setTimeout(fn, 0),
-      cwd: () => '/',
-      argv: []
-    };
-  }
-  
-  // Polyfill require (the source of our errors)
+  // Add require polyfill
   if (!(window as any).require) {
-    (window as any).require = (id: string) => {
-      throw new Error(`Module '${id}' not found in browser environment`);
-    };
-  }
-  
-  // Polyfill Buffer if needed
-  if (!(window as any).Buffer) {
-    (window as any).Buffer = {
-      from: (data: any) => new Uint8Array(data),
-      isBuffer: () => false
+    (window as any).require = () => {
+      throw new Error('require() not available in browser');
     };
   }
 }
 
-// Safe logging
-const safeLog = (msg: string, data?: any) => {
-  if (typeof console !== 'undefined' && console.log) {
-    try {
-      console.log(msg, data || '');
-    } catch (e) {
-      // Ignore logging errors
-    }
-  }
-};
+// Step 2: Import Supabase
+console.log('📦 Importing Supabase SDK...');
+import { createClient } from '@supabase/supabase-js';
+console.log('✅ Supabase SDK imported successfully');
 
-safeLog('🔧 Ultra-simple Supabase client initialization...');
-
-// Hardcoded credentials - absolutely no environment variable dependencies
+// Step 3: Hardcoded credentials
+console.log('🔑 Using hardcoded credentials...');
 const SUPABASE_URL = 'https://ftkeczodadvtnxofrwps.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg';
 
-// Create the client with absolute minimal configuration
+console.log('🔗 URL:', SUPABASE_URL);
+console.log('🔑 Key length:', SUPABASE_ANON_KEY.length);
+
+// Step 4: Create client
+console.log('🏗️ Creating Supabase client...');
 let supabase: any;
 
 try {
-  safeLog('🔧 Creating Supabase client...');
-  safeLog('🔗 URL:', SUPABASE_URL);
-  safeLog('🔑 Key length:', SUPABASE_ANON_KEY.length);
-  
-  // Try to create client step by step
-  safeLog('📦 Calling createClient...');
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
-      flowType: 'pkce'
+      detectSessionInUrl: false
     }
   });
-  
-  safeLog('🔍 Client created, checking properties...');
-  safeLog('Has supabase:', !!supabase);
-  safeLog('Has auth:', !!supabase?.auth);
-  safeLog('Has from:', !!supabase?.from);
-  safeLog('Auth type:', typeof supabase?.auth);
-  safeLog('From type:', typeof supabase?.from);
-  
-  // Immediate validation
+
+  console.log('🔍 Client created, validating...');
+  console.log('Client exists:', !!supabase);
+  console.log('Auth exists:', !!supabase?.auth);
+  console.log('From exists:', !!supabase?.from);
+  console.log('Storage exists:', !!supabase?.storage);
+
   if (supabase && supabase.auth && supabase.from) {
-    safeLog('✅ Supabase client created successfully');
-    // Mark as real client
+    console.log('✅ REAL SUPABASE CLIENT CREATED SUCCESSFULLY!');
     (supabase as any).__isRealClient = true;
-    safeLog('🏷️ Marked as real client');
   } else {
-    throw new Error(`Client created but missing methods: auth=${!!supabase?.auth}, from=${!!supabase?.from}`);
+    throw new Error('Client missing essential methods');
   }
-} catch (error: any) {
-  safeLog('❌ Supabase client creation failed:', error.message);
-  safeLog('❌ Error details:', error.stack || 'No stack trace');
+} catch (error) {
+  console.error('❌ SUPABASE CLIENT CREATION FAILED:', error);
+  console.error('Error stack:', (error as any)?.stack);
   
-  // Create a functional mock that won't crash the app
+  // Create functional mock as last resort
+  console.log('⚠️ Creating mock client as fallback...');
   supabase = {
     __isRealClient: false,
     auth: {
-      signUp: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
-      signInWithPassword: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
-      signInWithOAuth: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
-      signInWithOtp: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
+      signUp: async () => ({ data: null, error: { message: 'Supabase client failed to initialize' } }),
+      signInWithPassword: async () => ({ data: null, error: { message: 'Supabase client failed to initialize' } }),
+      signInWithOAuth: async () => ({ data: null, error: { message: 'Supabase client failed to initialize' } }),
       signOut: async () => ({ error: null }),
       getSession: async () => ({ data: { session: null }, error: null }),
-      getUser: async () => ({ data: { user: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: null } })
     },
     from: () => ({
-      select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }) }) }),
-      insert: () => ({ select: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }) }),
-      update: () => ({ eq: () => ({ select: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }) }) }),
-      delete: () => ({ eq: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }) })
+      select: () => ({ 
+        eq: () => ({ 
+          single: async () => ({ data: null, error: { message: 'Supabase client failed to initialize' } }) 
+        }) 
+      })
     }),
     storage: {
       from: () => ({
-        upload: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
-        download: async () => ({ data: null, error: { message: 'Supabase client unavailable' } })
+        upload: async () => ({ data: null, error: { message: 'Supabase client failed to initialize' } })
       })
-    },
-    channel: () => ({
-      on: () => ({ subscribe: () => ({}) }),
-      subscribe: () => ({})
-    })
+    }
   };
-  
-  safeLog('⚠️ Using mock Supabase client to prevent crashes');
 }
 
-// Export the client (either real or mock)
-export { supabase };
+// Step 5: Exports
+console.log('📤 Setting up exports...');
 
-// Default export for compatibility
+export { supabase };
 export default supabase;
 
-// Simple getter function
-export const getSupabaseClient = (): SupabaseClient => {
+export const getSupabaseClient = () => {
+  console.log('🔍 getSupabaseClient called, returning:', !!supabase ? 'client' : 'null');
   return supabase;
 };
 
-// Helper functions
+export const hasRealSupabaseClient = (): boolean => {
+  const isReal = !!(supabase as any)?.__isRealClient;
+  console.log('🔍 hasRealSupabaseClient called, result:', isReal);
+  return isReal;
+};
+
 export const getApiUrl = (): string => {
   return 'https://kryvextrading-com.onrender.com';
 };
@@ -149,18 +111,13 @@ export const isDevelopment = (): boolean => {
 };
 
 export const logEnvironmentStatus = (): void => {
-  if (isDevelopment()) {
-    console.log('🔧 Environment Status:', {
-      supabaseConnected: !!supabase,
-      isRealClient: !!(supabase as any)?.__isRealClient,
-      hostname: window.location.hostname
-    });
-  }
+  console.log('🌍 Environment Status:', {
+    supabaseConnected: !!supabase,
+    isRealClient: hasRealSupabaseClient(),
+    hostname: window.location.hostname,
+    isDev: isDevelopment()
+  });
 };
 
-// Check if we have a real Supabase client (not mock)
-export const hasRealSupabaseClient = (): boolean => {
-  return !!(supabase as any)?.__isRealClient;
-};
-
-// Production-ready client - no complex testing that might cause issues
+console.log('🎉 SUPABASE CLIENT SETUP COMPLETE!');
+console.log('Real client available:', hasRealSupabaseClient());

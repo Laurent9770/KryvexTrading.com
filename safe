@@ -1,5 +1,0 @@
-[33m1399bab[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m 🔧 Fix deployment paths: Update render.yaml to use correct directory structure for kryvex-forge-main subdirectory
-[33mda16846[m 🔧 Fix frontend configuration: Use environment variables instead of hardcoded values, add validation and helper functions, create configuration guide
-[33m98659df[m 🔧 Fix backend configuration: Add error handling for Supabase connection, improve CORS settings, add test endpoints, and create configuration guide
-[33mb6e61c9[m 🔧 Fix production deployment: Update render.yaml for separate frontend/backend services, create new Supabase-based backend server, fix CSP issues, and add comprehensive deployment guide
-[33m2458fda[m 🎉 SUPABASE MIGRATION COMPLETED SUCCESSFULLY - All services migrated, all components updated, build successful, type-safe, and fully functional
