@@ -33,12 +33,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
     try {
       await login(email, password);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to Kryvex Trading!",
-      });
-      onSuccess?.();
-      navigate('/dashboard');
+      console.log('✅ Login completed, preparing to navigate...');
+      
+      // Add a small delay to ensure auth state is updated
+      setTimeout(() => {
+        console.log('🔄 Navigating to dashboard...');
+        onSuccess?.();
+        
+        // Try React Router navigation first, fallback to window.location
+        try {
+          navigate('/dashboard', { replace: true });
+        } catch (navError) {
+          console.warn('React Router navigation failed, using window.location:', navError);
+          window.location.href = '/dashboard';
+        }
+      }, 500);
+      
     } catch (error) {
       toast({
         title: "Login Failed",
@@ -232,12 +242,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         formData.lastName,
         formData.phone
       );
-      toast({
-        title: "Registration Successful",
-        description: "Welcome to Kryvex Trading! Your account has been created.",
-      });
-      onSuccess?.();
-      navigate('/dashboard');
+      console.log('✅ Registration completed, preparing to navigate...');
+      
+      // Add a small delay to ensure auth state is updated
+      setTimeout(() => {
+        console.log('🔄 Navigating to dashboard after registration...');
+        toast({
+          title: "Registration Successful",
+          description: "Welcome to Kryvex Trading! Your account has been created.",
+        });
+        onSuccess?.();
+        
+        // Try React Router navigation first, fallback to window.location
+        try {
+          navigate('/dashboard', { replace: true });
+        } catch (navError) {
+          console.warn('React Router navigation failed, using window.location:', navError);
+          window.location.href = '/dashboard';
+        }
+      }, 500);
+      
     } catch (error) {
       toast({
         title: "Registration Failed",
