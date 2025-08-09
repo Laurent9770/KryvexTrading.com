@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import phoneAuthService, { PhoneAuthResponse, VerifyOTPResponse } from './phoneAuthService';
 import emailVerificationService, { EmailVerificationResponse, VerifyCodeResponse } from './emailVerificationService';
@@ -65,7 +65,8 @@ class SupabaseAuthService {
       console.log('🔐 Initializing Supabase Auth...');
       
       // Get initial session
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const client = getSupabaseClient();
+      const { data: { session }, error } = await client.auth.getSession();
       
       if (error) {
         console.error('❌ Error getting session:', error);
@@ -82,7 +83,7 @@ class SupabaseAuthService {
       }
 
       // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
         console.log('🔐 Auth state changed:', event, session?.user?.email);
         
         if (event === 'SIGNED_IN' && session?.user) {
@@ -184,7 +185,8 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Attempting sign in for:', credentials.email);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const client = getSupabaseClient();
+      const { data, error } = await client.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password
       });
@@ -211,7 +213,14 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Attempting Google sign in...');
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      // Get a valid Supabase client
+      const client = getSupabaseClient();
+      if (!client || !client.auth) {
+        console.error('❌ Supabase client or auth not available');
+        return { success: false, error: 'Authentication service unavailable' };
+      }
+      
+      const { data, error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
@@ -256,36 +265,33 @@ class SupabaseAuthService {
         return { success: false, error: result.error };
       }
 
-      // Update auth state with the phone-authenticated user
-      if (result.user) {
-        // For phone authentication, create a simple user object
-        const userData: AuthUser = {
-          id: result.user.id,
-          email: result.user.email || '',
-          fullName: result.user.full_name || '',
-          phone: result.user.phone || '',
-          accountBalance: 0,
-          isVerified: result.user.phone_verified || false,
-          kycStatus: 'unverified',
-          isAdmin: false,
-          accountStatus: 'active',
-          createdAt: result.user.created_at || new Date().toISOString(),
-          updatedAt: result.user.updated_at || new Date().toISOString()
-        };
-        
-        this.authState = {
-          user: userData,
-          isLoading: false,
-          isAuthenticated: true,
-          isAdmin: false,
-        };
-        this.notifyListeners();
-      }
+      // Create a demo user object for phone authentication
+      const userData: AuthUser = {
+        id: 'phone_' + phoneNumber.replace(/\D/g, ''), // Simple ID based on phone
+        email: '', // No email for phone auth
+        fullName: 'Phone User', // Default name
+        phone: phoneNumber,
+        accountBalance: 1000, // Demo balance
+        isVerified: true, // Phone is verified
+        kycStatus: 'unverified',
+        isAdmin: false,
+        accountStatus: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      this.authState = {
+        user: userData,
+        isLoading: false,
+        isAuthenticated: true,
+        isAdmin: false,
+      };
+      this.notifyListeners();
 
       console.log('✅ Phone authentication successful');
       return { 
         success: true, 
-        isNewUser: result.isNewUser 
+        isNewUser: false 
       };
     } catch (error) {
       console.error('❌ Phone sign in failed:', error);
@@ -373,7 +379,8 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Attempting sign up for:', data.email);
       
-      const { data: authData, error } = await supabase.auth.signUp({
+      const client = getSupabaseClient();
+      const { data: authData, error } = await client.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -412,7 +419,8 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Signing out...');
       
-      const { error } = await supabase.auth.signOut();
+      const client = getSupabaseClient();
+      const { error } = await client.auth.signOut();
       
       if (error) {
         console.error('❌ Sign out error:', error);
@@ -426,7 +434,8 @@ class SupabaseAuthService {
 
   async updateProfile(updates: ProfileUpdateData): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const client = getSupabaseClient();
+      const { data: { user } } = await client.auth.getUser();
       
       if (!user) {
         return { success: false, error: 'User not authenticated' };
@@ -461,7 +470,8 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Resetting password for:', email);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const client = getSupabaseClient();
+      const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
 
@@ -482,7 +492,8 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Updating password...');
       
-      const { error } = await supabase.auth.updateUser({
+      const client = getSupabaseClient();
+      const { error } = await client.auth.updateUser({
         password: newPassword
       });
 

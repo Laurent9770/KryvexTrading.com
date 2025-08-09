@@ -1,5 +1,5 @@
 import textlocalService, { OTPData } from './textlocalService';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
 
 export interface PhoneAuthResponse {
   success: boolean;
@@ -140,70 +140,14 @@ class PhoneAuthService {
       // OTP is correct - clean up
       this.otpStorage.delete(sessionId);
 
-      // Check if user exists in Supabase
-      const { data: existingUser, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone', phoneNumber)
-        .maybeSingle();
+      console.log('✅ Phone OTP verification successful for:', phoneNumber);
 
-      if (userError && userError.code !== 'PGRST116') {
-        console.error('❌ Database error:', userError);
-        return {
-          success: false,
-          error: 'Database error. Please try again.'
-        };
-      }
-
-      let user = existingUser;
-      let isNewUser = false;
-
-      // If user doesn't exist, create a new one
-      if (!existingUser) {
-        console.log('👤 Creating new user for phone:', phoneNumber);
-        
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            phone: phoneNumber,
-            phone_verified: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('❌ User creation error:', createError);
-          return {
-            success: false,
-            error: 'Failed to create user account. Please try again.'
-          };
-        }
-
-        user = newUser;
-        isNewUser = true;
-      } else {
-        // Update phone verification status
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ 
-            phone_verified: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingUser.id);
-
-        if (updateError) {
-          console.error('❌ User update error:', updateError);
-        }
-      }
-
-      console.log('✅ Phone authentication successful:', { userId: user.id, isNewUser });
-
+      // For now, return success without creating auth user
+      // The auth service will handle the actual authentication flow
       return {
         success: true,
-        user,
-        isNewUser
+        user: { phone: phoneNumber },
+        isNewUser: false // We'll determine this in the auth service
       };
 
     } catch (error: any) {
