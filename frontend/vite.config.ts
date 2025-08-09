@@ -24,6 +24,11 @@ export default defineConfig({
     sourcemap: false,
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   },
   define: {
     global: 'globalThis',

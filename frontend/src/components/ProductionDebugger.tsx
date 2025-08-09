@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../integrations/supabase/client';
 
 interface DebugInfo {
   hostname: string;
@@ -23,10 +24,9 @@ const ProductionDebugger: React.FC = () => {
 
       try {
         // Check if Supabase client is available
-        const { supabase } = require('@/integrations/supabase/client');
         supabaseClient = !!(supabase && supabase.auth);
       } catch (error) {
-        errors.push(`Supabase import error: ${error}`);
+        errors.push(`Supabase client error: ${error}`);
       }
 
       const info: DebugInfo = {

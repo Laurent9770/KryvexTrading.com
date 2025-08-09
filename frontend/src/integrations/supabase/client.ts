@@ -113,6 +113,9 @@ try {
 // Export the client (either real or mock)
 export { supabase };
 
+// Default export for compatibility
+export default supabase;
+
 // Simple getter function
 export const getSupabaseClient = (): SupabaseClient => {
   return supabase;
