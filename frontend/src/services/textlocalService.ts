@@ -1,4 +1,4 @@
-import axios from 'axios';
+// Using native fetch instead of axios to avoid build issues
 
 // Textlocal configuration
 const TEXTLOCAL_API_KEY = 'aky_313RjxSQGXb9yNSAyxytYMU2dSo';
@@ -78,31 +78,34 @@ class TextlocalService {
       params.append('message', message);
       params.append('sender', TEXTLOCAL_SENDER);
 
-      const response = await axios.post(TEXTLOCAL_API_URL, params, {
+      const response = await fetch(TEXTLOCAL_API_URL, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        timeout: 10000 // 10 second timeout
+        body: params.toString(),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
-      console.log('📨 Textlocal response:', response.data);
+      const responseData = await response.json();
+      console.log('📨 Textlocal response:', responseData);
 
-      if (response.data.status === 'success') {
+      if (responseData.status === 'success') {
         return {
           success: true,
           message: 'OTP sent successfully',
-          messageId: response.data.messages?.[0]?.id
+          messageId: responseData.messages?.[0]?.id
         };
       } else {
         return {
           success: false,
-          error: response.data.errors?.[0]?.message || 'Failed to send SMS'
+          error: responseData.errors?.[0]?.message || 'Failed to send SMS'
         };
       }
     } catch (error: any) {
       console.error('❌ Textlocal SMS error:', error);
       
-      if (error.code === 'ECONNABORTED') {
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
         return {
           success: false,
           error: 'SMS service timeout. Please try again.'
@@ -111,7 +114,7 @@ class TextlocalService {
       
       return {
         success: false,
-        error: error.response?.data?.errors?.[0]?.message || 'Failed to send SMS'
+        error: error.message || 'Failed to send SMS'
       };
     }
   }
