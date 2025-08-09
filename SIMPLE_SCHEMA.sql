@@ -1,11 +1,11 @@
--- CLEAN SCHEMA: Essential Tables Only (No Syntax Errors)
--- Run this in Supabase SQL Editor to fix all issues
+-- SIMPLE SCHEMA: Basic Tables Only (No Admin Policies)
+-- Run this in Supabase SQL Editor - focuses on core functionality
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Create essential enums (with safe creation)
+-- Create essential enums
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
         CREATE TYPE user_role AS ENUM ('user', 'admin', 'moderator');
@@ -18,7 +18,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- Create profiles table (CRITICAL - this fixes the 406 errors)
+-- Create profiles table
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     city TEXT,
     postal_code TEXT,
     
-    -- KYC fields (optional now)
+    -- KYC fields (optional)
     kyc_status kyc_status DEFAULT 'not_submitted',
     kyc_level INTEGER DEFAULT 0,
     is_verified BOOLEAN DEFAULT FALSE,
@@ -77,14 +77,11 @@ CREATE TRIGGER update_profiles_updated_at
 -- Enable RLS for profiles table
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist
+-- Create simple user policies for profiles (NO ADMIN POLICIES)
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
-DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
-DROP POLICY IF EXISTS "Admins can update all profiles" ON profiles;
 
--- Create simple, safe policies
 CREATE POLICY "Users can view own profile" ON profiles
     FOR SELECT USING (auth.uid() = user_id);
 
@@ -93,23 +90,6 @@ CREATE POLICY "Users can update own profile" ON profiles
 
 CREATE POLICY "Users can insert own profile" ON profiles
     FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Admin policies (properly reference role with table alias to avoid conflicts)
-CREATE POLICY "Admins can view all profiles" ON profiles
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM profiles AS admin_profile 
-            WHERE admin_profile.user_id = auth.uid() AND admin_profile.role = 'admin'
-        )
-    );
-
-CREATE POLICY "Admins can update all profiles" ON profiles
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM profiles AS admin_profile 
-            WHERE admin_profile.user_id = auth.uid() AND admin_profile.role = 'admin'
-        )
-    );
 
 -- Create function to automatically create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
@@ -169,14 +149,11 @@ CREATE TABLE IF NOT EXISTS kyc_submissions (
 -- Enable RLS for kyc_submissions
 ALTER TABLE kyc_submissions ENABLE ROW LEVEL SECURITY;
 
--- Drop existing KYC policies
+-- Create simple user policies for KYC (NO ADMIN POLICIES)
 DROP POLICY IF EXISTS "Users can view own KYC submissions" ON kyc_submissions;
 DROP POLICY IF EXISTS "Users can insert own KYC submissions" ON kyc_submissions;
 DROP POLICY IF EXISTS "Users can update own KYC submissions" ON kyc_submissions;
-DROP POLICY IF EXISTS "Admins can view all KYC submissions" ON kyc_submissions;
-DROP POLICY IF EXISTS "Admins can update all KYC submissions" ON kyc_submissions;
 
--- Create simple KYC policies
 CREATE POLICY "Users can view own KYC submissions" ON kyc_submissions
     FOR SELECT USING (auth.uid() = user_id);
 
@@ -186,23 +163,6 @@ CREATE POLICY "Users can insert own KYC submissions" ON kyc_submissions
 CREATE POLICY "Users can update own KYC submissions" ON kyc_submissions
     FOR UPDATE USING (auth.uid() = user_id);
 
--- Admin KYC policies (properly reference role from profiles table)
-CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.user_id = auth.uid() AND profiles.role = 'admin'
-        )
-    );
-
-CREATE POLICY "Admins can update all KYC submissions" ON kyc_submissions
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.user_id = auth.uid() AND profiles.role = 'admin'
-        )
-    );
-
 -- Add updated_at trigger for kyc_submissions
 DROP TRIGGER IF EXISTS update_kyc_submissions_updated_at ON kyc_submissions;
 CREATE TRIGGER update_kyc_submissions_updated_at 
@@ -211,4 +171,4 @@ CREATE TRIGGER update_kyc_submissions_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Success message
-SELECT 'CLEAN SCHEMA APPLIED SUCCESSFULLY! All tables created without syntax errors.' as status;
+SELECT 'SIMPLE SCHEMA APPLIED SUCCESSFULLY! Basic tables created without admin policies.' as status;
