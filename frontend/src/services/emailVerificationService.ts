@@ -59,34 +59,38 @@ class EmailVerificationService {
       // For development, log the code
       console.log('🔑 Verification code for', email, ':', verificationCode);
 
-      // In production, you would send an actual email here
-      // For now, we'll use Supabase's built-in email function or simulate
-      try {
-        // Try to use Supabase Auth email verification
-        const { error } = await supabase.auth.signInWithOtp({
-          email: email,
-          options: {
-            shouldCreateUser: false,
-            data: {
-              verification_code: verificationCode,
-              purpose: purpose,
-              verification_id: verificationId
-            }
-          }
-        });
+      // DEVELOPMENT MODE: Display verification code for testing
+      // In production, integrate with SendGrid, Mailgun, AWS SES, etc.
+      
+      console.log('📧 EMAIL VERIFICATION SIMULATION');
+      console.log('==============================');
+      console.log('To:', email);
+      console.log('Subject: Kryvex Trading - Email Verification Code');
+      console.log('Message:');
+      console.log(`Your verification code is: ${verificationCode}`);
+      console.log(`This code will expire in 10 minutes.`);
+      console.log(`Please enter this code on the verification page.`);
+      console.log('==============================');
 
-        if (error) {
-          console.warn('⚠️ Supabase email failed, using simulated email:', error.message);
-          // Continue with simulated email
-        } else {
-          console.log('✅ Supabase verification email sent');
-        }
-      } catch (supabaseError) {
-        console.warn('⚠️ Supabase email error, using simulated email:', supabaseError);
-      }
+      // Note: Supabase's signInWithOtp sends magic links, not verification codes
+      // For proper email verification in production, use a dedicated email service
 
       // Clean up old codes
       this.cleanupExpiredCodes();
+
+      // In development, dispatch a custom event for UI components to listen
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        const event = new CustomEvent('email-verification-code', {
+          detail: {
+            email,
+            code: verificationCode,
+            verificationId,
+            purpose,
+            expiresAt: expiresAt.toISOString()
+          }
+        });
+        window.dispatchEvent(event);
+      }
 
       return {
         success: true,
