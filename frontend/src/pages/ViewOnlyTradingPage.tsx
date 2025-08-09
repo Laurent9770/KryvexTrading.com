@@ -73,7 +73,7 @@ const ViewOnlyTradingPage: React.FC = () => {
     }
 
     // If authenticated and KYC verified, allow trading
-    navigate('/trading');
+    navigate('/trade');
   };
 
   const getCurrentPrice = () => {

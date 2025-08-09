@@ -44,7 +44,7 @@ export function MobileNav() {
     },
     {
       title: t('trading'),
-      href: "/trading",
+      href: "/trade",
       icon: TrendingUp
     },
     {

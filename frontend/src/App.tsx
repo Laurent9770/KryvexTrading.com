@@ -90,6 +90,7 @@ const AppContent: React.FC = () => {
       {/* PROTECTED ROUTES - With Navbar */}
       <Route element={<NavbarLayout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/trade" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
         <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
         <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
