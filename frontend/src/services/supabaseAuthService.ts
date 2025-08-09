@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import phoneAuthService, { PhoneAuthResponse, VerifyOTPResponse } from './phoneAuthService';
+import emailVerificationService, { EmailVerificationResponse, VerifyCodeResponse } from './emailVerificationService';
 
 export interface AuthUser {
   id: string;
@@ -309,6 +310,63 @@ class SupabaseAuthService {
   // Get remaining OTP time
   getOTPRemainingTime(sessionId: string): number {
     return phoneAuthService.getRemainingTime(sessionId);
+  }
+
+  // Send email verification for KYC
+  async sendKYCEmailVerification(email: string): Promise<EmailVerificationResponse> {
+    try {
+      console.log('📧 Sending KYC email verification to:', email);
+      return await emailVerificationService.sendVerificationEmail(email, 'kyc');
+    } catch (error) {
+      console.error('❌ KYC email verification error:', error);
+      return {
+        success: false,
+        error: 'Failed to send verification email'
+      };
+    }
+  }
+
+  // Verify KYC email code
+  async verifyKYCEmailCode(verificationId: string, code: string, email: string): Promise<VerifyCodeResponse> {
+    try {
+      console.log('🔐 Verifying KYC email code...');
+      return await emailVerificationService.verifyEmailCode(verificationId, code, email);
+    } catch (error) {
+      console.error('❌ KYC email verification failed:', error);
+      return {
+        success: false,
+        error: 'Email verification failed'
+      };
+    }
+  }
+
+  // Resend KYC email verification
+  async resendKYCEmailVerification(verificationId: string): Promise<EmailVerificationResponse> {
+    try {
+      console.log('📧 Resending KYC email verification...');
+      return await emailVerificationService.resendVerificationEmail(verificationId);
+    } catch (error) {
+      console.error('❌ Resend KYC email error:', error);
+      return {
+        success: false,
+        error: 'Failed to resend verification email'
+      };
+    }
+  }
+
+  // Check if email is verified
+  async isEmailVerified(email: string): Promise<boolean> {
+    try {
+      return await emailVerificationService.isEmailVerified(email);
+    } catch (error) {
+      console.error('❌ Email verification check error:', error);
+      return false;
+    }
+  }
+
+  // Get email verification remaining time
+  getEmailVerificationRemainingTime(verificationId: string): number {
+    return emailVerificationService.getRemainingTime(verificationId);
   }
 
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {

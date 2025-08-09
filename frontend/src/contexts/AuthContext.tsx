@@ -63,6 +63,9 @@ interface AuthContextType {
   sendPhoneOTP: (phoneNumber: string) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
   loginWithPhone: (sessionId: string, otp: string, phoneNumber: string) => Promise<void>;
   resendPhoneOTP: (sessionId: string, phoneNumber: string) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
+  sendKYCEmailVerification: (email: string) => Promise<{ success: boolean; verificationId?: string; error?: string }>;
+  verifyKYCEmailCode: (verificationId: string, code: string, email: string) => Promise<{ success: boolean; error?: string }>;
+  resendKYCEmailVerification: (verificationId: string) => Promise<{ success: boolean; verificationId?: string; error?: string }>;
   logout: () => void;
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;
   updateUserProfile: (profileData: Partial<User>) => void;
@@ -374,6 +377,92 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [toast]);
 
+  const sendKYCEmailVerification = useCallback(async (email: string) => {
+    try {
+      const result = await supabaseAuthService.sendKYCEmailVerification(email);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send verification email');
+      }
+      toast({
+        title: "Verification Email Sent",
+        description: `Please check your email for the verification code`,
+      });
+      return {
+        success: true,
+        verificationId: result.verificationId
+      };
+    } catch (error) {
+      console.error('Send email verification error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to send verification email. Please try again.";
+      toast({
+        title: "Failed to Send Email",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }, [toast]);
+
+  const verifyKYCEmailCode = useCallback(async (verificationId: string, code: string, email: string) => {
+    try {
+      const result = await supabaseAuthService.verifyKYCEmailCode(verificationId, code, email);
+      if (!result.success) {
+        throw new Error(result.error || 'Email verification failed');
+      }
+      toast({
+        title: "Email Verified",
+        description: "Your email has been successfully verified for KYC",
+      });
+      return {
+        success: true
+      };
+    } catch (error) {
+      console.error('Email verification error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Invalid verification code. Please try again.";
+      toast({
+        title: "Verification Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }, [toast]);
+
+  const resendKYCEmailVerification = useCallback(async (verificationId: string) => {
+    try {
+      const result = await supabaseAuthService.resendKYCEmailVerification(verificationId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to resend verification email');
+      }
+      toast({
+        title: "Email Resent",
+        description: "A new verification code has been sent to your email",
+      });
+      return {
+        success: true,
+        verificationId: result.verificationId
+      };
+    } catch (error) {
+      console.error('Resend email verification error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to resend verification email. Please try again.";
+      toast({
+        title: "Failed to Resend Email",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }, [toast]);
+
   const logout = useCallback(() => {
     try {
       supabaseAuthService.signOut();
@@ -549,6 +638,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     sendPhoneOTP,
     loginWithPhone,
     resendPhoneOTP,
+    sendKYCEmailVerification,
+    verifyKYCEmailCode,
+    resendKYCEmailVerification,
     logout,
     register,
     updateUserProfile,
@@ -577,6 +669,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     sendPhoneOTP,
     loginWithPhone,
     resendPhoneOTP,
+    sendKYCEmailVerification,
+    verifyKYCEmailCode,
+    resendKYCEmailVerification,
     logout,
     register,
     updateUserProfile,

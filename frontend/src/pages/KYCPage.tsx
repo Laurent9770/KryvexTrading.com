@@ -58,7 +58,7 @@ interface KYCStatus {
 const KYCPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, sendKYCEmailVerification, verifyKYCEmailCode, resendKYCEmailVerification } = useAuth();
   const { toast } = useToast();
   
   // Get redirect info from withdrawal flow
@@ -76,8 +76,10 @@ const KYCPage = () => {
   
   // Level 1: Email Verification
   const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [emailVerificationId, setEmailVerificationId] = useState('');
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [emailCountdown, setEmailCountdown] = useState(0);
   
   // Level 2: Identity Verification
   const [identityData, setIdentityData] = useState<KYCLevel2Data>({
@@ -107,6 +109,14 @@ const KYCPage = () => {
     }
   }, [user?.id]);
 
+  // Email verification countdown timer
+  useEffect(() => {
+    if (emailCountdown > 0) {
+      const timer = setTimeout(() => setEmailCountdown(emailCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailCountdown]);
+
   const loadKYCStatus = async () => {
     if (!user?.id) return;
     
@@ -129,21 +139,17 @@ const KYCPage = () => {
     
     setIsSendingCode(true);
     try {
-      // Simulate email sending (replace with actual email service)
-      toast({
-        title: "Verification Email Sent",
-        description: "Please check your email for the verification code",
-      });
-      setKycStatus(prev => ({
-        ...prev,
-        level1: { status: 'pending' }
-      }));
+      const result = await sendKYCEmailVerification(user.email);
+      if (result.success && result.verificationId) {
+        setEmailVerificationId(result.verificationId);
+        setEmailCountdown(600); // 10 minutes countdown
+        setKycStatus(prev => ({
+          ...prev,
+          level1: { status: 'pending' }
+        }));
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send verification email",
-        variant: "destructive"
-      });
+      // Error already handled in AuthContext
     } finally {
       setIsSendingCode(false);
     }
@@ -160,26 +166,53 @@ const KYCPage = () => {
       return;
     }
 
-    setIsVerifyingCode(true);
-    try {
-      // Simulate email verification (replace with actual verification)
+    if (!emailVerificationId || !user?.email) {
       toast({
-        title: "Email Verified",
-        description: "Your email has been successfully verified",
-      });
-      setKycStatus(prev => ({
-        ...prev,
-        level1: { status: 'verified' }
-      }));
-      setActiveTab('level2');
-    } catch (error) {
-      toast({
-        title: "Verification Failed",
-        description: "Invalid verification code",
+        title: "Error",
+        description: "Please request a new verification code",
         variant: "destructive"
       });
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      const result = await verifyKYCEmailCode(emailVerificationId, emailVerificationCode, user.email);
+      if (result.success) {
+        setKycStatus(prev => ({
+          ...prev,
+          level1: { status: 'verified' }
+        }));
+        setEmailCountdown(0);
+        setActiveTab('level2');
+      }
+    } catch (error) {
+      // Error already handled in AuthContext
     } finally {
       setIsVerifyingCode(false);
+    }
+  };
+
+  // Level 1: Resend verification email
+  const handleResendVerificationEmail = async () => {
+    if (!emailVerificationId) {
+      // If no verification ID, send new email
+      handleSendVerificationEmail();
+      return;
+    }
+    
+    setIsSendingCode(true);
+    try {
+      const result = await resendKYCEmailVerification(emailVerificationId);
+      if (result.success && result.verificationId) {
+        setEmailVerificationId(result.verificationId);
+        setEmailCountdown(600); // 10 minutes countdown
+        setEmailVerificationCode(''); // Clear previous code
+      }
+    } catch (error) {
+      // Error already handled in AuthContext
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
