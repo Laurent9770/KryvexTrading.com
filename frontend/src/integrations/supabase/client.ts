@@ -1,136 +1,107 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+// Polyfill for missing globals that Supabase needs
+if (typeof global === 'undefined') {
+  (window as any).global = window;
+}
+
+// Ensure Headers is available
+if (typeof window !== 'undefined' && !window.Headers) {
+  console.warn('Headers not available, creating polyfill');
+  (window as any).Headers = class {
+    constructor(init: any = {}) {
+      Object.assign(this, init);
+    }
+  };
+}
 
 // Hardcoded credentials that we know work
 const SUPABASE_URL = 'https://ftkeczodadvtnxofrwps.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg'
 
-console.log('🔧 Initializing Supabase client...')
+console.log('🔧 Initializing Supabase client with polyfills...')
 
-// Create the client with safe error handling
-let supabase: SupabaseClient | null = null
+// Create the client with safe error handling and dynamic import
+let supabase: any = null
 
-try {
-  // Ensure globals are available for Supabase
-  if (typeof global === 'undefined') {
-    (window as any).global = window;
-  }
-  
-  // Create with absolute minimal configuration
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false
-    },
-    global: {
-      headers: {}
-    }
-  })
-  
-  console.log('✅ Supabase client created successfully:', {
-    client: !!supabase,
-    auth: !!supabase?.auth,
-    url: SUPABASE_URL,
-    keyLength: SUPABASE_ANON_KEY.length
-  })
-} catch (error) {
-  console.error('❌ Failed to create Supabase client:', error)
-  console.error('Error details:', error)
-  
-  // Create a mock client to prevent crashes
-  supabase = {
-    auth: {
-      signInWithOAuth: async () => ({ data: null, error: new Error('Supabase client unavailable') }),
-      getSession: async () => ({ data: { session: null }, error: new Error('Supabase client unavailable') }),
-      signOut: async () => ({ error: new Error('Supabase client unavailable') }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
-    },
-    from: () => ({
-      select: () => ({ data: null, error: new Error('Supabase client unavailable') }),
-      insert: () => ({ data: null, error: new Error('Supabase client unavailable') }),
-      update: () => ({ data: null, error: new Error('Supabase client unavailable') }),
-      delete: () => ({ data: null, error: new Error('Supabase client unavailable') })
-    })
-  } as any
-  
-  console.warn('⚠️ Using mock Supabase client to prevent crashes')
-}
-
-// Export the client
-export { supabase }
-
-// Helper function to get the client safely
-export const getSupabaseClient = (): SupabaseClient => {
-  if (!supabase || !supabase.auth) {
-    console.error('❌ Supabase client or auth not available')
-    throw new Error('Supabase client unavailable')
-  }
-  return supabase
-}
-
-// Helper function to test connection (call this when needed)
-export const testConnection = async () => {
-  const client = getSupabaseClient()
-  
+async function createSupabaseClient() {
   try {
-    const { data, error } = await client.from('users').select('count').limit(1)
-    if (error) {
-      console.warn('⚠️ Supabase connection test failed:', error)
-      return false
-    }
-    console.log('✅ Supabase client initialized and tested successfully')
-    return true
-  } catch (testError) {
-    console.error('❌ Supabase client test failed:', testError)
-    return false
-  }
-}
-
-// Helper function to get user role
-export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => {
-  const client = getSupabaseClient()
-  
-  try {
-    const { data, error } = await client
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single()
-
-    if (error) {
-      console.error('Error fetching user role:', error)
-      return 'user'
-    }
-
-    return data?.role || 'user'
+    // Dynamic import to ensure all dependencies are loaded
+    const { createClient } = await import('@supabase/supabase-js');
+    
+    console.log('📦 Supabase package loaded successfully');
+    
+    // Create with minimal configuration
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    });
+    
+    console.log('✅ Supabase client created successfully:', {
+      client: !!supabase,
+      auth: !!supabase?.auth,
+      url: SUPABASE_URL,
+      keyLength: SUPABASE_ANON_KEY.length
+    });
+    
+    return supabase;
   } catch (error) {
-    console.error('Error in getUserRole:', error)
-    return 'user'
+    console.error('❌ Failed to create Supabase client:', error)
+    console.error('Error details:', error)
+  
+    // Create a mock client to prevent crashes
+    supabase = {
+      auth: {
+        signInWithOAuth: async () => ({ data: null, error: new Error('Supabase client unavailable') }),
+        getSession: async () => ({ data: { session: null }, error: new Error('Supabase client unavailable') }),
+        signOut: async () => ({ error: new Error('Supabase client unavailable') }),
+        signUp: async () => ({ data: null, error: new Error('Supabase client unavailable') }),
+        signInWithPassword: async () => ({ data: null, error: new Error('Supabase client unavailable') }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+      },
+      from: () => ({
+        select: () => ({ data: null, error: new Error('Supabase client unavailable') }),
+        insert: () => ({ data: null, error: new Error('Supabase client unavailable') }),
+        update: () => ({ data: null, error: new Error('Supabase client unavailable') }),
+        delete: () => ({ data: null, error: new Error('Supabase client unavailable') })
+      })
+    } as any;
+    
+    console.warn('⚠️ Using mock Supabase client to prevent crashes');
+    return supabase;
   }
 }
 
-// Helper function to check if user is admin
-export const isUserAdmin = async (userId: string): Promise<boolean> => {
-  try {
-    const role = await getUserRole(userId)
-    return role === 'admin'
-  } catch (error) {
-    console.error('Error in isUserAdmin:', error)
-    return false
-  }
-}
+// Initialize the client immediately
+createSupabaseClient().then(client => {
+  supabase = client;
+}).catch(error => {
+  console.error('Failed to initialize Supabase client:', error);
+});
 
-// Helper function to get API URL
+// Create a synchronous getter that ensures the client is available
+const getSupabaseClient = async (): Promise<any> => {
+  if (!supabase) {
+    console.log('🔄 Waiting for Supabase client initialization...');
+    supabase = await createSupabaseClient();
+  }
+  return supabase;
+};
+
+// Export both sync and async versions
+export { supabase };
+export { getSupabaseClient };
+
+// Simplified helper functions for the new async client
 export const getApiUrl = (): string => {
   return import.meta.env.VITE_API_URL || 'https://kryvextrading-com.onrender.com'
 }
 
-// Helper function to check if running in development
 export const isDevelopment = (): boolean => {
   return import.meta.env.DEV || false
 }
 
-// Helper function to log environment status
 export const logEnvironmentStatus = (): void => {
   console.log('🔧 Frontend Environment Status:', {
     supabaseUrl: SUPABASE_URL,
@@ -141,7 +112,6 @@ export const logEnvironmentStatus = (): void => {
   })
 }
 
-// Helper function to test authentication and policies
 export const testAuthPolicies = async (): Promise<{
   clientStatus: string;
   authStatus: string;
@@ -156,35 +126,24 @@ export const testAuthPolicies = async (): Promise<{
   }
 
   try {
-    // Test client
-    const client = getSupabaseClient()
+    const client = await getSupabaseClient()
     result.clientStatus = 'available'
 
-    // Test auth
     if (client.auth) {
       result.authStatus = 'available'
 
-      // Test session
       try {
         const { data: { session }, error } = await client.auth.getSession()
-        if (error) {
-          result.sessionStatus = `error: ${error.message}`
-        } else {
-          result.sessionStatus = session ? 'active' : 'none'
-        }
+        result.sessionStatus = error ? `error: ${error.message}` : (session ? 'active' : 'none')
       } catch (sessionError: any) {
         result.sessionStatus = `failed: ${sessionError.message}`
       }
 
-      // Test basic database access (policies)
       try {
         const { data, error } = await client.from('profiles').select('count').limit(1)
         if (error) {
-          if (error.message.includes('permission') || error.message.includes('policy')) {
-            result.policiesStatus = 'policy_error'
-          } else {
-            result.policiesStatus = `db_error: ${error.message}`
-          }
+          result.policiesStatus = error.message.includes('permission') || error.message.includes('policy') 
+            ? 'policy_error' : `db_error: ${error.message}`
         } else {
           result.policiesStatus = 'accessible'
         }
