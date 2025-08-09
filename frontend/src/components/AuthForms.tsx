@@ -207,6 +207,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       return;
     }
 
+    // Enhanced password validation to match Supabase requirements
+    const hasLower = /[a-z]/.test(formData.password);
+    const hasUpper = /[A-Z]/.test(formData.password);
+    const hasNumber = /[0-9]/.test(formData.password);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{}|\\:";'<>?,.\/]/.test(formData.password);
+    
+    if (!hasLower || !hasUpper || !hasNumber || !hasSpecial) {
+      toast({
+        title: "Password Requirements",
+        description: "Password must contain at least one uppercase letter, lowercase letter, number, and special character.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -395,6 +410,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
                 )}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Password must contain: uppercase, lowercase, number, and special character
+            </p>
           </div>
 
           <div className="space-y-2">

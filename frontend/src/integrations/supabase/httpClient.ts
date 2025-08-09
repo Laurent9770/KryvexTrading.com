@@ -25,8 +25,24 @@ export const httpAuth = {
         return { data: null, error: { message: 'Please enter a valid email address' } };
       }
       
-      if (!password || password.length < 6) {
-        return { data: null, error: { message: 'Password must be at least 6 characters long' } };
+      // Enhanced password validation to match Supabase requirements
+      if (!password || password.length < 8) {
+        return { data: null, error: { message: 'Password must be at least 8 characters long' } };
+      }
+      
+      // Check for required character types
+      const hasLower = /[a-z]/.test(password);
+      const hasUpper = /[A-Z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[!@#$%^&*()_+\-=\[\]{}|\\:";'<>?,.\/]/.test(password);
+      
+      if (!hasLower || !hasUpper || !hasNumber || !hasSpecial) {
+        return { 
+          data: null, 
+          error: { 
+            message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*()_+-=[]{}|\\:";\'<>?,./)' 
+          } 
+        };
       }
 
       const requestBody = {
