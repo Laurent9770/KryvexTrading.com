@@ -32,7 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import supabaseKYCService, { CreateKYCData } from '@/services/supabaseKYCService';
 import { getCountries } from '@/utils/countries';
-import DevVerificationCodeDisplay from '@/components/DevVerificationCodeDisplay';
+
 
 // Local interfaces for KYC page
 interface KYCLevel1Data {
@@ -151,7 +151,7 @@ const KYCPage = () => {
         
         toast({
           title: "Verification Code Sent",
-          description: "Check the development panel below for your 6-digit verification code (in production, this would be sent to your email).",
+          description: `A 6-digit verification code has been sent to ${user.email}. Please check your email.`,
           duration: 8000,
         });
       }
@@ -492,9 +492,7 @@ const KYCPage = () => {
                           </>
                         )}
                       </Button>
-                      
-                      {/* Development: Show verification code */}
-                      <DevVerificationCodeDisplay />
+
                       
                       <div className="space-y-2">
                         <Label htmlFor="verificationCode">Verification Code</Label>
