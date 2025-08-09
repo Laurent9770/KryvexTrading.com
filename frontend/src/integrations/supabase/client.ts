@@ -6,21 +6,55 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 console.log('🔧 Initializing Supabase client...')
 
-// Create the client immediately with minimal configuration
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
-})
+// Create the client with safe error handling
+let supabase: SupabaseClient | null = null
 
-console.log('✅ Supabase client created:', {
-  client: !!supabase,
-  auth: !!supabase?.auth,
-  url: SUPABASE_URL,
-  keyLength: SUPABASE_ANON_KEY.length
-})
+try {
+  // Ensure globals are available for Supabase
+  if (typeof global === 'undefined') {
+    (window as any).global = window;
+  }
+  
+  // Create with absolute minimal configuration
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      headers: {}
+    }
+  })
+  
+  console.log('✅ Supabase client created successfully:', {
+    client: !!supabase,
+    auth: !!supabase?.auth,
+    url: SUPABASE_URL,
+    keyLength: SUPABASE_ANON_KEY.length
+  })
+} catch (error) {
+  console.error('❌ Failed to create Supabase client:', error)
+  console.error('Error details:', error)
+  
+  // Create a mock client to prevent crashes
+  supabase = {
+    auth: {
+      signInWithOAuth: async () => ({ data: null, error: new Error('Supabase client unavailable') }),
+      getSession: async () => ({ data: { session: null }, error: new Error('Supabase client unavailable') }),
+      signOut: async () => ({ error: new Error('Supabase client unavailable') }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+    },
+    from: () => ({
+      select: () => ({ data: null, error: new Error('Supabase client unavailable') }),
+      insert: () => ({ data: null, error: new Error('Supabase client unavailable') }),
+      update: () => ({ data: null, error: new Error('Supabase client unavailable') }),
+      delete: () => ({ data: null, error: new Error('Supabase client unavailable') })
+    })
+  } as any
+  
+  console.warn('⚠️ Using mock Supabase client to prevent crashes')
+}
 
 // Export the client
 export { supabase }
