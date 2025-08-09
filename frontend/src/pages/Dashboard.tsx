@@ -153,16 +153,16 @@ const Dashboard = () => {
       case "options":
       case "binary":
       case "quant":
-        navigate('/trade');
+        navigate('/trading');
         break;
       case "wallet":
         navigate('/wallet');
         break;
       case "bot":
-        navigate('/trade');
+        navigate('/trading');
         break;
       case "staking":
-        navigate('/trade');
+        navigate('/trading');
         break;
       case "profile":
         navigate('/settings');
@@ -229,7 +229,7 @@ const Dashboard = () => {
             </Button>
             <Button 
               className="bg-kucoin-green hover:bg-kucoin-green/90 text-white"
-              onClick={() => navigate('/trade')}
+              onClick={() => navigate('/trading')}
             >
               <TrendingUp className="w-4 h-4 mr-2" />
               Start Trading
@@ -381,7 +381,7 @@ const Dashboard = () => {
                 <Button 
                   variant="outline"
                   className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                  onClick={() => navigate('/trade')}
+                  onClick={() => navigate('/trading')}
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Open New Position

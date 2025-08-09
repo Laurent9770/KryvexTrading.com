@@ -79,7 +79,7 @@ export function Sidebar() {
     },
     {
       title: "Trading",
-      href: "/trade",
+      href: "/trading",
       icon: TrendingUp,
       shortcut: "T",
       description: "Advanced trading interface",

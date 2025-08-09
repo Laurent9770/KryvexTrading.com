@@ -10,7 +10,6 @@ import NavbarLayout from "@/layouts/NavbarLayout";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
 import TradingPage from "@/pages/TradingPage";
-import ViewOnlyTradingPage from "@/pages/ViewOnlyTradingPage";
 import Auth from "@/pages/Auth";
 import AuthCallback from "@/pages/AuthCallback";
 import KYCPage from "@/pages/KYCPage";
@@ -84,13 +83,13 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/trading" element={<ViewOnlyTradingPage />} />
+        <Route path="/trading" element={<TradingPage />} />
       </Route>
 
       {/* PROTECTED ROUTES - With Navbar */}
       <Route element={<NavbarLayout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/trade" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
+
         <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
         <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />

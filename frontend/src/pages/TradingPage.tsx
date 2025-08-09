@@ -28,7 +28,7 @@ const TradingPage = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { realTimePrices, tradingAccount, addActivity, addTrade, updateTradingBalance, user } = useAuth();
+  const { realTimePrices, tradingAccount, addActivity, addTrade, updateTradingBalance, user, isAuthenticated } = useAuth();
   
   // Set up user ID for trading service
   useEffect(() => {
@@ -36,6 +36,31 @@ const TradingPage = () => {
       supabaseTradingPageService.setUserId(user.id);
     }
   }, [user?.id]);
+
+  // Handle authentication and KYC checks for trading actions
+  const handleTradeAction = (action: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in or create an account to start trading",
+        variant: "destructive"
+      });
+      navigate('/auth');
+      return false;
+    }
+
+    if (user?.kycStatus === 'pending' || user?.kycStatus === 'unverified') {
+      toast({
+        title: "KYC Verification Required",
+        description: "Please complete identity verification before trading",
+        variant: "destructive"
+      });
+      navigate('/kyc');
+      return false;
+    }
+
+    return true; // Allow trading
+  };
   
   const [activeTab, setActiveTab] = useState("spot");
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
@@ -457,6 +482,11 @@ const TradingPage = () => {
   };
 
   const startSpotTrade = async () => {
+    // Check authentication first
+    if (!handleTradeAction('spot')) {
+      return;
+    }
+
     if (!spotAmount || parseFloat(spotAmount) <= 0) {
       toast({
         variant: "destructive",
