@@ -8,6 +8,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const envUrl = import.meta.env.VITE_SUPABASE_URL
 const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// Debug environment variables
+console.log('🔍 Environment Variables Debug:', {
+  VITE_SUPABASE_URL: envUrl,
+  VITE_SUPABASE_ANON_KEY: envKey ? `${envKey.substring(0, 20)}...` : 'undefined',
+  hardcodedUrl: SUPABASE_URL,
+  hardcodedKey: SUPABASE_ANON_KEY ? `${SUPABASE_ANON_KEY.substring(0, 20)}...` : 'undefined',
+  importMetaEnv: typeof import.meta.env,
+  allEnvKeys: Object.keys(import.meta.env || {})
+})
+
 // Use env vars if available, otherwise use hardcoded
 const finalUrl = envUrl || SUPABASE_URL
 const finalKey = envKey || SUPABASE_ANON_KEY
@@ -17,7 +27,9 @@ console.log('🔧 Supabase Configuration:', {
   hasUrl: !!finalUrl,
   hasKey: !!finalKey,
   urlLength: finalUrl?.length || 0,
-  keyLength: finalKey?.length || 0
+  keyLength: finalKey?.length || 0,
+  finalUrl: finalUrl,
+  finalKeyPrefix: finalKey ? `${finalKey.substring(0, 20)}...` : 'undefined'
 })
 
 // Create the Supabase client with validated credentials
@@ -26,28 +38,65 @@ let supabaseClient: SupabaseClient | null = null
 try {
   // Validate that we have the required values
   if (!finalUrl || !finalKey || finalUrl === 'undefined' || finalKey === 'undefined') {
-    throw new Error('Invalid Supabase credentials')
+    console.error('❌ Invalid Supabase credentials:', { finalUrl, finalKey })
+    throw new Error(`Invalid Supabase credentials: URL=${!!finalUrl}, Key=${!!finalKey}`)
   }
+
+  // Validate URL format
+  if (!finalUrl.startsWith('https://') || !finalUrl.includes('supabase.co')) {
+    console.error('❌ Invalid Supabase URL format:', finalUrl)
+    throw new Error(`Invalid Supabase URL format: ${finalUrl}`)
+  }
+
+  // Validate key format (JWT)
+  if (!finalKey.startsWith('eyJ') || finalKey.split('.').length !== 3) {
+    console.error('❌ Invalid Supabase key format')
+    throw new Error('Invalid Supabase key format')
+  }
+
+  console.log('🔧 Creating Supabase client with:', {
+    url: finalUrl,
+    keyLength: finalKey.length,
+    keyPrefix: finalKey.substring(0, 20) + '...'
+  })
 
   // Create the client with basic configuration
   supabaseClient = createClient(finalUrl, finalKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false // Disable to prevent issues
+      detectSessionInUrl: true // Enable for OAuth
+    },
+    global: {
+      headers: {
+        'Content-Type': 'application/json'
+      }
     }
   })
 
-  console.log('✅ Supabase client initialized successfully')
+  // Test the client
+  if (supabaseClient && supabaseClient.auth) {
+    console.log('✅ Supabase client initialized successfully')
+  } else {
+    throw new Error('Supabase client or auth is null')
+  }
 } catch (error) {
   console.error('❌ Supabase client initialization failed:', error)
   
-  // Last resort - create with minimal config
+  // Create a simple fallback client
+  console.warn('⚠️ Attempting fallback client creation...')
   try {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    console.warn('⚠️ Using minimal Supabase client configuration')
+    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      }
+    })
+    console.warn('⚠️ Using fallback Supabase client')
   } catch (fallbackError) {
     console.error('❌ Even fallback client creation failed:', fallbackError)
+    supabaseClient = null
   }
 }
 
@@ -59,12 +108,31 @@ export const getSupabaseClient = (): SupabaseClient => {
   if (!supabaseClient) {
     console.warn('⚠️ Supabase client is null, creating new one...')
     try {
-      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      console.log('🔧 Creating emergency Supabase client...')
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      })
+      
+      if (!supabaseClient || !supabaseClient.auth) {
+        throw new Error('Created client is invalid')
+      }
+      
+      console.log('✅ Emergency Supabase client created successfully')
     } catch (error) {
       console.error('❌ Failed to recreate Supabase client:', error)
-      throw new Error('Supabase client unavailable')
+      throw new Error(`Supabase client unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
+  
+  if (!supabaseClient.auth) {
+    console.error('❌ Supabase client exists but auth is null')
+    throw new Error('Supabase auth unavailable')
+  }
+  
   return supabaseClient
 }
 
@@ -137,6 +205,68 @@ export const logEnvironmentStatus = (): void => {
     finalKey: finalKey ? '✅ Set' : '❌ Missing',
     apiUrl: getApiUrl(),
     mode: import.meta.env.MODE,
-    clientInitialized: !!supabaseClient
+    clientInitialized: !!supabaseClient,
+    authAvailable: !!(supabaseClient && supabaseClient.auth)
   })
+}
+
+// Helper function to test authentication and policies
+export const testAuthPolicies = async (): Promise<{
+  clientStatus: string;
+  authStatus: string;
+  sessionStatus: string;
+  policiesStatus: string;
+}> => {
+  const result = {
+    clientStatus: 'unknown',
+    authStatus: 'unknown', 
+    sessionStatus: 'unknown',
+    policiesStatus: 'unknown'
+  }
+
+  try {
+    // Test client
+    const client = getSupabaseClient()
+    result.clientStatus = 'available'
+
+    // Test auth
+    if (client.auth) {
+      result.authStatus = 'available'
+
+      // Test session
+      try {
+        const { data: { session }, error } = await client.auth.getSession()
+        if (error) {
+          result.sessionStatus = `error: ${error.message}`
+        } else {
+          result.sessionStatus = session ? 'active' : 'none'
+        }
+      } catch (sessionError: any) {
+        result.sessionStatus = `failed: ${sessionError.message}`
+      }
+
+      // Test basic database access (policies)
+      try {
+        const { data, error } = await client.from('profiles').select('count').limit(1)
+        if (error) {
+          if (error.message.includes('permission') || error.message.includes('policy')) {
+            result.policiesStatus = 'policy_error'
+          } else {
+            result.policiesStatus = `db_error: ${error.message}`
+          }
+        } else {
+          result.policiesStatus = 'accessible'
+        }
+      } catch (dbError: any) {
+        result.policiesStatus = `failed: ${dbError.message}`
+      }
+    } else {
+      result.authStatus = 'unavailable'
+    }
+  } catch (clientError: any) {
+    result.clientStatus = `failed: ${clientError.message}`
+  }
+
+  console.log('🔍 Auth & Policy Test Results:', result)
+  return result
 }

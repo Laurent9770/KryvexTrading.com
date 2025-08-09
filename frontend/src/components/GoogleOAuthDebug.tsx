@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getSupabaseClient } from '@/integrations/supabase/client';
+import { getSupabaseClient, testAuthPolicies } from '@/integrations/supabase/client';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 const GoogleOAuthDebug: React.FC = () => {
@@ -14,21 +14,31 @@ const GoogleOAuthDebug: React.FC = () => {
     const results: any = {};
 
     try {
-      // Check Supabase client
-      const client = getSupabaseClient();
-      results.supabaseClient = !!client;
-      results.supabaseAuth = !!(client && client.auth);
+      // Run comprehensive auth and policy tests
+      const authTests = await testAuthPolicies();
+      results.authTests = authTests;
 
-      // Check current session
-      if (client?.auth) {
-        try {
-          const { data: { session }, error } = await client.auth.getSession();
-          results.currentSession = !!session;
-          results.sessionError = error?.message || null;
-          results.userEmail = session?.user?.email || null;
-        } catch (error: any) {
-          results.sessionError = error.message;
+      // Check Supabase client
+      try {
+        const client = getSupabaseClient();
+        results.supabaseClient = !!client;
+        results.supabaseAuth = !!(client && client.auth);
+
+        // Check current session
+        if (client?.auth) {
+          try {
+            const { data: { session }, error } = await client.auth.getSession();
+            results.currentSession = !!session;
+            results.sessionError = error?.message || null;
+            results.userEmail = session?.user?.email || null;
+          } catch (error: any) {
+            results.sessionError = error.message;
+          }
         }
+      } catch (clientError: any) {
+        results.clientError = clientError.message;
+        results.supabaseClient = false;
+        results.supabaseAuth = false;
       }
 
       // Check environment variables
@@ -39,8 +49,9 @@ const GoogleOAuthDebug: React.FC = () => {
       };
 
       // Test Google OAuth configuration
-      if (client?.auth) {
+      if (results.supabaseAuth) {
         try {
+          const client = getSupabaseClient();
           // This will fail if Google OAuth isn't configured
           console.log('Testing Google OAuth configuration...');
           // We can't actually test without triggering OAuth, but we can check if the method exists
