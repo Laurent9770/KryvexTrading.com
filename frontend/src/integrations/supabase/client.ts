@@ -1,139 +1,37 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Direct hardcoded credentials to ensure they're always available
+// Hardcoded credentials that we know work
 const SUPABASE_URL = 'https://ftkeczodadvtnxofrwps.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg'
 
-// Get environment variables (will override hardcoded if available)
-const envUrl = import.meta.env.VITE_SUPABASE_URL
-const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+console.log('🔧 Initializing Supabase client...')
 
-// Debug environment variables
-console.log('🔍 Environment Variables Debug:', {
-  VITE_SUPABASE_URL: envUrl,
-  VITE_SUPABASE_ANON_KEY: envKey ? `${envKey.substring(0, 20)}...` : 'undefined',
-  hardcodedUrl: SUPABASE_URL,
-  hardcodedKey: SUPABASE_ANON_KEY ? `${SUPABASE_ANON_KEY.substring(0, 20)}...` : 'undefined',
-  importMetaEnv: typeof import.meta.env,
-  allEnvKeys: Object.keys(import.meta.env || {})
+// Create the client immediately with minimal configuration
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
 })
 
-// Use env vars if available, otherwise use hardcoded
-const finalUrl = envUrl || SUPABASE_URL
-const finalKey = envKey || SUPABASE_ANON_KEY
-
-console.log('🔧 Supabase Configuration:', {
-  usingEnvVars: !!(envUrl && envKey),
-  hasUrl: !!finalUrl,
-  hasKey: !!finalKey,
-  urlLength: finalUrl?.length || 0,
-  keyLength: finalKey?.length || 0,
-  finalUrl: finalUrl,
-  finalKeyPrefix: finalKey ? `${finalKey.substring(0, 20)}...` : 'undefined'
+console.log('✅ Supabase client created:', {
+  client: !!supabase,
+  auth: !!supabase?.auth,
+  url: SUPABASE_URL,
+  keyLength: SUPABASE_ANON_KEY.length
 })
 
-// Create the Supabase client with validated credentials
-let supabaseClient: SupabaseClient | null = null
-
-try {
-  // Validate that we have the required values
-  if (!finalUrl || !finalKey || finalUrl === 'undefined' || finalKey === 'undefined') {
-    console.error('❌ Invalid Supabase credentials:', { finalUrl, finalKey })
-    throw new Error(`Invalid Supabase credentials: URL=${!!finalUrl}, Key=${!!finalKey}`)
-  }
-
-  // Validate URL format
-  if (!finalUrl.startsWith('https://') || !finalUrl.includes('supabase.co')) {
-    console.error('❌ Invalid Supabase URL format:', finalUrl)
-    throw new Error(`Invalid Supabase URL format: ${finalUrl}`)
-  }
-
-  // Validate key format (JWT)
-  if (!finalKey.startsWith('eyJ') || finalKey.split('.').length !== 3) {
-    console.error('❌ Invalid Supabase key format')
-    throw new Error('Invalid Supabase key format')
-  }
-
-  console.log('🔧 Creating Supabase client with:', {
-    url: finalUrl,
-    keyLength: finalKey.length,
-    keyPrefix: finalKey.substring(0, 20) + '...'
-  })
-
-  // Create the client with basic configuration
-  supabaseClient = createClient(finalUrl, finalKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true // Enable for OAuth
-    },
-    global: {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }
-  })
-
-  // Test the client
-  if (supabaseClient && supabaseClient.auth) {
-    console.log('✅ Supabase client initialized successfully')
-  } else {
-    throw new Error('Supabase client or auth is null')
-  }
-} catch (error) {
-  console.error('❌ Supabase client initialization failed:', error)
-  
-  // Create a simple fallback client
-  console.warn('⚠️ Attempting fallback client creation...')
-  try {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false
-      }
-    })
-    console.warn('⚠️ Using fallback Supabase client')
-  } catch (fallbackError) {
-    console.error('❌ Even fallback client creation failed:', fallbackError)
-    supabaseClient = null
-  }
-}
-
-// Export the client directly
-export const supabase = supabaseClient
+// Export the client
+export { supabase }
 
 // Helper function to get the client safely
 export const getSupabaseClient = (): SupabaseClient => {
-  if (!supabaseClient) {
-    console.warn('⚠️ Supabase client is null, creating new one...')
-    try {
-      console.log('🔧 Creating emergency Supabase client...')
-      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true
-        }
-      })
-      
-      if (!supabaseClient || !supabaseClient.auth) {
-        throw new Error('Created client is invalid')
-      }
-      
-      console.log('✅ Emergency Supabase client created successfully')
-    } catch (error) {
-      console.error('❌ Failed to recreate Supabase client:', error)
-      throw new Error(`Supabase client unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
+  if (!supabase || !supabase.auth) {
+    console.error('❌ Supabase client or auth not available')
+    throw new Error('Supabase client unavailable')
   }
-  
-  if (!supabaseClient.auth) {
-    console.error('❌ Supabase client exists but auth is null')
-    throw new Error('Supabase auth unavailable')
-  }
-  
-  return supabaseClient
+  return supabase
 }
 
 // Helper function to test connection (call this when needed)
@@ -201,12 +99,11 @@ export const isDevelopment = (): boolean => {
 // Helper function to log environment status
 export const logEnvironmentStatus = (): void => {
   console.log('🔧 Frontend Environment Status:', {
-    finalUrl: finalUrl ? '✅ Set' : '❌ Missing',
-    finalKey: finalKey ? '✅ Set' : '❌ Missing',
-    apiUrl: getApiUrl(),
+    supabaseUrl: SUPABASE_URL,
+    clientInitialized: !!supabase,
+    authAvailable: !!(supabase && supabase.auth),
     mode: import.meta.env.MODE,
-    clientInitialized: !!supabaseClient,
-    authAvailable: !!(supabaseClient && supabaseClient.auth)
+    apiUrl: getApiUrl()
   })
 }
 
