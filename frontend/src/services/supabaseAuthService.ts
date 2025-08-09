@@ -65,7 +65,7 @@ class SupabaseAuthService {
       console.log('🔐 Initializing Supabase Auth...');
       
       // Get initial session
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { data: { session }, error } = await client.auth.getSession();
       
       if (error) {
@@ -185,7 +185,7 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Attempting sign in for:', credentials.email);
       
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { data, error } = await client.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password
@@ -214,7 +214,7 @@ class SupabaseAuthService {
       console.log('🔐 Attempting Google sign in...');
       
       // Get a valid Supabase client
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       if (!client || !client.auth) {
         console.error('❌ Supabase client or auth not available');
         return { success: false, error: 'Authentication service unavailable' };
@@ -390,7 +390,7 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Attempting sign up for:', data.email);
       
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { data: authData, error } = await client.auth.signUp({
         email: data.email,
         password: data.password,
@@ -430,7 +430,7 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Signing out...');
       
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { error } = await client.auth.signOut();
       
       if (error) {
@@ -445,7 +445,7 @@ class SupabaseAuthService {
 
   async updateProfile(updates: ProfileUpdateData): Promise<{ success: boolean; error?: string }> {
     try {
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
       
       if (!user) {
@@ -481,7 +481,7 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Resetting password for:', email);
       
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
@@ -503,7 +503,7 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Updating password...');
       
-      const client = await getSupabaseClient();
+      const client = getSupabaseClient();
       const { error } = await client.auth.updateUser({
         password: newPassword
       });
