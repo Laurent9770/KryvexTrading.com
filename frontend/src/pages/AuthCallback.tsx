@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
 
 const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
@@ -11,14 +11,18 @@ const AuthCallback: React.FC = () => {
     const handleAuthCallback = async () => {
       try {
         console.log('🔗 Processing OAuth callback...');
+        console.log('Current URL:', window.location.href);
+        console.log('URL hash:', window.location.hash);
+        console.log('URL search:', window.location.search);
         
         // Get the current URL
         const url = new URL(window.location.href);
         const urlParams = new URLSearchParams(url.search);
+        const hashParams = new URLSearchParams(url.hash.substring(1));
         
-        // Check for error in URL params
-        const error = urlParams.get('error');
-        const errorDescription = urlParams.get('error_description');
+        // Check for error in URL params (both search and hash)
+        const error = urlParams.get('error') || hashParams.get('error');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
         
         if (error) {
           console.error('❌ OAuth error:', error, errorDescription);
@@ -31,8 +35,25 @@ const AuthCallback: React.FC = () => {
           return;
         }
 
+        // Check if we have access token in hash (common for OAuth)
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        console.log('OAuth tokens:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
+
         // Get the session from Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const client = getSupabaseClient();
+        if (!client) {
+          console.error('❌ Supabase client not available');
+          toast({
+            title: "Configuration Error",
+            description: "Authentication service is not available",
+            variant: "destructive"
+          });
+          navigate('/auth');
+          return;
+        }
+
+        const { data: { session }, error: sessionError } = await client.auth.getSession();
         
         if (sessionError) {
           console.error('❌ Session error:', sessionError);

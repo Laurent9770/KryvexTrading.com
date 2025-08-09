@@ -229,7 +229,18 @@ class SupabaseAuthService {
 
       if (error) {
         console.error('❌ Google sign in error:', error);
-        return { success: false, error: error.message };
+        
+        // Provide specific error messages for common issues
+        let errorMessage = error.message;
+        if (error.message.includes('Provider not found') || error.message.includes('Invalid provider')) {
+          errorMessage = 'Google OAuth is not configured in Supabase. Please check the setup guide.';
+        } else if (error.message.includes('redirect_uri')) {
+          errorMessage = 'OAuth redirect URL mismatch. Please check your Google Cloud Console configuration.';
+        } else if (error.message.includes('client_id')) {
+          errorMessage = 'Invalid Google Client ID. Please check your Supabase configuration.';
+        }
+        
+        return { success: false, error: errorMessage };
       }
 
       console.log('✅ Google OAuth initiated successfully');
