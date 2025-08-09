@@ -1,4 +1,4 @@
-import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
+import { supabase, getSupabaseClient, hasRealSupabaseClient } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import phoneAuthService, { PhoneAuthResponse, VerifyOTPResponse } from './phoneAuthService';
 import emailVerificationService, { EmailVerificationResponse, VerifyCodeResponse } from './emailVerificationService';
@@ -213,11 +213,20 @@ class SupabaseAuthService {
     try {
       console.log('🔐 Attempting Google sign in...');
       
-      // Get a valid Supabase client
+      // Check if we have a real Supabase client
       const client = getSupabaseClient();
-      if (!client || !client.auth) {
-        console.error('❌ Supabase client or auth not available');
-        return { success: false, error: 'Authentication service unavailable' };
+      const isRealClient = hasRealSupabaseClient();
+      
+      console.log('🔍 Client status:', { 
+        hasClient: !!client, 
+        hasAuth: !!client?.auth,
+        isRealClient,
+        authMethods: client?.auth ? Object.keys(client.auth).slice(0, 3) : []
+      });
+      
+      if (!client || !client.auth || !isRealClient) {
+        console.error('❌ Real Supabase client not available for OAuth');
+        return { success: false, error: 'Supabase client unavailable' };
       }
       
       const { data, error } = await client.auth.signInWithOAuth({

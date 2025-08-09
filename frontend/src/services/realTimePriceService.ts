@@ -30,11 +30,26 @@ class RealTimePriceService {
 
   private async initializePrices() {
     try {
-      // Fetch real market data from CoinGecko API
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true');
+      console.log('🔄 Fetching market data...');
+      
+      // Try CoinGecko API with CORS proxy for production
+      const isProduction = window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true')
+        : 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
+      
+      const response = await fetch(apiUrl);
       
       if (response.ok) {
-        const data = await response.json();
+        let data;
+        if (isProduction) {
+          const proxyResponse = await response.json();
+          data = JSON.parse(proxyResponse.contents);
+        } else {
+          data = await response.json();
+        }
+        
+        console.log('📊 Market data received:', data);
         
         const symbols = {
           bitcoin: 'BTC',

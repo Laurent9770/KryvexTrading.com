@@ -71,6 +71,8 @@ try {
   // Immediate validation
   if (supabase && supabase.auth && supabase.from) {
     safeLog('✅ Supabase client created successfully');
+    // Mark as real client
+    (supabase as any).__isRealClient = true;
   } else {
     throw new Error('Client created but missing essential methods');
   }
@@ -79,6 +81,7 @@ try {
   
   // Create a functional mock that won't crash the app
   supabase = {
+    __isRealClient: false,
     auth: {
       signUp: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
       signInWithPassword: async () => ({ data: null, error: { message: 'Supabase client unavailable' } }),
@@ -135,9 +138,15 @@ export const logEnvironmentStatus = (): void => {
   if (isDevelopment()) {
     console.log('🔧 Environment Status:', {
       supabaseConnected: !!supabase,
+      isRealClient: !!(supabase as any)?.__isRealClient,
       hostname: window.location.hostname
     });
   }
+};
+
+// Check if we have a real Supabase client (not mock)
+export const hasRealSupabaseClient = (): boolean => {
+  return !!(supabase as any)?.__isRealClient;
 };
 
 // Production-ready client - no complex testing that might cause issues
