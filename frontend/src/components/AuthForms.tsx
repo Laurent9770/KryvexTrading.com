@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, MessageSquare, Clock } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -435,6 +435,200 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   );
 };
 
+export const PhoneLoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState('');
+  const [sessionId, setSessionId] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const { sendPhoneOTP, loginWithPhone, resendPhoneOTP } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Countdown timer for OTP expiry
+  React.useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    
+    // Format as international number
+    if (cleaned.startsWith('44')) {
+      return '+' + cleaned;
+    } else if (cleaned.startsWith('0')) {
+      return '+44' + cleaned.slice(1);
+    } else if (cleaned.length <= 11) {
+      return '+44' + cleaned;
+    }
+    
+    return '+' + cleaned;
+  };
+
+  const handleSendOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      const result = await sendPhoneOTP(formattedPhone);
+      
+      if (result.success && result.sessionId) {
+        setSessionId(result.sessionId);
+        setStep('otp');
+        setCountdown(60); // 60 seconds countdown
+        toast({
+          title: "OTP Sent",
+          description: `Verification code sent to ${formattedPhone}`,
+        });
+      }
+    } catch (error) {
+      // Error already handled in AuthContext
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      await loginWithPhone(sessionId, otp, formattedPhone);
+      onSuccess?.();
+      navigate('/dashboard');
+    } catch (error) {
+      // Error already handled in AuthContext
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setIsLoading(true);
+    try {
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      const result = await resendPhoneOTP(sessionId, formattedPhone);
+      
+      if (result.success && result.sessionId) {
+        setSessionId(result.sessionId);
+        setCountdown(60);
+        setOtp(''); // Clear previous OTP
+      }
+    } catch (error) {
+      // Error already handled in AuthContext
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const goBack = () => {
+    setStep('phone');
+    setOtp('');
+    setCountdown(0);
+  };
+
+  return (
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold">
+          {step === 'phone' ? 'Phone Login' : 'Verify OTP'}
+        </CardTitle>
+        <CardDescription>
+          {step === 'phone' 
+            ? 'Enter your phone number to receive a verification code'
+            : `Enter the 6-digit code sent to ${formatPhoneNumber(phoneNumber)}`
+          }
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {step === 'phone' ? (
+          <form onSubmit={handleSendOTP} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+44 7123 456789"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter with country code (e.g., +44 for UK)
+              </p>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Sending..." : "Send Verification Code"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOTP} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="otp">Verification Code</Label>
+              <div className="relative">
+                <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="pl-10 text-center text-lg tracking-widest"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              {countdown > 0 && (
+                <div className="flex items-center justify-center text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4 mr-1" />
+                  Code expires in {countdown}s
+                </div>
+              )}
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading || otp.length !== 6}>
+              {isLoading ? "Verifying..." : "Verify & Login"}
+            </Button>
+
+            <div className="flex flex-col space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResendOTP}
+                disabled={isLoading || countdown > 0}
+                className="w-full"
+              >
+                {isLoading ? "Resending..." : "Resend Code"}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={goBack}
+                className="w-full"
+              >
+                Change Phone Number
+              </Button>
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 export const AuthTabs: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -449,13 +643,18 @@ export const AuthTabs: React.FC = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="login">Email</TabsTrigger>
+            <TabsTrigger value="phone">Phone</TabsTrigger>
             <TabsTrigger value="register">Sign Up</TabsTrigger>
           </TabsList>
           
           <TabsContent value="login">
             <LoginForm />
+          </TabsContent>
+          
+          <TabsContent value="phone">
+            <PhoneLoginForm />
           </TabsContent>
           
           <TabsContent value="register">

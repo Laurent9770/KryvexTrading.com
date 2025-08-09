@@ -60,6 +60,9 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  sendPhoneOTP: (phoneNumber: string) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
+  loginWithPhone: (sessionId: string, otp: string, phoneNumber: string) => Promise<void>;
+  resendPhoneOTP: (sessionId: string, phoneNumber: string) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
   logout: () => void;
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;
   updateUserProfile: (profileData: Partial<User>) => void;
@@ -292,6 +295,85 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [toast]);
 
+  const sendPhoneOTP = useCallback(async (phoneNumber: string) => {
+    try {
+      const result = await supabaseAuthService.sendPhoneOTP(phoneNumber);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send OTP');
+      }
+      toast({
+        title: "OTP Sent",
+        description: `Verification code sent to ${phoneNumber}`,
+      });
+      return {
+        success: true,
+        sessionId: result.sessionId
+      };
+    } catch (error) {
+      console.error('Send OTP error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to send OTP. Please try again.";
+      toast({
+        title: "Failed to Send OTP",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }, [toast]);
+
+  const loginWithPhone = useCallback(async (sessionId: string, otp: string, phoneNumber: string) => {
+    try {
+      const { success, error, isNewUser } = await supabaseAuthService.signInWithPhone(sessionId, otp, phoneNumber);
+      if (!success) {
+        throw new Error(error || 'Phone login failed');
+      }
+      toast({
+        title: "Login Successful",
+        description: isNewUser ? "Welcome to Kryvex Trading!" : "Welcome back!",
+      });
+    } catch (error) {
+      console.error('Phone login error:', error);
+      toast({
+        title: "Phone Login Failed",
+        description: error instanceof Error ? error.message : "Invalid OTP. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  }, [toast]);
+
+  const resendPhoneOTP = useCallback(async (sessionId: string, phoneNumber: string) => {
+    try {
+      const result = await supabaseAuthService.resendPhoneOTP(sessionId, phoneNumber);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to resend OTP');
+      }
+      toast({
+        title: "OTP Resent",
+        description: `New verification code sent to ${phoneNumber}`,
+      });
+      return {
+        success: true,
+        sessionId: result.sessionId
+      };
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to resend OTP. Please try again.";
+      toast({
+        title: "Failed to Resend OTP",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }, [toast]);
+
   const logout = useCallback(() => {
     try {
       supabaseAuthService.signOut();
@@ -464,6 +546,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     loginWithGoogle,
+    sendPhoneOTP,
+    loginWithPhone,
+    resendPhoneOTP,
     logout,
     register,
     updateUserProfile,
@@ -489,6 +574,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     loginWithGoogle,
+    sendPhoneOTP,
+    loginWithPhone,
+    resendPhoneOTP,
     logout,
     register,
     updateUserProfile,

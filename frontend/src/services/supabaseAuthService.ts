@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import phoneAuthService, { PhoneAuthResponse, VerifyOTPResponse } from './phoneAuthService';
 
 export interface AuthUser {
   id: string;
@@ -227,6 +228,87 @@ class SupabaseAuthService {
       console.error('❌ Google sign in failed:', error);
       return { success: false, error: 'Google sign in failed' };
     }
+  }
+
+  // Send OTP to phone number
+  async sendPhoneOTP(phoneNumber: string): Promise<PhoneAuthResponse> {
+    try {
+      console.log('📱 Sending OTP to phone:', phoneNumber);
+      return await phoneAuthService.sendOTP(phoneNumber);
+    } catch (error) {
+      console.error('❌ Phone OTP error:', error);
+      return {
+        success: false,
+        error: 'Failed to send OTP'
+      };
+    }
+  }
+
+  // Verify OTP and sign in with phone
+  async signInWithPhone(sessionId: string, otp: string, phoneNumber: string): Promise<{ success: boolean; error?: string; isNewUser?: boolean }> {
+    try {
+      console.log('🔐 Verifying phone OTP...');
+      
+      const result = await phoneAuthService.verifyOTP(sessionId, otp, phoneNumber);
+      
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      // Update auth state with the phone-authenticated user
+      if (result.user) {
+        // For phone authentication, create a simple user object
+        const userData: AuthUser = {
+          id: result.user.id,
+          email: result.user.email || '',
+          fullName: result.user.full_name || '',
+          phone: result.user.phone || '',
+          accountBalance: 0,
+          isVerified: result.user.phone_verified || false,
+          kycStatus: 'unverified',
+          isAdmin: false,
+          accountStatus: 'active',
+          createdAt: result.user.created_at || new Date().toISOString(),
+          updatedAt: result.user.updated_at || new Date().toISOString()
+        };
+        
+        this.authState = {
+          user: userData,
+          isLoading: false,
+          isAuthenticated: true,
+          isAdmin: false,
+        };
+        this.notifyListeners();
+      }
+
+      console.log('✅ Phone authentication successful');
+      return { 
+        success: true, 
+        isNewUser: result.isNewUser 
+      };
+    } catch (error) {
+      console.error('❌ Phone sign in failed:', error);
+      return { success: false, error: 'Phone authentication failed' };
+    }
+  }
+
+  // Resend OTP
+  async resendPhoneOTP(sessionId: string, phoneNumber: string): Promise<PhoneAuthResponse> {
+    try {
+      console.log('📱 Resending OTP to phone:', phoneNumber);
+      return await phoneAuthService.resendOTP(sessionId, phoneNumber);
+    } catch (error) {
+      console.error('❌ Resend OTP error:', error);
+      return {
+        success: false,
+        error: 'Failed to resend OTP'
+      };
+    }
+  }
+
+  // Get remaining OTP time
+  getOTPRemainingTime(sessionId: string): number {
+    return phoneAuthService.getRemainingTime(sessionId);
   }
 
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {
