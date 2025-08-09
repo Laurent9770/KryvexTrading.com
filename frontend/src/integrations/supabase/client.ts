@@ -59,6 +59,11 @@ let supabase: any;
 
 try {
   safeLog('🔧 Creating Supabase client...');
+  safeLog('🔗 URL:', SUPABASE_URL);
+  safeLog('🔑 Key length:', SUPABASE_ANON_KEY.length);
+  
+  // Try to create client step by step
+  safeLog('📦 Calling createClient...');
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       autoRefreshToken: true,
@@ -68,16 +73,25 @@ try {
     }
   });
   
+  safeLog('🔍 Client created, checking properties...');
+  safeLog('Has supabase:', !!supabase);
+  safeLog('Has auth:', !!supabase?.auth);
+  safeLog('Has from:', !!supabase?.from);
+  safeLog('Auth type:', typeof supabase?.auth);
+  safeLog('From type:', typeof supabase?.from);
+  
   // Immediate validation
   if (supabase && supabase.auth && supabase.from) {
     safeLog('✅ Supabase client created successfully');
     // Mark as real client
     (supabase as any).__isRealClient = true;
+    safeLog('🏷️ Marked as real client');
   } else {
-    throw new Error('Client created but missing essential methods');
+    throw new Error(`Client created but missing methods: auth=${!!supabase?.auth}, from=${!!supabase?.from}`);
   }
 } catch (error: any) {
   safeLog('❌ Supabase client creation failed:', error.message);
+  safeLog('❌ Error details:', error.stack || 'No stack trace');
   
   // Create a functional mock that won't crash the app
   supabase = {

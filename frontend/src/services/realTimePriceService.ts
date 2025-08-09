@@ -32,23 +32,22 @@ class RealTimePriceService {
     try {
       console.log('🔄 Fetching market data...');
       
-      // Try CoinGecko API with CORS proxy for production
+      // For production, use fallback data immediately instead of CORS proxy
       const isProduction = window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true')
-        : 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
+      
+      if (isProduction) {
+        console.log('🔄 Production detected, using fallback prices to avoid CORS issues');
+        this.initializeFallbackPrices();
+        return;
+      }
+      
+      // Only use direct API in development
+      const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
       
       const response = await fetch(apiUrl);
       
       if (response.ok) {
-        let data;
-        if (isProduction) {
-          const proxyResponse = await response.json();
-          data = JSON.parse(proxyResponse.contents);
-        } else {
-          data = await response.json();
-        }
-        
+        const data = await response.json();
         console.log('📊 Market data received:', data);
         
         const symbols = {
@@ -192,23 +191,21 @@ class RealTimePriceService {
     try {
       console.log('🔄 Updating market data...');
       
-      // Use CORS proxy for production, direct API for development
+      // Skip updates in production to avoid CORS issues - prices already initialized
       const isProduction = window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true')
-        : 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
+      
+      if (isProduction) {
+        console.log('🔄 Production: skipping price update to avoid CORS issues');
+        return;
+      }
+      
+      // Only update prices in development
+      const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
       
       const response = await fetch(apiUrl);
       
       if (response.ok) {
-        let data;
-        if (isProduction) {
-          const proxyResponse = await response.json();
-          data = JSON.parse(proxyResponse.contents);
-        } else {
-          data = await response.json();
-        }
-        
+        const data = await response.json();
         console.log('📊 Market data updated:', data);
         
         const symbols = {
