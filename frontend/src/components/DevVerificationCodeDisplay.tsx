@@ -37,8 +37,40 @@ const DevVerificationCodeDisplay: React.FC<DevVerificationCodeDisplayProps> = ({
       setTimeout(() => setShowCode(false), 30000);
     };
 
+    // Also listen to console logs to catch verification codes
+    const originalLog = console.log;
+    console.log = (...args) => {
+      originalLog(...args);
+      
+      // Check if this is a verification code log
+      if (args.length >= 3 && 
+          typeof args[0] === 'string' && 
+          args[0].includes('🔑') && 
+          args[0].includes('Verification code')) {
+        const email = args[1];
+        const code = args[2];
+        
+        setLastCode(code?.toString() || '');
+        setLastEmail(email?.toString() || '');
+        setTimestamp(new Date().toLocaleTimeString());
+        setShowCode(true);
+        
+        toast({
+          title: "📧 Verification Code Generated",
+          description: `Code: ${code} (From console capture)`,
+          duration: 8000,
+        });
+        
+        setTimeout(() => setShowCode(false), 30000);
+      }
+    };
+
     window.addEventListener('email-verification-code', handleVerificationEvent);
-    return () => window.removeEventListener('email-verification-code', handleVerificationEvent);
+    
+    return () => {
+      window.removeEventListener('email-verification-code', handleVerificationEvent);
+      console.log = originalLog;
+    };
   }, [toast]);
 
   const copyToClipboard = async () => {

@@ -56,12 +56,10 @@ class EmailVerificationService {
         verified: false
       });
 
-      // For development, log the code
+      // For development, log the code prominently
       console.log('🔑 Verification code for', email, ':', verificationCode);
-
-      // DEVELOPMENT MODE: Display verification code for testing
-      // In production, integrate with SendGrid, Mailgun, AWS SES, etc.
       
+      // DEVELOPMENT MODE: Display verification code for testing
       console.log('📧 EMAIL VERIFICATION SIMULATION');
       console.log('==============================');
       console.log('To:', email);
@@ -71,6 +69,13 @@ class EmailVerificationService {
       console.log(`This code will expire in 10 minutes.`);
       console.log(`Please enter this code on the verification page.`);
       console.log('==============================');
+      
+      // Show alert for immediate visibility (development only)
+      if (import.meta.env.DEV) {
+        setTimeout(() => {
+          alert(`DEVELOPMENT: Email verification code is ${verificationCode}\n\nCopy this code and paste it in the verification field.`);
+        }, 500);
+      }
 
       // Note: Supabase's signInWithOtp sends magic links, not verification codes
       // For proper email verification in production, use a dedicated email service
