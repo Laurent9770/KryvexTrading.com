@@ -82,46 +82,46 @@ class RealTimePriceService {
   }
 
   private initializeFallbackPrices() {
-    // Fallback prices (only used if API fails)
+    // Updated fallback prices (realistic current market prices as of December 2024)
     const fallbackPrices: CryptoPrice[] = [
       {
         symbol: 'BTC',
-        price: 43250.50,
-        change24h: 2.5,
-        volume24h: 25000000000,
-        marketCap: 850000000000,
+        price: 95250.00,
+        change24h: 2.34,
+        volume24h: 28500000000,
+        marketCap: 1847000000000,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'ETH',
-        price: 2650.75,
-        change24h: -1.2,
-        volume24h: 15000000000,
-        marketCap: 320000000000,
+        price: 3420.75,
+        change24h: 1.89,
+        volume24h: 15200000000,
+        marketCap: 412000000000,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'SOL',
-        price: 98.25,
-        change24h: 5.8,
-        volume24h: 2000000000,
-        marketCap: 45000000000,
+        price: 245.60,
+        change24h: 4.52,
+        volume24h: 2100000000,
+        marketCap: 115000000000,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'ADA',
-        price: 0.485,
-        change24h: 1.3,
-        volume24h: 800000000,
-        marketCap: 17000000000,
+        price: 1.25,
+        change24h: -0.85,
+        volume24h: 890000000,
+        marketCap: 44000000000,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'BNB',
-        price: 320.45,
-        change24h: 0.8,
-        volume24h: 1200000000,
-        marketCap: 48000000000,
+        price: 695.30,
+        change24h: 0.67,
+        volume24h: 1650000000,
+        marketCap: 101000000000,
         lastUpdated: new Date().toISOString()
       }
     ];

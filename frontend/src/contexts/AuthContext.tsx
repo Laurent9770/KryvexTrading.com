@@ -163,6 +163,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Subscribe to auth state changes
       let unsubscribe: (() => void) | null = null;
       
+      // Listen for storage events (when other tabs/windows update auth)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'supabase.auth.token') {
+          console.log('🔄 Storage auth change detected, refreshing state...');
+          // Trigger a refresh of the auth state
+          if (e.newValue) {
+            supabaseAuthService.checkSession();
+          } else {
+            // Session was cleared
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+          }
+        }
+      };
+      
+      // Listen for custom auth state events
+      const handleAuthStateEvent = (e: CustomEvent) => {
+        console.log('🔄 Custom auth state change detected:', e.detail);
+        if (e.detail?.user) {
+          supabaseAuthService.checkSession();
+        }
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('authStateChange', handleAuthStateEvent as EventListener);
+      
       try {
         unsubscribe = supabaseAuthService.subscribe((authState: AuthState) => {
           console.log('🔍 AuthContext received auth state:', authState);
@@ -248,6 +275,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (unsubscribe) {
             unsubscribe();
           }
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('authStateChange', handleAuthStateEvent as EventListener);
         } catch (error) {
           console.warn('Error unsubscribing from auth:', error);
         }
@@ -465,13 +494,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(() => {
     try {
+      // Clear state immediately
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      
+      // Clear all user data
+      setTradingAccount({
+        USDT: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+        BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+        ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
+      });
+      
+      setFundingAccount({
+        USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
+      });
+      
+      setActivityFeed([]);
+      setTradingHistory([]);
+      
+      // Clear storage and call auth service
+      localStorage.removeItem('supabase.auth.token');
       supabaseAuthService.signOut();
+      
+      // Dispatch storage event to notify other components
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'supabase.auth.token',
+        newValue: null
+      }));
+      
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
       });
+      
+      // Navigate to landing page after a short delay
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     } catch (error) {
       console.error('Logout error:', error);
+      // Force navigation even if there's an error
+      window.location.href = '/';
     }
   }, [toast]);
 

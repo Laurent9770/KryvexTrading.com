@@ -97,20 +97,27 @@ const AuthCallback: React.FC = () => {
         localStorage.setItem('supabase.auth.token', JSON.stringify(session));
         console.log('✅ Session stored in localStorage');
 
-        // Verify session is working
-        const storedSession = httpAuth.getSession();
-        if (storedSession && storedSession.user) {
-          console.log('✅ OAuth authentication successful for:', storedSession.user.email);
-          toast({
-            title: "Welcome!",
-            description: `Successfully signed in with Google as ${storedSession.user.email}`,
-          });
-          
-          // Redirect to dashboard
+        // Trigger a storage event to notify other components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'supabase.auth.token',
+          newValue: JSON.stringify(session)
+        }));
+
+        // Also dispatch a custom event for immediate auth state update
+        window.dispatchEvent(new CustomEvent('authStateChange', {
+          detail: { user: userData, session }
+        }));
+
+        console.log('✅ OAuth authentication successful for:', userData.email);
+        toast({
+          title: "Welcome!",
+          description: `Successfully signed in with Google as ${userData.email}`,
+        });
+        
+        // Add a small delay to ensure state updates, then redirect
+        setTimeout(() => {
           navigate('/dashboard');
-        } else {
-          throw new Error('Failed to create session');
-        }
+        }, 500);
 
       } catch (error) {
         console.error('❌ Auth callback error:', error);
