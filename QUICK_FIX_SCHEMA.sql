@@ -216,27 +216,31 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- Admin policies for KYC
+-- Admin policies for KYC (check role after table is created)
 DO $$ BEGIN
-    CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions
-        FOR SELECT USING (
-            EXISTS (
-                SELECT 1 FROM profiles 
-                WHERE user_id = auth.uid() AND role = 'admin'
-            )
-        );
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'role') THEN
+        CREATE POLICY "Admins can view all KYC submissions" ON kyc_submissions
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM profiles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+    END IF;
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
 DO $$ BEGIN
-    CREATE POLICY "Admins can update all KYC submissions" ON kyc_submissions
-        FOR UPDATE USING (
-            EXISTS (
-                SELECT 1 FROM profiles 
-                WHERE user_id = auth.uid() AND role = 'admin'
-            )
-        );
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'role') THEN
+        CREATE POLICY "Admins can update all KYC submissions" ON kyc_submissions
+            FOR UPDATE USING (
+                EXISTS (
+                    SELECT 1 FROM profiles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+    END IF;
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

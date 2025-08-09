@@ -37,7 +37,7 @@ const TradingPage = () => {
     }
   }, [user?.id]);
 
-  // Handle authentication and KYC checks for trading actions
+  // Handle authentication for trading actions (KYC restrictions removed)
   const handleTradeAction = (action: string) => {
     if (!isAuthenticated) {
       toast({
@@ -49,17 +49,8 @@ const TradingPage = () => {
       return false;
     }
 
-    if (user?.kycStatus === 'pending' || user?.kycStatus === 'unverified') {
-      toast({
-        title: "KYC Verification Required",
-        description: "Please complete identity verification before trading",
-        variant: "destructive"
-      });
-      navigate('/kyc');
-      return false;
-    }
-
-    return true; // Allow trading
+    // KYC restrictions removed - all authenticated users can trade
+    return true; // Allow trading for all authenticated users
   };
   
   const [activeTab, setActiveTab] = useState("spot");

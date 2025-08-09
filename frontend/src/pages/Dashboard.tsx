@@ -245,8 +245,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Account Setup Card */}
-        {user?.kycStatus === 'pending' && (
+        {/* KYC Setup Card - Now Optional */}
+        {false && (
           <Card className="bg-orange-500/10 border-orange-500/20 p-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">

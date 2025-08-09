@@ -22,7 +22,6 @@ import SettingsPage from "@/pages/SettingsPage";
 import SupportPage from "@/pages/SupportPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
-import KYCRequired from "@/components/KYCRequired";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
 
@@ -37,25 +36,20 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 };
 
-// KYC Required Route component
-const KYCRequiredRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// KYC Optional Route component (KYC restrictions removed)
+const KYCOptionalRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   try {
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
     
     // If not authenticated, redirect to auth
     if (!isAuthenticated) {
       return <Navigate to="/auth" />;
     }
     
-    // If KYC not verified, show KYC required page
-    if (user?.kycStatus === 'pending' || user?.kycStatus === 'unverified' || user?.kycStatus === 'rejected') {
-      return <KYCRequired />;
-    }
-    
-    // If KYC verified, allow access
+    // KYC restrictions removed - all authenticated users have access
     return <>{children}</>;
   } catch (error) {
-    console.error('KYCRequiredRoute error:', error);
+    console.error('KYCOptionalRoute error:', error);
     return <Navigate to="/auth" />;
   }
 };
@@ -97,9 +91,9 @@ const AppContent: React.FC = () => {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
         
-        {/* KYC Required Routes */}
-        <Route path="/withdraw" element={<KYCRequiredRoute><WithdrawPage /></KYCRequiredRoute>} />
-        <Route path="/withdrawal-request" element={<KYCRequiredRoute><WithdrawalRequestPage /></KYCRequiredRoute>} />
+        {/* Previously KYC Required Routes - Now Optional */}
+        <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
+        <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
         
         {/* Admin Routes */}
         <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />

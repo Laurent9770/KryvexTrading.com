@@ -62,18 +62,8 @@ const ViewOnlyTradingPage: React.FC = () => {
       return;
     }
 
-    if (user?.kycStatus === 'pending' || user?.kycStatus === 'unverified') {
-      toast({
-        title: "KYC Verification Required",
-        description: "Please complete identity verification before trading",
-        variant: "destructive"
-      });
-      navigate('/kyc');
-      return;
-    }
-
-    // If authenticated and KYC verified, allow trading
-    navigate('/trade');
+    // KYC restrictions removed - all authenticated users can trade
+    navigate('/trading');
   };
 
   const getCurrentPrice = () => {
@@ -135,8 +125,8 @@ const ViewOnlyTradingPage: React.FC = () => {
           </Card>
         )}
 
-        {/* KYC Banner for authenticated users */}
-        {isAuthenticated && user?.kycStatus === 'pending' && (
+        {/* KYC Banner removed - verification is now optional */}
+        {false && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
