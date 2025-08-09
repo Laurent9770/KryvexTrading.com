@@ -408,41 +408,76 @@ class SupabaseAuthService {
 
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔐 Attempting sign up for:', data.email);
+      console.log('🔐 Attempting HTTP sign up for:', data.email);
       
-      const client = getSupabaseClient();
-      const { data: authData, error } = await client.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            first_name: data.fullName.split(' ')[0],
-            last_name: data.fullName.split(' ').slice(1).join(' '),
-            phone: data.phone,
-            country: data.country
-          }
-        }
-      });
+      // Use HTTP client instead of SDK
+      const { httpAuth } = await import('@/integrations/supabase/httpClient');
+      
+      const userData = {
+        full_name: data.fullName,
+        first_name: data.fullName.split(' ')[0],
+        last_name: data.fullName.split(' ').slice(1).join(' '),
+        phone: data.phone,
+        country: data.country
+      };
+
+      const { data: authData, error } = await httpAuth.signUp(data.email, data.password, userData);
 
       if (error) {
-        console.error('❌ Sign up error:', error);
-        return { success: false, error: error.message };
+        console.error('❌ HTTP sign up error:', error);
+        // Provide more specific error messages
+        let errorMessage = error.message || 'Registration failed';
+        if (error.message?.includes('already registered')) {
+          errorMessage = 'An account with this email already exists';
+        } else if (error.message?.includes('password')) {
+          errorMessage = 'Password must be at least 6 characters long';
+        } else if (error.message?.includes('email')) {
+          errorMessage = 'Please enter a valid email address';
+        }
+        return { success: false, error: errorMessage };
       }
 
-      if (authData.user) {
-        console.log('✅ Sign up successful, user profile will be created automatically by trigger');
+      if (authData?.user) {
+        console.log('✅ HTTP sign up successful, user ID:', authData.user.id);
         
-        // The trigger will automatically create the user profile
-        // No need to manually insert into users table
+        // Create user profile manually since we're using HTTP client
+        try {
+          const profileData = {
+            user_id: authData.user.id,
+            email: data.email,
+            full_name: data.fullName,
+            phone: data.phone,
+            country: data.country,
+            account_balance: 0,
+            is_verified: false,
+            kyc_status: 'unverified',
+            account_status: 'active'
+          };
+
+          // Insert profile using HTTP client
+          const { httpDb } = await import('@/integrations/supabase/httpClient');
+          const { error: profileError } = await httpDb.from('profiles').insert(profileData);
+          
+          if (profileError) {
+            console.warn('⚠️ Profile creation failed, but user was created:', profileError);
+            // Don't fail the registration if profile creation fails - the trigger should handle it
+          } else {
+            console.log('✅ User profile created successfully');
+          }
+          
+        } catch (profileError) {
+          console.warn('⚠️ Profile creation error:', profileError);
+          // Continue anyway - the database trigger should create the profile
+        }
         
         console.log('✅ Registration complete');
         return { success: true };
       }
 
-      return { success: false, error: 'Sign up failed' };
-    } catch (error) {
+      return { success: false, error: 'Registration failed - no user data received' };
+    } catch (error: any) {
       console.error('❌ Unexpected sign up error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
+      return { success: false, error: error.message || 'An unexpected error occurred during registration' };
     }
   }
 
