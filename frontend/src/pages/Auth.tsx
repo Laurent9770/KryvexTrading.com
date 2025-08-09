@@ -5,6 +5,7 @@ import { ArrowLeft, Shield, Bug } from 'lucide-react';
 import { AuthTabs } from '@/components/AuthForms';
 import GoogleOAuthDebug from '@/components/GoogleOAuthDebug';
 import QuickOAuthTest from '@/components/QuickOAuthTest';
+import SupabaseClientTest from '@/components/SupabaseClientTest';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
@@ -38,21 +39,25 @@ const Auth: React.FC = () => {
           <p className="text-muted-foreground">Professional cryptocurrency trading platform</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="flex justify-center">
-            <AuthTabs />
-          </div>
-          
-          <div className="flex justify-center">
-            <QuickOAuthTest />
-          </div>
-          
-          {showDebug && (
-            <div>
-              <GoogleOAuthDebug />
-            </div>
-          )}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="flex justify-center">
+        <AuthTabs />
+      </div>
+
+      <div className="flex justify-center">
+        <QuickOAuthTest />
+      </div>
+
+      <div className="flex justify-center">
+        <SupabaseClientTest />
+      </div>
+
+      {showDebug && (
+        <div>
+          <GoogleOAuthDebug />
         </div>
+      )}
+    </div>
       </div>
     </div>
   );

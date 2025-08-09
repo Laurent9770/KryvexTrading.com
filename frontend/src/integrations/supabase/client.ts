@@ -1,4 +1,6 @@
 // BULLETPROOF Supabase Client - Force Fix All Issues
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
 console.log('🔧 Starting bulletproof Supabase client initialization...');
 
 // Ensure all required globals exist
@@ -37,12 +39,9 @@ if (!SUPABASE_ANON_KEY.startsWith('eyJ')) {
 }
 
 // Create Supabase client with maximum compatibility
-let supabase: any = null;
+let supabase: SupabaseClient | null = null;
 
 try {
-  console.log('📦 Importing Supabase...');
-  const { createClient } = require('@supabase/supabase-js');
-  
   console.log('🔧 Creating Supabase client with minimal config...');
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
