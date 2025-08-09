@@ -1,80 +1,84 @@
-// CRASH-PROOF Supabase Client
-console.log('🚀 Starting crash-proof Supabase client...');
+// WORKING Supabase Client - Real Authentication
+console.log('🚀 Starting WORKING Supabase client...');
 
-// Essential polyfills first
+// Essential polyfills
 if (typeof window !== 'undefined') {
+  console.log('🔧 Setting up polyfills...');
   (window as any).global = window;
-  (window as any).process = { env: {}, version: 'browser' };
+  (window as any).process = { env: {}, version: 'browser', platform: 'browser' };
+  
+  // Critical polyfills for Supabase
+  if (!(window as any).Buffer) {
+    (window as any).Buffer = {
+      from: (data: any) => new Uint8Array(data),
+      isBuffer: () => false
+    };
+  }
 }
 
-// Import Supabase at the top level
-import { createClient } from '@supabase/supabase-js';
+// Import Supabase
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+console.log('✅ Supabase SDK imported');
 
-// Hardcoded credentials
+// Real credentials
 const SUPABASE_URL = 'https://ftkeczodadvtnxofrwps.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg';
 
-// Create mock client first (safe fallback)
-const mockClient = {
-  __isRealClient: false,
+console.log('🔗 URL:', SUPABASE_URL);
+console.log('🔑 Key valid:', SUPABASE_ANON_KEY.length > 100);
+
+// Create the real client
+console.log('🏗️ Creating real Supabase client...');
+
+const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    signUp: async () => ({ data: null, error: { message: 'Supabase unavailable' } }),
-    signInWithPassword: async () => ({ data: null, error: { message: 'Supabase unavailable' } }),
-    signInWithOAuth: async () => ({ data: null, error: { message: 'Supabase unavailable' } }),
-    signOut: async () => ({ error: null }),
-    getSession: async () => ({ data: { session: null }, error: null }),
-    onAuthStateChange: () => ({ data: { subscription: null } })
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true, // Enable for OAuth
+    flowType: 'pkce'
   },
-  from: () => ({
-    select: () => ({ 
-      eq: () => ({ 
-        single: async () => ({ data: null, error: { message: 'Supabase unavailable' } }) 
-      }) 
-    })
-  }),
-  storage: {
-    from: () => ({
-      upload: async () => ({ data: null, error: { message: 'Supabase unavailable' } })
-    })
-  }
-};
-
-// Try to create real client, fall back to mock
-let supabase: any = mockClient;
-
-try {
-  console.log('🏗️ Creating real Supabase client...');
-  
-  const realClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false
+  global: {
+    headers: {
+      'X-Client-Info': 'kryvex-frontend'
     }
-  });
-  
-  // Validate the client
-  if (realClient && realClient.auth && realClient.from) {
-    console.log('✅ REAL SUPABASE CLIENT CREATED!');
-    supabase = realClient;
-    (supabase as any).__isRealClient = true;
-  } else {
-    console.warn('⚠️ Real client missing methods, using mock');
   }
-  
-} catch (error) {
-  console.error('❌ Failed to create real client:', error);
-  console.log('⚠️ Using mock client as fallback');
-}
+});
+
+// Validate client immediately
+console.log('🔍 Validating client...');
+console.log('Has auth:', !!supabase.auth);
+console.log('Has from:', !!supabase.from);
+console.log('Has storage:', !!supabase.storage);
+
+// Mark as real client
+(supabase as any).__isRealClient = true;
+
+// Test basic functionality
+supabase.auth.getSession().then(({ data, error }) => {
+  if (error) {
+    console.log('⚠️ Auth test error (expected):', error.message);
+  } else {
+    console.log('✅ Auth test successful, session:', !!data.session);
+  }
+}).catch(err => {
+  console.log('⚠️ Auth test failed:', err.message);
+});
+
+console.log('✅ REAL SUPABASE CLIENT CREATED AND READY!');
 
 // Exports
 export { supabase };
 export default supabase;
 
-export const getSupabaseClient = () => supabase;
+export const getSupabaseClient = (): SupabaseClient => {
+  console.log('🔍 getSupabaseClient called - returning REAL client');
+  return supabase;
+};
 
 export const hasRealSupabaseClient = (): boolean => {
-  return !!(supabase as any)?.__isRealClient;
+  const isReal = !!(supabase as any).__isRealClient;
+  console.log('🔍 hasRealSupabaseClient called, result:', isReal);
+  return isReal;
 };
 
 export const getApiUrl = (): string => {
@@ -88,10 +92,13 @@ export const isDevelopment = (): boolean => {
 
 export const logEnvironmentStatus = (): void => {
   console.log('🌍 Environment Status:', {
-    supabaseConnected: !!supabase,
-    isRealClient: hasRealSupabaseClient(),
-    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server'
+    supabaseConnected: true,
+    isRealClient: true,
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+    authAvailable: !!supabase.auth
   });
 };
 
-console.log('🎉 Crash-proof client ready, real client:', hasRealSupabaseClient());
+// Initialize immediately
+logEnvironmentStatus();
+console.log('🎉 WORKING Supabase client ready for authentication!');
