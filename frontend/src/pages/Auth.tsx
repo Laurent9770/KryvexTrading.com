@@ -6,6 +6,7 @@ import { AuthTabs } from '@/components/AuthForms';
 import GoogleOAuthDebug from '@/components/GoogleOAuthDebug';
 import QuickOAuthTest from '@/components/QuickOAuthTest';
 import SupabaseClientTest from '@/components/SupabaseClientTest';
+import RawSupabaseTest from '@/components/RawSupabaseTest';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ const Auth: React.FC = () => {
           <p className="text-muted-foreground">Professional cryptocurrency trading platform</p>
         </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
       <div className="flex justify-center">
         <AuthTabs />
       </div>
@@ -50,6 +51,10 @@ const Auth: React.FC = () => {
 
       <div className="flex justify-center">
         <SupabaseClientTest />
+      </div>
+
+      <div className="flex justify-center">
+        <RawSupabaseTest />
       </div>
 
       {showDebug && (

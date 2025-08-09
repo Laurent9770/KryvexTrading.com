@@ -66,6 +66,18 @@ try {
 
 } catch (error) {
   console.error('❌ CRITICAL: Failed to create Supabase client:', error);
+  console.error('❌ Error name:', error?.name);
+  console.error('❌ Error message:', error?.message);
+  console.error('❌ Error stack:', error?.stack);
+  console.error('❌ Full error object:', JSON.stringify(error, null, 2));
+  
+  // Also log what we attempted to pass to createClient
+  console.error('❌ Attempted to create client with:', {
+    url: SUPABASE_URL,
+    keyLength: SUPABASE_ANON_KEY?.length,
+    urlType: typeof SUPABASE_URL,
+    keyType: typeof SUPABASE_ANON_KEY
+  });
   
   // Create absolute minimal mock to prevent app crashes
   supabase = {
