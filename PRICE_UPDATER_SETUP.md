@@ -57,11 +57,11 @@ node price-updater-service.js
 
 ### **1. Quick Price Update** (Copy-paste into Supabase)
 ```sql
--- Update Bitcoin price
-SELECT update_trading_pair_price('BTC/USDT', 97250.00, 2.8, 30000000000, 1890000000000);
+-- Update Bitcoin price (August 2025 example)
+SELECT update_trading_pair_price('BTC/USDT', 127500.00, 4.2, 44000000000, 2520000000000);
 
--- Update Ethereum price  
-SELECT update_trading_pair_price('ETH/USDT', 3450.50, 1.5, 16000000000, 415000000000);
+-- Update Ethereum price (August 2025 example)
+SELECT update_trading_pair_price('ETH/USDT', 4920.75, 2.8, 23000000000, 592000000000);
 
 -- Update all prices with current market values
 SELECT update_all_crypto_prices();

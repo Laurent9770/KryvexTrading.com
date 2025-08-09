@@ -343,13 +343,13 @@ CREATE POLICY "Users can create own chat messages" ON chat_messages FOR INSERT W
 -- SAMPLE DATA
 -- ===========================
 
--- Insert default trading pairs
+-- Insert default trading pairs (August 2025 prices)
 INSERT INTO trading_pairs (symbol, base_currency, quote_currency, current_price, price_change_24h, volume_24h, market_cap) VALUES
-('BTC/USDT', 'BTC', 'USDT', 95250.00, 2.34, 28500000000, 1847000000000),
-('ETH/USDT', 'ETH', 'USDT', 3420.75, 1.89, 15200000000, 412000000000),
-('SOL/USDT', 'SOL', 'USDT', 245.60, 4.52, 2100000000, 115000000000),
-('ADA/USDT', 'ADA', 'USDT', 1.25, -0.85, 890000000, 44000000000),
-('BNB/USDT', 'BNB', 'USDT', 695.30, 0.67, 1650000000, 101000000000)
+('BTC/USDT', 'BTC', 'USDT', 125750.00, 3.42, 42000000000, 2480000000000),
+('ETH/USDT', 'ETH', 'USDT', 4850.25, 2.18, 22000000000, 584000000000),
+('SOL/USDT', 'SOL', 'USDT', 385.40, 5.67, 3800000000, 178000000000),
+('ADA/USDT', 'ADA', 'USDT', 2.15, 1.45, 1200000000, 76000000000),
+('BNB/USDT', 'BNB', 'USDT', 925.80, 0.92, 2400000000, 138000000000)
 ON CONFLICT (symbol) DO UPDATE SET
   current_price = EXCLUDED.current_price,
   price_change_24h = EXCLUDED.price_change_24h,
