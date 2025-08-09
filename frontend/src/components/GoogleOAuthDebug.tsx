@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getSupabaseClient, testAuthPolicies } from '@/integrations/supabase/client';
+import { getSupabaseClient } from '@/integrations/supabase/client';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 const GoogleOAuthDebug: React.FC = () => {
@@ -14,8 +14,14 @@ const GoogleOAuthDebug: React.FC = () => {
     const results: any = {};
 
     try {
-      // Run comprehensive auth and policy tests
-      const authTests = await testAuthPolicies();
+      // Simple auth and client tests
+      const client = getSupabaseClient();
+      const authTests = {
+        clientStatus: client ? 'available' : 'unavailable',
+        authStatus: client?.auth ? 'available' : 'unavailable',
+        sessionStatus: 'not_tested',
+        policiesStatus: 'not_tested'
+      };
       results.authTests = authTests;
 
       // Check Supabase client
