@@ -408,9 +408,73 @@ class SupabaseAuthService {
 
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔐 Attempting HTTP sign up for:', data.email);
+      console.log('🔐 Attempting sign up for:', data.email);
       
-      // Use HTTP client instead of SDK
+      // Try to use the real Supabase client first, fall back to HTTP if needed
+      const client = getSupabaseClient();
+      
+      // Check if we have a working Supabase client
+      if (client && client.auth && typeof client.auth.signUp === 'function') {
+        console.log('🔐 Using Supabase SDK for registration...');
+        
+        try {
+          const { data: authData, error } = await client.auth.signUp({
+            email: data.email,
+            password: data.password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+              data: {
+                full_name: data.fullName,
+                first_name: data.fullName.split(' ')[0],
+                last_name: data.fullName.split(' ').slice(1).join(' '),
+                phone: data.phone,
+                country: data.country
+              }
+            }
+          });
+
+          if (error) {
+            console.error('❌ SDK sign up error:', error);
+            // Provide more specific error messages
+            let errorMessage = error.message || 'Registration failed';
+            if (error.message?.includes('already registered') || error.message?.includes('already been registered')) {
+              errorMessage = 'An account with this email already exists';
+            } else if (error.message?.includes('password')) {
+              errorMessage = 'Password must be at least 6 characters long';
+            } else if (error.message?.includes('email')) {
+              errorMessage = 'Please enter a valid email address';
+            } else if (error.message?.includes('weak_password')) {
+              errorMessage = 'Password is too weak. Please use at least 8 characters.';
+            }
+            return { success: false, error: errorMessage };
+          }
+
+          if (authData?.user) {
+            console.log('✅ SDK sign up successful, user ID:', authData.user.id);
+            
+            // Check if email confirmation is required
+            if (!authData.session && authData.user && !authData.user.email_confirmed_at) {
+              console.log('📧 Email confirmation required');
+              return { 
+                success: true, 
+                error: 'Please check your email and click the confirmation link to complete registration.' 
+              };
+            }
+            
+            console.log('✅ Registration complete - user can login immediately');
+            return { success: true };
+          }
+
+          return { success: false, error: 'Registration failed - no user data received' };
+          
+        } catch (sdkError: any) {
+          console.warn('⚠️ SDK signup failed, trying HTTP fallback:', sdkError);
+          // Fall through to HTTP method
+        }
+      }
+      
+      // Fallback to HTTP method
+      console.log('🔐 Using HTTP fallback for registration...');
       const { httpAuth } = await import('@/integrations/supabase/httpClient');
       
       const userData = {
@@ -427,11 +491,14 @@ class SupabaseAuthService {
         console.error('❌ HTTP sign up error:', error);
         // Provide more specific error messages
         let errorMessage = error.message || 'Registration failed';
-        if (error.message?.includes('already registered')) {
+        if (typeof error === 'object' && error.msg) {
+          errorMessage = error.msg;
+        }
+        if (errorMessage.includes('already registered')) {
           errorMessage = 'An account with this email already exists';
-        } else if (error.message?.includes('password')) {
+        } else if (errorMessage.includes('password')) {
           errorMessage = 'Password must be at least 6 characters long';
-        } else if (error.message?.includes('email')) {
+        } else if (errorMessage.includes('email')) {
           errorMessage = 'Please enter a valid email address';
         }
         return { success: false, error: errorMessage };
@@ -439,37 +506,6 @@ class SupabaseAuthService {
 
       if (authData?.user) {
         console.log('✅ HTTP sign up successful, user ID:', authData.user.id);
-        
-        // Create user profile manually since we're using HTTP client
-        try {
-          const profileData = {
-            user_id: authData.user.id,
-            email: data.email,
-            full_name: data.fullName,
-            phone: data.phone,
-            country: data.country,
-            account_balance: 0,
-            is_verified: false,
-            kyc_status: 'unverified',
-            account_status: 'active'
-          };
-
-          // Insert profile using HTTP client
-          const { httpDb } = await import('@/integrations/supabase/httpClient');
-          const { error: profileError } = await httpDb.from('profiles').insert(profileData);
-          
-          if (profileError) {
-            console.warn('⚠️ Profile creation failed, but user was created:', profileError);
-            // Don't fail the registration if profile creation fails - the trigger should handle it
-          } else {
-            console.log('✅ User profile created successfully');
-          }
-          
-        } catch (profileError) {
-          console.warn('⚠️ Profile creation error:', profileError);
-          // Continue anyway - the database trigger should create the profile
-        }
-        
         console.log('✅ Registration complete');
         return { success: true };
       }

@@ -18,29 +18,67 @@ export const httpAuth = {
   async signUp(email: string, password: string, userData?: any) {
     try {
       console.log('🔐 HTTP Sign up for:', email);
+      console.log('🔐 User data:', userData);
+      
+      // Validate inputs
+      if (!email || !email.includes('@')) {
+        return { data: null, error: { message: 'Please enter a valid email address' } };
+      }
+      
+      if (!password || password.length < 6) {
+        return { data: null, error: { message: 'Password must be at least 6 characters long' } };
+      }
+
+      const requestBody = {
+        email: email.trim().toLowerCase(),
+        password,
+      };
+
+      // Only add userData if it exists and has content
+      if (userData && Object.keys(userData).length > 0) {
+        (requestBody as any).data = userData;
+      }
+
+      console.log('🔐 Signup request body:', { ...requestBody, password: '[HIDDEN]' });
       
       const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({
-          email,
-          password,
-          data: userData
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('🔐 Signup response status:', response.status);
       const result = await response.json();
+      console.log('🔐 Signup response data:', result);
       
       if (!response.ok) {
-        console.error('❌ HTTP signup error:', result);
-        return { data: null, error: result };
+        console.error('❌ HTTP signup error:', response.status, result);
+        
+        // Handle specific error cases
+        let errorMessage = result.msg || result.message || result.error_description || 'Registration failed';
+        
+        if (response.status === 422) {
+          if (result.msg?.includes('password')) {
+            errorMessage = 'Password must be at least 6 characters long';
+          } else if (result.msg?.includes('email')) {
+            errorMessage = 'Please enter a valid email address';
+          } else if (result.msg?.includes('already')) {
+            errorMessage = 'An account with this email already exists';
+          } else {
+            errorMessage = 'Invalid registration data. Please check your information.';
+          }
+        } else if (response.status === 400) {
+          errorMessage = 'Invalid registration data. Please check your information.';
+        }
+        
+        return { data: null, error: { message: errorMessage, status: response.status } };
       }
 
       console.log('✅ HTTP signup successful');
       return { data: result, error: null };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ HTTP signup failed:', error);
-      return { data: null, error: { message: 'Network error during signup' } };
+      return { data: null, error: { message: error.message || 'Network error during signup' } };
     }
   },
 
