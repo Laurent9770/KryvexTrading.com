@@ -23,6 +23,7 @@ import SupportPage from "@/pages/SupportPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ProductionDebugger from "@/components/ProductionDebugger";
 import { logEnvironmentStatus } from "@/integrations/supabase/client";
 
 // Simple ProtectedRoute component with error handling
@@ -117,6 +118,7 @@ const App: React.FC = () => {
           <LanguageProvider>
             <TooltipProvider>
               <AppContent />
+              <ProductionDebugger />
               <Toaster />
               <Sonner />
             </TooltipProvider>
