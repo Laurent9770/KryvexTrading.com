@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import TradingPage from "@/pages/TradingPage";
 import ViewOnlyTradingPage from "@/pages/ViewOnlyTradingPage";
 import Auth from "@/pages/Auth";
+import AuthCallback from "@/pages/AuthCallback";
 import KYCPage from "@/pages/KYCPage";
 import DepositPage from "@/pages/DepositPage";
 import WithdrawPage from "@/pages/WithdrawPage";
@@ -82,6 +83,7 @@ const AppContent: React.FC = () => {
       <Route element={<NoNavbarLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/trading" element={<ViewOnlyTradingPage />} />
       </Route>
 

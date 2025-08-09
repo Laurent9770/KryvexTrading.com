@@ -204,6 +204,31 @@ class SupabaseAuthService {
     }
   }
 
+  // Sign in with Google OAuth
+  async signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🔐 Attempting Google sign in...');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) {
+        console.error('❌ Google sign in error:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Google OAuth initiated successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Google sign in failed:', error);
+      return { success: false, error: 'Google sign in failed' };
+    }
+  }
+
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🔐 Attempting sign up for:', data.email);

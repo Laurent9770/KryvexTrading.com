@@ -59,6 +59,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;
   updateUserProfile: (profileData: Partial<User>) => void;
@@ -273,6 +274,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [toast]);
 
+  const loginWithGoogle = useCallback(async () => {
+    try {
+      const { success, error } = await supabaseAuthService.signInWithGoogle();
+      if (!success) {
+        throw new Error(error || 'Google login failed');
+      }
+      // Note: Success toast will be shown after redirect completes
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast({
+        title: "Google Login Failed",
+        description: error instanceof Error ? error.message : "Failed to sign in with Google. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  }, [toast]);
+
   const logout = useCallback(() => {
     try {
       supabaseAuthService.signOut();
@@ -444,6 +463,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAdmin,
     isLoading,
     login,
+    loginWithGoogle,
     logout,
     register,
     updateUserProfile,
@@ -468,6 +488,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAdmin,
     isLoading,
     login,
+    loginWithGoogle,
     logout,
     register,
     updateUserProfile,
