@@ -133,10 +133,10 @@ class RealTimePriceService {
   }
 
   private startRealTimeUpdates() {
-    // Update prices every 30 seconds with real market data
+    // Update prices every 2 minutes to avoid rate limiting
     this.updateInterval = setInterval(() => {
       this.updatePrices();
-    }, 30000);
+    }, 120000); // 2 minutes instead of 30 seconds
 
     // Also try to connect to Supabase real-time for actual live data
     this.connectToSupabaseRealtime();
@@ -190,11 +190,26 @@ class RealTimePriceService {
 
   private async updatePrices() {
     try {
-      // Fetch updated real market data
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true');
+      console.log('🔄 Updating market data...');
+      
+      // Use CORS proxy for production, direct API for development
+      const isProduction = window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true')
+        : 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,bnb&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
+      
+      const response = await fetch(apiUrl);
       
       if (response.ok) {
-        const data = await response.json();
+        let data;
+        if (isProduction) {
+          const proxyResponse = await response.json();
+          data = JSON.parse(proxyResponse.contents);
+        } else {
+          data = await response.json();
+        }
+        
+        console.log('📊 Market data updated:', data);
         
         const symbols = {
           bitcoin: 'BTC',
@@ -219,9 +234,14 @@ class RealTimePriceService {
         });
 
         this.notifySubscribers();
+      } else if (response.status === 429) {
+        console.warn('⚠️ Rate limit hit, will retry in next update cycle');
+      } else {
+        console.warn('⚠️ Failed to fetch market data, keeping existing prices');
       }
     } catch (error) {
       console.error('❌ Error updating real market data:', error);
+      // Keep existing prices on error - don't crash the app
     }
   }
 
