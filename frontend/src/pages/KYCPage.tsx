@@ -453,13 +453,26 @@ const KYCPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {kycStatus.level1.status === 'unverified' ? (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-500/10 rounded-lg">
-                      <p className="text-sm text-blue-600">
-                        Please verify your email address to unlock trading features.
+                <div className="space-y-4">
+                  {kycStatus.level1.status === 'verified' && (
+                    <div className="p-4 bg-green-500/10 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <span className="font-semibold text-green-600">Email Verified</span>
+                      </div>
+                      <p className="text-sm text-green-600 mt-1">
+                        Your email has been verified. You can verify again if needed.
                       </p>
                     </div>
+                  )}
+                  
+                  {kycStatus.level1.status !== 'verified' && (
+                    <div className="p-4 bg-blue-500/10 rounded-lg">
+                      <p className="text-sm text-blue-600">
+                        Email verification is optional. You can already access all trading features.
+                      </p>
+                    </div>
+                  )}
                     
                     <div className="space-y-4">
                       <Button 
@@ -513,17 +526,6 @@ const KYCPage = () => {
                       </Button>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-4 bg-green-500/10 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="font-semibold text-green-600">Email Verified</span>
-                    </div>
-                    <p className="text-sm text-green-600 mt-1">
-                      Your email has been verified. You can now access trading features.
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
