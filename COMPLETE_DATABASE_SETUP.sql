@@ -458,29 +458,58 @@ DROP POLICY IF EXISTS "Admins can view all sessions" ON public.user_sessions;
 DROP POLICY IF EXISTS "Admins can view trade outcome logs" ON public.trade_outcome_logs;
 DROP POLICY IF EXISTS "Admins can insert trade outcome logs" ON public.trade_outcome_logs;
 
--- Enable RLS on all tables
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.trading_pairs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.deposits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.withdrawals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.support_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.admin_notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wallet_adjustments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.trade_outcome_logs ENABLE ROW LEVEL SECURITY;
-
--- Profiles policies
-CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all profiles" ON public.profiles FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- Enable RLS on all tables (conditional)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles') THEN
+        ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_roles') THEN
+        ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'kyc_documents') THEN
+        ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'trading_pairs') THEN
+        ALTER TABLE public.trading_pairs ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'trades') THEN
+        ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transactions') THEN
+        ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'deposits') THEN
+        ALTER TABLE public.deposits ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'withdrawals') THEN
+        ALTER TABLE public.withdrawals ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'support_tickets') THEN
+        ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'support_messages') THEN
+        ALTER TABLE public.support_messages ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notifications') THEN
+        ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'admin_actions') THEN
+        ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'admin_notifications') THEN
+        ALTER TABLE public.admin_notifications ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wallet_adjustments') THEN
+        ALTER TABLE public.wallet_adjustments ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_sessions') THEN
+        ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'trade_outcome_logs') THEN
+        ALTER TABLE public.trade_outcome_logs ENABLE ROW LEVEL SECURITY;
+    END IF;
+END $$;
 
 -- User roles policies (conditional)
 DO $$
