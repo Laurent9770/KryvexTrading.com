@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import SafeComponent from '@/components/SafeComponent';
 
 // Safe lazy loading wrapper with error handling
 const safeLazyLoad = (importFunc: () => Promise<any>) => {
@@ -11,11 +12,13 @@ const safeLazyLoad = (importFunc: () => Promise<any>) => {
   
   return React.forwardRef<any, any>((props, ref) => {
     return (
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingSpinner size="lg" />}>
-          <LazyComponent {...props} ref={ref} />
-        </Suspense>
-      </ErrorBoundary>
+      <SafeComponent componentName="LazyComponent">
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingSpinner size="lg" />}>
+            <LazyComponent {...props} ref={ref} />
+          </Suspense>
+        </ErrorBoundary>
+      </SafeComponent>
     );
   });
 };
@@ -67,9 +70,11 @@ const logEnvironmentStatus = () => {
 // Safe route wrapper component
 const SafeRoute = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ErrorBoundary>
-      {children}
-    </ErrorBoundary>
+    <SafeComponent componentName="SafeRoute">
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
+    </SafeComponent>
   );
 };
 
@@ -122,85 +127,87 @@ function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <LanguageProvider>
-        <AuthProvider>
-          <Router>
-            <div className="min-h-screen bg-background">
-              <Routes>
-                <Route path="/" element={
-                  <SafeRoute>
-                    <LandingPage />
-                  </SafeRoute>
-                } />
-                <Route path="/dashboard" element={
-                  <SafeRoute>
-                    <Dashboard />
-                  </SafeRoute>
-                } />
-                <Route path="/admin" element={
-                  <SafeRoute>
-                    <AdminDashboard />
-                  </SafeRoute>
-                } />
-                <Route path="/view-only" element={
-                  <SafeRoute>
-                    <ViewOnlyDashboard />
-                  </SafeRoute>
-                } />
-                <Route path="/trading" element={
-                  <SafeRoute>
-                    <TradingPage />
-                  </SafeRoute>
-                } />
-                <Route path="/deposit" element={
-                  <SafeRoute>
-                    <DepositPage />
-                  </SafeRoute>
-                } />
-                <Route path="/withdrawal" element={
-                  <SafeRoute>
-                    <WithdrawalRequestPage />
-                  </SafeRoute>
-                } />
-                <Route path="/settings" element={
-                  <SafeRoute>
-                    <SettingsPage />
-                  </SafeRoute>
-                } />
-                <Route path="/kyc" element={
-                  <SafeRoute>
-                    <KYCPage />
-                  </SafeRoute>
-                } />
-                <Route path="/support" element={
-                  <SafeRoute>
-                    <SupportPage />
-                  </SafeRoute>
-                } />
-                <Route path="/history" element={
-                  <SafeRoute>
-                    <TradingHistoryPage />
-                  </SafeRoute>
-                } />
-                <Route path="/wallet" element={
-                  <SafeRoute>
-                    <WalletPage />
-                  </SafeRoute>
-                } />
-                <Route path="/auth/callback" element={
-                  <SafeRoute>
-                    <AuthCallback />
-                  </SafeRoute>
-                } />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              <Toaster />
-            </div>
-          </Router>
-        </AuthProvider>
-      </LanguageProvider>
-    </ErrorBoundary>
+    <SafeComponent componentName="App">
+      <ErrorBoundary>
+        <LanguageProvider>
+          <AuthProvider>
+            <Router>
+              <div className="min-h-screen bg-background">
+                <Routes>
+                  <Route path="/" element={
+                    <SafeRoute>
+                      <LandingPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/dashboard" element={
+                    <SafeRoute>
+                      <Dashboard />
+                    </SafeRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <SafeRoute>
+                      <AdminDashboard />
+                    </SafeRoute>
+                  } />
+                  <Route path="/view-only" element={
+                    <SafeRoute>
+                      <ViewOnlyDashboard />
+                    </SafeRoute>
+                  } />
+                  <Route path="/trading" element={
+                    <SafeRoute>
+                      <TradingPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/deposit" element={
+                    <SafeRoute>
+                      <DepositPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/withdrawal" element={
+                    <SafeRoute>
+                      <WithdrawalRequestPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <SafeRoute>
+                      <SettingsPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/kyc" element={
+                    <SafeRoute>
+                      <KYCPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/support" element={
+                    <SafeRoute>
+                      <SupportPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/history" element={
+                    <SafeRoute>
+                      <TradingHistoryPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/wallet" element={
+                    <SafeRoute>
+                      <WalletPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/auth/callback" element={
+                    <SafeRoute>
+                      <AuthCallback />
+                    </SafeRoute>
+                  } />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+                <Toaster />
+              </div>
+            </Router>
+          </AuthProvider>
+        </LanguageProvider>
+      </ErrorBoundary>
+    </SafeComponent>
   );
 }
 
