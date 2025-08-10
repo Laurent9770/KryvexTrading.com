@@ -1,30 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Check for environment variables
+// Get environment variables from Vite
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Validate environment variables
-if (!supabaseUrl) {
-    console.error('Missing VITE_SUPABASE_URL environment variable');
-    // Warn users in development
-    if (import.meta.env.DEV) {
-        alert('Missing VITE_SUPABASE_URL environment variable. Please check your .env file.');
-    }
-    throw new Error('Missing VITE_SUPABASE_URL environment variable');
+// Debug logging
+console.log('Supabase URL:', supabaseUrl ? 'Defined ✓' : 'Missing ✗');
+console.log('Supabase Anon Key:', supabaseAnonKey ? 'Defined ✓' : 'Missing ✗');
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables!');
+  console.error(`VITE_SUPABASE_URL: ${supabaseUrl ? 'Defined' : 'Missing'}`);
+  console.error(`VITE_SUPABASE_ANON_KEY: ${supabaseAnonKey ? 'Defined' : 'Missing'}`);
 }
 
-if (!supabaseAnonKey) {
-    console.error('Missing VITE_SUPABASE_ANON_KEY environment variable');
-    // Warn users in development
-    if (import.meta.env.DEV) {
-        alert('Missing VITE_SUPABASE_ANON_KEY environment variable. Please check your .env file.');
+// Create the Supabase client
+const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: true, 
+      autoRefreshToken: true,
+      detectSessionInUrl: true
     }
-    throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable');
-}
+  }
+);
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Export as default for backward compatibility
 export default supabase;
+export { supabase };
