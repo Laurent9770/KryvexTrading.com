@@ -6,29 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Wallet, 
-  ArrowUpRight, 
-  ArrowDownLeft,
   Clock,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
   RefreshCw,
-  Star,
-  User,
-  Send,
-  Download,
-  ArrowRight,
-  ArrowUpDown,
   Activity,
   BarChart3,
-  PieChart,
-  LineChart,
-  Target,
-  Percent,
-  FileText
+  Target
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
