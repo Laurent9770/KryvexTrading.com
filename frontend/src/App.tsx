@@ -31,7 +31,7 @@ const LandingPage = safeLazyLoad(() => import('@/pages/LandingPage'));
 const Auth = safeLazyLoad(() => import('@/pages/Auth'));
 const Dashboard = safeLazyLoad(() => import('@/pages/Dashboard'));
 const AdminDashboard = safeLazyLoad(() => import('@/pages/AdminDashboard'));
-const ViewOnlyDashboard = safeLazyLoad(() => import('@/pages/ViewOnlyDashboard'));
+
 const TradingPage = safeLazyLoad(() => import('@/pages/TradingPage'));
 const DepositPage = safeLazyLoad(() => import('@/pages/DepositPage'));
 const WithdrawalRequestPage = safeLazyLoad(() => import('@/pages/WithdrawalRequestPage'));
@@ -168,11 +168,7 @@ function App() {
                           <AdminDashboard />
                         </SafeRoute>
                       } />
-                      <Route path="/view-only" element={
-                        <SafeRoute>
-                          <ViewOnlyDashboard />
-                        </SafeRoute>
-                      } />
+
                       <Route path="/trading" element={
                         <SafeRoute>
                           <TradingPage />
