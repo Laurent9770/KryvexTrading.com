@@ -394,3 +394,84 @@ export async function getAllWithdrawalRequests() {
     return [];
   }
 }
+
+// Subscribe to Transactions (real-time updates)
+export function subscribeToTransactions(callback: (payload: any) => void) {
+  try {
+    const subscription = supabase
+      .channel('transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  } catch (error) {
+    console.error('Error subscribing to transactions:', error);
+    return () => {};
+  }
+}
+
+// Subscribe to Withdrawals (real-time updates)
+export function subscribeToWithdrawals(callback: (payload: any) => void) {
+  try {
+    const subscription = supabase
+      .channel('withdrawals')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'withdrawals'
+        },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  } catch (error) {
+    console.error('Error subscribing to withdrawals:', error);
+    return () => {};
+  }
+}
+
+// Subscribe to Wallet Transactions (real-time updates)
+export function subscribeToWalletTransactions(callback: (payload: any) => void) {
+  try {
+    const subscription = supabase
+      .channel('wallet_transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'wallet_transactions'
+        },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  } catch (error) {
+    console.error('Error subscribing to wallet transactions:', error);
+    return () => {};
+  }
+}
