@@ -80,6 +80,16 @@ const supabase = {
       return { data: { user }, error: null };
     },
     
+    async resetPasswordForEmail(email: string, options?: any) {
+      console.log('🔐 HTTP ResetPasswordForEmail for:', email);
+      return await httpAuth.resetPasswordForEmail(email, options);
+    },
+    
+    async updateUser(updates: any) {
+      console.log('🔐 HTTP UpdateUser');
+      return await httpAuth.updateUser(updates);
+    },
+    
     onAuthStateChange(callback?: Function) {
       // Simple implementation
       const session = httpAuth.getSession();

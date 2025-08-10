@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Eye, EyeOff, Mail, Lock, User, Phone, MessageSquare, Clock } from 'lucide-react';
+import ForgotPassword from './ForgotPassword';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -23,6 +24,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -75,6 +77,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       setIsGoogleLoading(false);
     }
   };
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPassword onBack={() => setShowForgotPassword(false)} />
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -166,6 +174,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
                 ) : (
                   <Eye className="h-4 w-4" />
                 )}
+              </Button>
+            </div>
+            <div className="text-right">
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="px-0 text-sm text-blue-600 hover:text-blue-800"
+                onClick={() => setShowForgotPassword(true)}
+              >
+                Forgot password?
               </Button>
             </div>
           </div>

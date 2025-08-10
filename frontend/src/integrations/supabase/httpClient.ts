@@ -221,6 +221,69 @@ export const httpAuth = {
       console.error('❌ Google OAuth failed:', error);
       return { data: null, error: { message: 'Failed to initiate Google OAuth' } };
     }
+  },
+
+  // Reset password for email
+  async resetPasswordForEmail(email: string, options?: any) {
+    try {
+      console.log('🔐 HTTP Reset password for email:', email);
+      
+      const requestBody: any = {
+        email: email.trim().toLowerCase()
+      };
+
+      if (options?.redirectTo) {
+        requestBody.redirect_to = options.redirectTo;
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(requestBody)
+      });
+
+      const result = await response.json();
+      console.log('🔐 Reset password response:', result);
+
+      if (!response.ok) {
+        return { data: null, error: { message: result.error_description || result.msg || 'Failed to send reset email' } };
+      }
+
+      return { data: result, error: null };
+    } catch (error) {
+      console.error('❌ HTTP Reset password error:', error);
+      return { data: null, error: { message: 'Failed to send reset email' } };
+    }
+  },
+
+  // Update user (for password reset)
+  async updateUser(updates: any) {
+    try {
+      console.log('🔐 HTTP Update user');
+      
+      const session = this.getSession();
+      if (!session) {
+        return { data: null, error: { message: 'No active session' } };
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: 'PUT',
+        headers: getHeaders(session.access_token),
+        body: JSON.stringify(updates)
+      });
+
+      const result = await response.json();
+      console.log('🔐 Update user response:', result);
+
+      if (!response.ok) {
+        return { data: null, error: { message: result.error_description || result.msg || 'Failed to update user' } };
+      }
+
+      return { data: result, error: null };
+    } catch (error) {
+      console.error('❌ HTTP Update user error:', error);
+      return { data: null, error: { message: 'Failed to update user' } };
+    }
   }
 };
 
