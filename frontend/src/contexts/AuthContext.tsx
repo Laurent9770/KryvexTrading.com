@@ -287,6 +287,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Auto-redirect effect when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      console.log('🔄 Auth state changed - user is authenticated, checking current location...');
+      
+      // Check if we're on the auth page and should redirect
+      if (window.location.pathname === '/auth' || window.location.pathname === '/') {
+        console.log('📍 Currently on auth page, redirecting to dashboard...');
+        
+        // Use a small delay to ensure the auth state is fully processed
+        setTimeout(() => {
+          try {
+            window.location.href = '/dashboard';
+          } catch (error) {
+            console.warn('Auto-redirect failed:', error);
+          }
+        }, 200);
+      }
+    }
+  }, [isAuthenticated, isLoading]);
+
   // Authentication functions
   const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
     try {
@@ -294,6 +315,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!success) {
         throw new Error(error || 'Login failed');
       }
+      
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       toast({
         title: "Login Successful",
         description: "Welcome back to Kryvex Trading!",

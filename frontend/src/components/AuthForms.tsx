@@ -37,19 +37,34 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       await login(email, password);
       console.log('✅ Login completed, preparing to navigate...');
       
-      // Add a small delay to ensure auth state is updated
-      setTimeout(() => {
-        console.log('🔄 Navigating to dashboard...');
-        onSuccess?.();
+      // Call onSuccess callback immediately
+      onSuccess?.();
+      
+      // Force navigation with multiple fallbacks
+      console.log('🔄 Navigating to dashboard...');
+      
+      // Method 1: Try React Router navigation
+      try {
+        navigate('/dashboard', { replace: true });
+      } catch (navError) {
+        console.warn('React Router navigation failed, trying window.location:', navError);
         
-        // Try React Router navigation first, fallback to window.location
+        // Method 2: Try window.location.href
         try {
-          navigate('/dashboard', { replace: true });
-        } catch (navError) {
-          console.warn('React Router navigation failed, using window.location:', navError);
           window.location.href = '/dashboard';
+        } catch (windowError) {
+          console.warn('Window location failed, trying window.location.replace:', windowError);
+          
+          // Method 3: Try window.location.replace
+          try {
+            window.location.replace('/dashboard');
+          } catch (replaceError) {
+            console.error('All navigation methods failed:', replaceError);
+            // Method 4: Force page reload
+            window.location.reload();
+          }
         }
-      }, 500);
+      }
       
     } catch (error) {
       toast({
@@ -263,23 +278,40 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       );
       console.log('✅ Registration completed, preparing to navigate...');
       
-      // Add a small delay to ensure auth state is updated
-      setTimeout(() => {
-        console.log('🔄 Navigating to dashboard after registration...');
-        toast({
-          title: "Registration Successful",
-          description: "Welcome to Kryvex Trading! Your account has been created.",
-        });
-        onSuccess?.();
+      // Show success message immediately
+      toast({
+        title: "Registration Successful",
+        description: "Welcome to Kryvex Trading! Your account has been created.",
+      });
+      
+      // Call onSuccess callback immediately
+      onSuccess?.();
+      
+      // Force navigation with multiple fallbacks
+      console.log('🔄 Navigating to dashboard after registration...');
+      
+      // Method 1: Try React Router navigation
+      try {
+        navigate('/dashboard', { replace: true });
+      } catch (navError) {
+        console.warn('React Router navigation failed, trying window.location:', navError);
         
-        // Try React Router navigation first, fallback to window.location
+        // Method 2: Try window.location.href
         try {
-          navigate('/dashboard', { replace: true });
-        } catch (navError) {
-          console.warn('React Router navigation failed, using window.location:', navError);
           window.location.href = '/dashboard';
+        } catch (windowError) {
+          console.warn('Window location failed, trying window.location.replace:', windowError);
+          
+          // Method 3: Try window.location.replace
+          try {
+            window.location.replace('/dashboard');
+          } catch (replaceError) {
+            console.error('All navigation methods failed:', replaceError);
+            // Method 4: Force page reload
+            window.location.reload();
+          }
         }
-      }, 500);
+      }
       
     } catch (error) {
       toast({
