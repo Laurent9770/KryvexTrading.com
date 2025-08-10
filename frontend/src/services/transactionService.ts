@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Supabase client initialization
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!, // Fixed: Use VITE_ prefix for Vite
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
+import { supabase } from '../lib/supabaseClient';
 
 // Transaction Types
 interface Transaction {
@@ -46,7 +40,7 @@ interface TransactionStats {
 // Transaction Service
 export class TransactionService {
   // Get current authenticated user safely
-  private static async getCurrentUser() {
+  static async getCurrentUser() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       
