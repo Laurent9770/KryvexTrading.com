@@ -10,43 +10,50 @@ DO $$
 DECLARE
     admin_user_id UUID;
     encrypted_password TEXT;
+    user_exists BOOLEAN;
 BEGIN
-    -- Generate encrypted password using bcrypt
-    encrypted_password := crypt('Kotera@123', gen_salt('bf'));
+    -- Check if user already exists
+    SELECT EXISTS(SELECT 1 FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com') INTO user_exists;
     
-    -- Create user in auth.users
-    INSERT INTO auth.users (
-        instance_id,
-        id,
-        aud,
-        role,
-        email,
-        encrypted_password,
-        email_confirmed_at,
-        raw_app_meta_data,
-        raw_user_meta_data,
-        created_at,
-        updated_at
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000',
-        gen_random_uuid(),
-        'authenticated',
-        'authenticated',
-        'jeanlaurentkoterumutima@gmail.com',
-        encrypted_password,
-        NOW(),
-        '{"provider": "email", "providers": ["email"]}',
-        '{"full_name": "Jean Laurent Koterumutima"}',
-        NOW(),
-        NOW()
-    ) ON CONFLICT (email) DO NOTHING
-    RETURNING id INTO admin_user_id;
-    
-    -- If user was created or already exists, set up profile and role
-    IF admin_user_id IS NULL THEN
+    IF NOT user_exists THEN
+        -- Generate encrypted password using bcrypt
+        encrypted_password := crypt('Kotera@123', gen_salt('bf'));
+        
+        -- Create user in auth.users
+        INSERT INTO auth.users (
+            instance_id,
+            id,
+            aud,
+            role,
+            email,
+            encrypted_password,
+            email_confirmed_at,
+            raw_app_meta_data,
+            raw_user_meta_data,
+            created_at,
+            updated_at
+        ) VALUES (
+            '00000000-0000-0000-0000-000000000000',
+            gen_random_uuid(),
+            'authenticated',
+            'authenticated',
+            'jeanlaurentkoterumutima@gmail.com',
+            encrypted_password,
+            NOW(),
+            '{"provider": "email", "providers": ["email"]}',
+            '{"full_name": "Jean Laurent Koterumutima"}',
+            NOW(),
+            NOW()
+        ) RETURNING id INTO admin_user_id;
+        
+        RAISE NOTICE '✅ New admin user created with ID: %', admin_user_id;
+    ELSE
+        -- User already exists, get the ID
         SELECT id INTO admin_user_id FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com';
+        RAISE NOTICE 'ℹ️ Admin user already exists with ID: %', admin_user_id;
     END IF;
     
+    -- Set up profile and role for the user
     IF admin_user_id IS NOT NULL THEN
         -- Create profile
         INSERT INTO public.profiles (
