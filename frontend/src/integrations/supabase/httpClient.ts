@@ -20,8 +20,9 @@ export const httpAuth = {
       console.log('🔐 HTTP Sign up for:', email);
       console.log('🔐 User data:', userData);
       
-      // Validate inputs
-      if (!email || !email.includes('@')) {
+      // Validate inputs - use proper email regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email.trim())) {
         return { data: null, error: { message: 'Please enter a valid email address' } };
       }
       
@@ -45,17 +46,23 @@ export const httpAuth = {
         };
       }
 
-      const requestBody = {
+      const requestBody: any = {
         email: email.trim().toLowerCase(),
         password,
       };
 
-      // Only add userData if it exists and has content
+      // Add user metadata if provided
       if (userData && Object.keys(userData).length > 0) {
-        (requestBody as any).data = userData;
+        requestBody.data = userData;
+      }
+
+      // Ensure we're not sending empty data object
+      if (requestBody.data && Object.keys(requestBody.data).length === 0) {
+        delete requestBody.data;
       }
 
       console.log('🔐 Signup request body:', { ...requestBody, password: '[HIDDEN]' });
+      console.log('🔐 Full request body (for debugging):', JSON.stringify(requestBody, null, 2));
       
       const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
@@ -69,22 +76,39 @@ export const httpAuth = {
       
       if (!response.ok) {
         console.error('❌ HTTP signup error:', response.status, result);
+        console.error('❌ Full error details:', JSON.stringify(result, null, 2));
         
-        // Handle specific error cases
-        let errorMessage = result.msg || result.message || result.error_description || 'Registration failed';
+        // Handle specific error cases with better parsing
+        let errorMessage = 'Registration failed';
         
+        // Try to extract error message from various possible locations
+        if (result.error_description) {
+          errorMessage = result.error_description;
+        } else if (result.msg) {
+          errorMessage = result.msg;
+        } else if (result.message) {
+          errorMessage = result.message;
+        } else if (result.error) {
+          errorMessage = result.error;
+        } else if (typeof result === 'string') {
+          errorMessage = result;
+        }
+        
+        // Handle specific status codes
         if (response.status === 422) {
-          if (result.msg?.includes('password')) {
+          if (errorMessage.toLowerCase().includes('password')) {
             errorMessage = 'Password must be at least 6 characters long';
-          } else if (result.msg?.includes('email')) {
+          } else if (errorMessage.toLowerCase().includes('email')) {
             errorMessage = 'Please enter a valid email address';
-          } else if (result.msg?.includes('already')) {
+          } else if (errorMessage.toLowerCase().includes('already') || errorMessage.toLowerCase().includes('exists')) {
             errorMessage = 'An account with this email already exists';
           } else {
-            errorMessage = 'Invalid registration data. Please check your information.';
+            errorMessage = `Registration failed: ${errorMessage}`;
           }
         } else if (response.status === 400) {
-          errorMessage = 'Invalid registration data. Please check your information.';
+          errorMessage = `Invalid registration data: ${errorMessage}`;
+        } else if (response.status === 429) {
+          errorMessage = 'Too many registration attempts. Please try again later.';
         }
         
         return { data: null, error: { message: errorMessage, status: response.status } };
