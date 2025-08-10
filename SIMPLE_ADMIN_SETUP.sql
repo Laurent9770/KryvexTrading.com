@@ -79,12 +79,10 @@ BEGIN
         -- Create admin role
         INSERT INTO public.user_roles (
             user_id,
-            role,
-            created_at
+            role
         ) VALUES (
             admin_user_id,
-            'admin',
-            NOW()
+            'admin'
         ) ON CONFLICT (user_id, role) DO NOTHING;
         
         -- Create wallet balance
