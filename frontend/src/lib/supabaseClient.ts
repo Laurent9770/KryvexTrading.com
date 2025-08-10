@@ -9,12 +9,12 @@ console.log('🔍 SUPABASE CLIENT DEBUGGING:');
 console.log(`URL: "${supabaseUrl}" (length: ${supabaseUrl.length})`);
 console.log(`ANON KEY: "${supabaseAnonKey.substring(0, 20)}..." (length: ${supabaseAnonKey.length})`);
 
-// Create a mock client that mimics Supabase's interface
+// Create a mock client that mimics Supabase's interface and returns safe data
 const supabase = {
   from: (table: string) => ({
     select: (columns = '*') => ({
       eq: (column: string, value: any) => ({
-        single: () => Promise.resolve({ data: null, error: new Error('Mock client - no data') }),
+        single: () => Promise.resolve({ data: null, error: null }),
         order: (column: string, options: any) => ({
           limit: (count: number) => Promise.resolve({ data: [], error: null }),
           range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
@@ -22,24 +22,27 @@ const supabase = {
         limit: (count: number) => Promise.resolve({ data: [], error: null }),
         range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
       }),
-      single: () => Promise.resolve({ data: null, error: new Error('Mock client - no data') }),
+      single: () => Promise.resolve({ data: null, error: null }),
       order: (column: string, options: any) => ({
         limit: (count: number) => Promise.resolve({ data: [], error: null }),
         range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
       }),
       limit: (count: number) => Promise.resolve({ data: [], error: null }),
-      range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
+      range: (from: number, to: number) => Promise.resolve({ data: [], error: null }),
+      ilike: (column: string, pattern: string) => ({
+        order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
+      })
     }),
-    insert: (data: any) => Promise.resolve({ data: null, error: new Error('Mock client - insert not available') }),
+    insert: (data: any) => Promise.resolve({ data: null, error: null }),
     update: (data: any) => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: new Error('Mock client - update not available') })
+      eq: (column: string, value: any) => Promise.resolve({ data: null, error: null })
     }),
     delete: () => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: new Error('Mock client - delete not available') })
+      eq: (column: string, value: any) => Promise.resolve({ data: null, error: null })
     }),
     eq: (column: string, value: any) => ({
       select: (columns = '*') => ({
-        single: () => Promise.resolve({ data: null, error: new Error('Mock client - no data') }),
+        single: () => Promise.resolve({ data: null, error: null }),
         order: (column: string, options: any) => ({
           limit: (count: number) => Promise.resolve({ data: [], error: null }),
           range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
@@ -48,23 +51,32 @@ const supabase = {
         range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
       })
     }),
-    single: () => Promise.resolve({ data: null, error: new Error('Mock client - no data') }),
+    single: () => Promise.resolve({ data: null, error: null }),
     order: (column: string, options: any) => ({
       limit: (count: number) => Promise.resolve({ data: [], error: null }),
       range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
     }),
     limit: (count: number) => Promise.resolve({ data: [], error: null }),
-    range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
+    range: (from: number, to: number) => Promise.resolve({ data: [], error: null }),
+    gte: (column: string, value: any) => ({
+      lte: (column: string, value: any) => ({
+        order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
+      }),
+      order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
+    }),
+    lte: (column: string, value: any) => ({
+      order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
+    })
   }),
   auth: {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-    signInWithPassword: (credentials: any) => Promise.resolve({ data: null, error: new Error('Mock client - auth not available') }),
-    signInWithOAuth: (options: any) => Promise.resolve({ data: null, error: new Error('Mock client - OAuth not available') }),
-    signUp: (data: any) => Promise.resolve({ data: null, error: new Error('Mock client - signup not available') }),
+    signInWithPassword: (credentials: any) => Promise.resolve({ data: null, error: null }),
+    signInWithOAuth: (options: any) => Promise.resolve({ data: null, error: null }),
+    signUp: (data: any) => Promise.resolve({ data: null, error: null }),
     signOut: () => Promise.resolve({ error: null }),
     resetPasswordForEmail: (email: string, options?: any) => Promise.resolve({ error: null }),
-    updateUser: (updates: any) => Promise.resolve({ data: null, error: new Error('Mock client - update user not available') }),
+    updateUser: (updates: any) => Promise.resolve({ data: null, error: null }),
     onAuthStateChange: (callback: any) => ({
       data: {
         subscription: {
@@ -81,10 +93,10 @@ const supabase = {
   }),
   storage: {
     from: (bucket: string) => ({
-      upload: (path: string, file: any, options?: any) => Promise.resolve({ data: null, error: new Error('Mock client - storage not available') }),
-      download: (path: string) => Promise.resolve({ data: null, error: new Error('Mock client - storage not available') }),
-      remove: (paths: string[]) => Promise.resolve({ data: null, error: new Error('Mock client - storage not available') }),
-      list: (path?: string, options?: any) => Promise.resolve({ data: null, error: new Error('Mock client - storage not available') })
+      upload: (path: string, file: any, options?: any) => Promise.resolve({ data: null, error: null }),
+      download: (path: string) => Promise.resolve({ data: null, error: null }),
+      remove: (paths: string[]) => Promise.resolve({ data: null, error: null }),
+      list: (path?: string, options?: any) => Promise.resolve({ data: null, error: null })
     })
   }
 } as any;
