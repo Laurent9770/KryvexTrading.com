@@ -1,87 +1,127 @@
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
-interface ErrorBoundaryState {
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
   hasError: boolean;
-  error?: Error;
-  errorInfo?: React.ErrorInfo;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<{ error?: Error; errorInfo?: React.ErrorInfo }>;
-}
-
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    // Log the error for debugging
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      hasError: true,
+      error,
+      errorInfo: null
+    };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('🚨 React Error caught by boundary:', error);
     console.error('🔍 Error stack:', error.stack);
-    
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('🚨 Error caught by boundary:', error);
-    console.error('🔍 Error info:', errorInfo);
     console.error('📍 Component stack:', errorInfo.componentStack);
     
-    // Update state with error info
-    this.setState({ error, errorInfo });
-    
-    // Log additional debugging information
-    console.log('🔧 Current React version:', React.version);
-    console.log('🔧 Error boundary state:', this.state);
+    this.setState({
+      error,
+      errorInfo
+    });
+
+    // Log error to console for debugging
+    console.group('🚨 React Error Details');
+    console.error('Error:', error);
+    console.error('Error Info:', errorInfo);
+    console.error('Component Stack:', errorInfo.componentStack);
+    console.groupEnd();
   }
+
+  handleRetry = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    });
+  };
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  handleGoHome = () => {
+    window.location.href = '/';
+  };
 
   render() {
     if (this.state.hasError) {
+      // Custom fallback UI
       if (this.props.fallback) {
-        const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error} errorInfo={this.state.errorInfo} />;
+        return this.props.fallback;
       }
 
+      // Default error UI
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="max-w-md w-full space-y-4 text-center">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
-            <p className="text-muted-foreground">
+          <div className="max-w-md w-full text-center">
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Something went wrong
+            </h1>
+            <p className="text-muted-foreground mb-6">
               We're sorry, but something unexpected happened. Please try refreshing the page.
             </p>
-            {this.state.error && (
-              <details className="mt-4 text-left">
-                <summary className="cursor-pointer text-sm text-muted-foreground">
-                  Error Details
+            
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details className="mb-6 text-left">
+                <summary className="cursor-pointer text-sm font-medium text-foreground mb-2">
+                  Error Details (Development)
                 </summary>
-                <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
-                  {this.state.error.message}
-                  {this.state.errorInfo && (
-                    <>
-                      {'\n\nComponent Stack:'}
-                      {this.state.errorInfo.componentStack}
-                    </>
+                <div className="bg-muted p-4 rounded-lg text-xs font-mono text-muted-foreground overflow-auto max-h-40">
+                  <div className="mb-2">
+                    <strong>Error:</strong> {this.state.error.message}
+                  </div>
+                  {this.state.error.stack && (
+                    <div className="mb-2">
+                      <strong>Stack:</strong>
+                      <pre className="whitespace-pre-wrap">{this.state.error.stack}</pre>
+                    </div>
                   )}
-                </pre>
+                  {this.state.errorInfo && (
+                    <div>
+                      <strong>Component Stack:</strong>
+                      <pre className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</pre>
+                    </div>
+                  )}
+                </div>
               </details>
             )}
-            <div className="flex space-x-2">
-              <button
-                onClick={() => window.location.reload()}
-                className="flex-1 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
-              >
-                Refresh Page
-              </button>
-              <button
-                onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}
-                className="flex-1 bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 transition-colors"
-              >
+
+            <div className="flex flex-col gap-3">
+              <Button onClick={this.handleRetry} className="w-full">
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Try Again
-              </button>
+              </Button>
+              <Button variant="outline" onClick={this.handleReload} className="w-full">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={this.handleGoHome} className="w-full">
+                <Home className="w-4 h-4 mr-2" />
+                Go to Home
+              </Button>
             </div>
           </div>
         </div>
