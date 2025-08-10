@@ -219,6 +219,10 @@ CREATE TABLE IF NOT EXISTS public.trade_outcome_logs (
 -- FUNCTIONS AND TRIGGERS
 -- =====================================================
 
+-- Drop any existing functions that might conflict
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP FUNCTION IF EXISTS public.update_modified_column() CASCADE;
+
 -- Function to create profile when user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -250,7 +254,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to check if user has admin role
-DROP FUNCTION IF EXISTS public.has_admin_role(UUID);
+DROP FUNCTION IF EXISTS public.has_admin_role(UUID) CASCADE;
 CREATE OR REPLACE FUNCTION public.has_admin_role(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -262,7 +266,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to promote user to admin
-DROP FUNCTION IF EXISTS public.promote_to_admin(UUID);
+DROP FUNCTION IF EXISTS public.promote_to_admin(UUID) CASCADE;
 CREATE OR REPLACE FUNCTION public.promote_to_admin(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -278,7 +282,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to demote user from admin
-DROP FUNCTION IF EXISTS public.demote_from_admin(UUID);
+DROP FUNCTION IF EXISTS public.demote_from_admin(UUID) CASCADE;
 CREATE OR REPLACE FUNCTION public.demote_from_admin(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -293,7 +297,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to log admin actions
-DROP FUNCTION IF EXISTS public.log_admin_action(UUID, UUID, TEXT, JSONB);
+DROP FUNCTION IF EXISTS public.log_admin_action(UUID, UUID, TEXT, JSONB) CASCADE;
 CREATE OR REPLACE FUNCTION public.log_admin_action(
     admin_uuid UUID,
     target_user_uuid UUID,
@@ -313,7 +317,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get user role
-DROP FUNCTION IF EXISTS public.get_user_role(UUID);
+DROP FUNCTION IF EXISTS public.get_user_role(UUID) CASCADE;
 CREATE OR REPLACE FUNCTION public.get_user_role(user_uuid UUID)
 RETURNS TEXT AS $$
 BEGIN
@@ -327,7 +331,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to calculate total balance
-DROP FUNCTION IF EXISTS public.calculate_total_balance(UUID);
+DROP FUNCTION IF EXISTS public.calculate_total_balance(UUID) CASCADE;
 CREATE OR REPLACE FUNCTION public.calculate_total_balance(user_uuid UUID)
 RETURNS DECIMAL AS $$
 BEGIN
