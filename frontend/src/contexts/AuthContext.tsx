@@ -294,6 +294,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (isAuthenticated && !isLoading) {
       console.log('🔄 Auth state changed - user is authenticated, checking current location...');
       console.log('🔍 User is admin:', isAdmin);
+      console.log('🔍 Current user email:', user?.email);
+      console.log('🔍 Current pathname:', window.location.pathname);
       
       // Check if we're on the auth page and should redirect
       if (window.location.pathname === '/auth' || window.location.pathname === '/') {
@@ -305,6 +307,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Redirect admin users to admin dashboard, regular users to regular dashboard
             const targetPath = isAdmin ? '/admin' : '/dashboard';
             console.log('🎯 Redirecting to:', targetPath);
+            console.log('🎯 User email:', user?.email, 'Admin status:', isAdmin);
             window.location.href = targetPath;
           } catch (error) {
             console.warn('Auto-redirect failed:', error);
@@ -312,7 +315,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }, 200);
       }
     }
-  }, [isAuthenticated, isLoading, isAdmin]);
+  }, [isAuthenticated, isLoading, isAdmin, user?.email]);
 
   // Authentication functions
   const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
