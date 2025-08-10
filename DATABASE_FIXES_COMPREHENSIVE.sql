@@ -133,6 +133,10 @@ CREATE POLICY "Admins can update all profiles" ON public.profiles FOR UPDATE USI
 );
 
 -- 10. Create RLS policies for wallet_transactions
+DROP POLICY IF EXISTS "Users can view own wallet transactions" ON public.wallet_transactions;
+DROP POLICY IF EXISTS "Admins can view all wallet transactions" ON public.wallet_transactions;
+DROP POLICY IF EXISTS "Admins can insert wallet transactions" ON public.wallet_transactions;
+
 CREATE POLICY "Users can view own wallet transactions" ON public.wallet_transactions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admins can view all wallet transactions" ON public.wallet_transactions FOR SELECT USING (
     EXISTS (
@@ -146,6 +150,11 @@ CREATE POLICY "Admins can insert wallet transactions" ON public.wallet_transacti
 );
 
 -- 11. Create RLS policies for transactions
+DROP POLICY IF EXISTS "Users can view own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Users can insert own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admins can view all transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admins can update all transactions" ON public.transactions;
+
 CREATE POLICY "Users can view own transactions" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own transactions" ON public.transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Admins can view all transactions" ON public.transactions FOR SELECT USING (
@@ -160,6 +169,11 @@ CREATE POLICY "Admins can update all transactions" ON public.transactions FOR UP
 );
 
 -- 12. Create RLS policies for withdrawals
+DROP POLICY IF EXISTS "Users can view own withdrawals" ON public.withdrawals;
+DROP POLICY IF EXISTS "Users can insert own withdrawals" ON public.withdrawals;
+DROP POLICY IF EXISTS "Admins can view all withdrawals" ON public.withdrawals;
+DROP POLICY IF EXISTS "Admins can update all withdrawals" ON public.withdrawals;
+
 CREATE POLICY "Users can view own withdrawals" ON public.withdrawals FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own withdrawals" ON public.withdrawals FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Admins can view all withdrawals" ON public.withdrawals FOR SELECT USING (
@@ -174,6 +188,9 @@ CREATE POLICY "Admins can update all withdrawals" ON public.withdrawals FOR UPDA
 );
 
 -- 13. Create RLS policies for user_roles
+DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Admins can manage roles" ON public.user_roles;
+
 CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL USING (
     EXISTS (
@@ -182,6 +199,9 @@ CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL USING (
 );
 
 -- 14. Create RLS policies for trading_pairs
+DROP POLICY IF EXISTS "Anyone can view trading pairs" ON public.trading_pairs;
+DROP POLICY IF EXISTS "Admins can manage trading pairs" ON public.trading_pairs;
+
 CREATE POLICY "Anyone can view trading pairs" ON public.trading_pairs FOR SELECT USING (true);
 CREATE POLICY "Admins can manage trading pairs" ON public.trading_pairs FOR ALL USING (
     EXISTS (
