@@ -250,6 +250,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to check if user has admin role
+DROP FUNCTION IF EXISTS public.has_admin_role(UUID);
 CREATE OR REPLACE FUNCTION public.has_admin_role(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -261,6 +262,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to promote user to admin
+DROP FUNCTION IF EXISTS public.promote_to_admin(UUID);
 CREATE OR REPLACE FUNCTION public.promote_to_admin(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -276,6 +278,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to demote user from admin
+DROP FUNCTION IF EXISTS public.demote_from_admin(UUID);
 CREATE OR REPLACE FUNCTION public.demote_from_admin(user_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -290,6 +293,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to log admin actions
+DROP FUNCTION IF EXISTS public.log_admin_action(UUID, UUID, TEXT, JSONB);
 CREATE OR REPLACE FUNCTION public.log_admin_action(
     admin_uuid UUID,
     target_user_uuid UUID,
@@ -309,6 +313,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get user role
+DROP FUNCTION IF EXISTS public.get_user_role(UUID);
 CREATE OR REPLACE FUNCTION public.get_user_role(user_uuid UUID)
 RETURNS TEXT AS $$
 BEGIN
@@ -322,6 +327,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to calculate total balance
+DROP FUNCTION IF EXISTS public.calculate_total_balance(UUID);
 CREATE OR REPLACE FUNCTION public.calculate_total_balance(user_uuid UUID)
 RETURNS DECIMAL AS $$
 BEGIN
@@ -350,6 +356,77 @@ CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON public.support
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- =====================================================
+
+-- Drop existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
+
+DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Admins can view all roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Admins can manage roles" ON public.user_roles;
+
+DROP POLICY IF EXISTS "Users can view own KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Users can insert own KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Users can update own KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Admins can view all KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Admins can update all KYC documents" ON public.kyc_documents;
+
+DROP POLICY IF EXISTS "Anyone can view trading pairs" ON public.trading_pairs;
+DROP POLICY IF EXISTS "Admins can manage trading pairs" ON public.trading_pairs;
+
+DROP POLICY IF EXISTS "Users can view own trades" ON public.trades;
+DROP POLICY IF EXISTS "Users can insert own trades" ON public.trades;
+DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
+DROP POLICY IF EXISTS "Admins can update all trades" ON public.trades;
+
+DROP POLICY IF EXISTS "Users can view own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Users can insert own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admins can view all transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admins can update all transactions" ON public.transactions;
+
+DROP POLICY IF EXISTS "Users can view own deposits" ON public.deposits;
+DROP POLICY IF EXISTS "Users can insert own deposits" ON public.deposits;
+DROP POLICY IF EXISTS "Admins can view all deposits" ON public.deposits;
+DROP POLICY IF EXISTS "Admins can update all deposits" ON public.deposits;
+
+DROP POLICY IF EXISTS "Users can view own withdrawals" ON public.withdrawals;
+DROP POLICY IF EXISTS "Users can insert own withdrawals" ON public.withdrawals;
+DROP POLICY IF EXISTS "Admins can view all withdrawals" ON public.withdrawals;
+DROP POLICY IF EXISTS "Admins can update all withdrawals" ON public.withdrawals;
+
+DROP POLICY IF EXISTS "Users can view own tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "Users can insert own tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "Users can update own tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "Admins can view all tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "Admins can update all tickets" ON public.support_tickets;
+
+DROP POLICY IF EXISTS "Users can view messages in own tickets" ON public.support_messages;
+DROP POLICY IF EXISTS "Users can insert messages in own tickets" ON public.support_messages;
+DROP POLICY IF EXISTS "Admins can view all messages" ON public.support_messages;
+DROP POLICY IF EXISTS "Admins can insert messages" ON public.support_messages;
+
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Admins can view all notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Admins can insert notifications" ON public.notifications;
+
+DROP POLICY IF EXISTS "Admins can view admin actions" ON public.admin_actions;
+DROP POLICY IF EXISTS "Admins can insert admin actions" ON public.admin_actions;
+
+DROP POLICY IF EXISTS "Admins can view admin notifications" ON public.admin_notifications;
+DROP POLICY IF EXISTS "Admins can insert admin notifications" ON public.admin_notifications;
+DROP POLICY IF EXISTS "Admins can update own notifications" ON public.admin_notifications;
+
+DROP POLICY IF EXISTS "Admins can view wallet adjustments" ON public.wallet_adjustments;
+DROP POLICY IF EXISTS "Admins can insert wallet adjustments" ON public.wallet_adjustments;
+
+DROP POLICY IF EXISTS "Users can view own sessions" ON public.user_sessions;
+DROP POLICY IF EXISTS "Admins can view all sessions" ON public.user_sessions;
+
+DROP POLICY IF EXISTS "Admins can view trade outcome logs" ON public.trade_outcome_logs;
+DROP POLICY IF EXISTS "Admins can insert trade outcome logs" ON public.trade_outcome_logs;
 
 -- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
