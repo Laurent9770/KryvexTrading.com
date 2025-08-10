@@ -567,8 +567,20 @@ CREATE INDEX IF NOT EXISTS idx_trades_created_at ON public.trades(created_at);
 
 -- Transactions indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+
+-- Conditional index creation for transactions type (only if column exists)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transactions' 
+        AND column_name = 'type'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
+    END IF;
+END $$;
 
 -- Support tickets indexes
 CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
