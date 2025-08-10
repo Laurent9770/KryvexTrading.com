@@ -347,6 +347,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- TRIGGERS
 -- =====================================================
 
+-- Drop existing triggers to avoid conflicts
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
+DROP TRIGGER IF EXISTS update_kyc_documents_updated_at ON public.kyc_documents;
+DROP TRIGGER IF EXISTS update_trading_pairs_updated_at ON public.trading_pairs;
+DROP TRIGGER IF EXISTS update_trades_updated_at ON public.trades;
+DROP TRIGGER IF EXISTS update_transactions_updated_at ON public.transactions;
+DROP TRIGGER IF EXISTS update_deposits_updated_at ON public.deposits;
+DROP TRIGGER IF EXISTS update_withdrawals_updated_at ON public.withdrawals;
+DROP TRIGGER IF EXISTS update_support_tickets_updated_at ON public.support_tickets;
+
 -- Add updated_at triggers to all tables
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
 CREATE TRIGGER update_kyc_documents_updated_at BEFORE UPDATE ON public.kyc_documents FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
