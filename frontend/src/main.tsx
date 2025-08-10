@@ -6,6 +6,24 @@ import './index.css';
 import { validateEnvironment } from './utils/envChecker';
 import './lib/envDebugger';
 
+// Global error handler to catch headers errors
+window.addEventListener('error', (event) => {
+  if (event.error && event.error.message && event.error.message.includes('headers')) {
+    console.warn('🚨 Headers error caught by global handler:', event.error);
+    event.preventDefault();
+    return false;
+  }
+});
+
+// Global unhandled promise rejection handler
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && event.reason.message && event.reason.message.includes('headers')) {
+    console.warn('🚨 Headers promise rejection caught by global handler:', event.reason);
+    event.preventDefault();
+    return false;
+  }
+});
+
 // Validate environment variables before app initialization
 const envValid = validateEnvironment();
 
