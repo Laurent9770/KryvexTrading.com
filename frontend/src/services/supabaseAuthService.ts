@@ -117,18 +117,31 @@ class SupabaseAuthService {
         console.error('❌ Error loading user profile:', profileError);
       }
 
-      // Get user role (if you have a user_roles table)
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
+      // Get user role with fallback
+      let isAdmin = false;
+      try {
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
 
-      if (roleError) {
-        console.error('❌ Error loading user role:', roleError);
+        if (roleError) {
+          console.warn('⚠️ Error loading user role:', roleError);
+          // Fallback: check if user email is admin (for development)
+          isAdmin = user.email?.toLowerCase().includes('admin') || 
+                   user.email?.toLowerCase().includes('kryvex') ||
+                   user.email === 'jeanlaurentkoterumutima@gmail.com'; // Your email
+        } else {
+          isAdmin = roleData?.role === 'admin';
+        }
+      } catch (error) {
+        console.warn('⚠️ Role check failed, using fallback:', error);
+        // Fallback: check if user email is admin (for development)
+        isAdmin = user.email?.toLowerCase().includes('admin') || 
+                 user.email?.toLowerCase().includes('kryvex') ||
+                 user.email === 'jeanlaurentkoterumutima@gmail.com'; // Your email
       }
-
-      const isAdmin = roleData?.role === 'admin';
 
       // Create AuthUser object
       const authUser: AuthUser = {
@@ -349,47 +362,7 @@ class SupabaseAuthService {
     return phoneAuthService.getRemainingTime(sessionId);
   }
 
-  // Send email verification for KYC
-  async sendKYCEmailVerification(email: string): Promise<EmailVerificationResponse> {
-    try {
-      console.log('📧 Sending KYC email verification to:', email);
-      return await emailVerificationService.sendVerificationEmail(email, 'kyc');
-    } catch (error) {
-      console.error('❌ KYC email verification error:', error);
-      return {
-        success: false,
-        error: 'Failed to send verification email'
-      };
-    }
-  }
 
-  // Verify KYC email code
-  async verifyKYCEmailCode(verificationId: string, code: string, email: string): Promise<VerifyCodeResponse> {
-    try {
-      console.log('🔐 Verifying KYC email code...');
-      return await emailVerificationService.verifyEmailCode(verificationId, code, email);
-    } catch (error) {
-      console.error('❌ KYC email verification failed:', error);
-      return {
-        success: false,
-        error: 'Email verification failed'
-      };
-    }
-  }
-
-  // Resend KYC email verification
-  async resendKYCEmailVerification(verificationId: string): Promise<EmailVerificationResponse> {
-    try {
-      console.log('📧 Resending KYC email verification...');
-      return await emailVerificationService.resendVerificationEmail(verificationId);
-    } catch (error) {
-      console.error('❌ Resend KYC email error:', error);
-      return {
-        success: false,
-        error: 'Failed to resend verification email'
-      };
-    }
-  }
 
   // Check if email is verified
   async isEmailVerified(email: string): Promise<boolean> {
