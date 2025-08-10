@@ -1,5 +1,5 @@
 import textlocalService, { OTPData } from './textlocalService';
-import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
+import supabase from '@/lib/supabaseClient';
 
 export interface PhoneAuthResponse {
   success: boolean;

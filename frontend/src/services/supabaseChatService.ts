@@ -1,4 +1,4 @@
-import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
+import supabase from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface ChatMessage {

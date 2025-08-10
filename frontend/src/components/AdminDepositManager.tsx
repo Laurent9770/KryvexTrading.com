@@ -20,7 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { subscribeToTransactions } from '@/services/walletService';
 import supabaseAdminDataService, { AdminDepositRequest } from '@/services/supabaseAdminDataService';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import supabase from '@/lib/supabaseClient';
 
 const AdminDepositManager = () => {
   const { toast } = useToast();

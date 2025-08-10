@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client'
+import supabase from '@/lib/supabaseClient'
 import { SupportTicket, SupportTicketInsert, SupportTicketUpdate, SupportMessage, SupportMessageInsert, SupportMessageUpdate } from '@/integrations/supabase/types'
 
 interface SupportTicketWithMessages extends SupportTicket {

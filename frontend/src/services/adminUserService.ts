@@ -1,4 +1,4 @@
-import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
+import supabase from '@/lib/supabaseClient';
 import { httpDb } from '@/integrations/supabase/httpClient';
 
 export interface AdminUser {

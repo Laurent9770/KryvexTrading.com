@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import supabaseAuthService, { AuthUser, AuthState } from '@/services/supabaseAuthService';
-import { supabase, getSupabaseClient } from '@/integrations/supabase/client';
+import supabase from '@/lib/supabaseClient';
 
 interface User {
   id: string;
