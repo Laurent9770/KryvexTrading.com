@@ -355,3 +355,42 @@ export async function createWithdrawalRequest(withdrawalData: {
     };
   }
 }
+
+// Get Withdrawal Requests (for current user)
+export async function getWithdrawalRequests() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error);
+    return [];
+  }
+}
+
+// Get All Withdrawal Requests (admin function)
+export async function getAllWithdrawalRequests() {
+  try {
+    const isAdmin = await checkIfAdmin();
+    if (!isAdmin) throw new Error('Unauthorized');
+    
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all withdrawal requests:', error);
+    return [];
+  }
+}
