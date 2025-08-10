@@ -59,9 +59,8 @@ BEGIN
         INSERT INTO public.profiles (
             id,
             user_id,
-            first_name,
-            last_name,
             email,
+            full_name,
             kyc_status,
             account_status,
             created_at,
@@ -69,9 +68,8 @@ BEGIN
         ) VALUES (
             admin_user_id,
             admin_user_id,
-            'Jean Laurent',
-            'Koterumutima',
             'jeanlaurentkoterumutima@gmail.com',
+            'Jean Laurent Koterumutima',
             'approved',
             'active',
             NOW(),
