@@ -31,6 +31,29 @@ const createMockQueryBuilder = () => ({
   catch: (callback: any) => Promise.resolve({ data: [], error: null }).catch(callback)
 });
 
+// Mock user data structure
+const createMockUser = (email: string) => ({
+  id: 'mock-user-id-' + Date.now(),
+  email: email,
+  email_confirmed_at: new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  user_metadata: {},
+  app_metadata: {},
+  aud: 'authenticated',
+  role: 'authenticated'
+});
+
+// Mock session data structure
+const createMockSession = (user: any) => ({
+  access_token: 'mock-access-token-' + Date.now(),
+  refresh_token: 'mock-refresh-token-' + Date.now(),
+  expires_in: 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  token_type: 'bearer',
+  user: user
+});
+
 // Create the mock Supabase client
 const supabase = {
   from: (table: string) => ({
@@ -61,12 +84,36 @@ const supabase = {
   auth: {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-    signInWithPassword: (credentials: any) => Promise.resolve({ data: null, error: null }),
-    signInWithOAuth: (options: any) => Promise.resolve({ data: null, error: null }),
-    signUp: (data: any) => Promise.resolve({ data: null, error: null }),
+    signInWithPassword: (credentials: any) => {
+      console.log('🔐 Mock signInWithPassword called with:', credentials.email);
+      const mockUser = createMockUser(credentials.email);
+      const mockSession = createMockSession(mockUser);
+      return Promise.resolve({ 
+        data: { user: mockUser, session: mockSession }, 
+        error: null 
+      });
+    },
+    signInWithOAuth: (options: any) => {
+      console.log('🔐 Mock signInWithOAuth called with:', options);
+      const mockUser = createMockUser('mock-oauth-user@example.com');
+      const mockSession = createMockSession(mockUser);
+      return Promise.resolve({ 
+        data: { user: mockUser, session: mockSession }, 
+        error: null 
+      });
+    },
+    signUp: (data: any) => {
+      console.log('🔐 Mock signUp called with:', data.email);
+      const mockUser = createMockUser(data.email);
+      const mockSession = createMockSession(mockUser);
+      return Promise.resolve({ 
+        data: { user: mockUser, session: mockSession }, 
+        error: null 
+      });
+    },
     signOut: () => Promise.resolve({ error: null }),
     resetPasswordForEmail: (email: string, options?: any) => Promise.resolve({ error: null }),
-    updateUser: (updates: any) => Promise.resolve({ data: null, error: null }),
+    updateUser: (updates: any) => Promise.resolve({ data: { user: null }, error: null }),
     onAuthStateChange: (callback: any) => ({
       data: {
         subscription: {
@@ -74,7 +121,7 @@ const supabase = {
         }
       }
     }),
-    getAccessToken: () => Promise.resolve({ data: { access_token: null }, error: null }),
+    getAccessToken: () => Promise.resolve({ data: { access_token: 'mock-token' }, error: null }),
     refreshSession: () => Promise.resolve({ data: { session: null }, error: null })
   },
   channel: (name: string) => ({
