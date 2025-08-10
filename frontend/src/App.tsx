@@ -1,140 +1,104 @@
-import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { LanguageProvider } from "@/contexts/LanguageContext";
-import NoNavbarLayout from "@/layouts/NoNavbarLayout";
-import NavbarLayout from "@/layouts/NavbarLayout";
-import LandingPage from "@/pages/LandingPage";
-import Dashboard from "@/pages/Dashboard";
-import TradingPage from "@/pages/TradingPage";
-import Auth from "@/pages/Auth";
-import AuthCallback from "@/pages/AuthCallback";
-import KYCPage from "@/pages/KYCPage";
-import DepositPage from "@/pages/DepositPage";
-import WithdrawPage from "@/pages/WithdrawPage";
-import WithdrawalRequestPage from "@/pages/WithdrawalRequestPage";
-import WalletPage from "@/pages/WalletPage";
-import TradingHistoryPage from "@/pages/TradingHistoryPage";
-import SettingsPage from "@/pages/SettingsPage";
-import SupportPage from "@/pages/SupportPage";
-import AdminDashboard from "@/pages/AdminDashboard";
-import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import React, { Suspense, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
+// Lazy load pages for better performance
+const LandingPage = React.lazy(() => import('@/pages/LandingPage'));
+const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
+const AdminDashboard = React.lazy(() => import('@/pages/AdminDashboard'));
+const ViewOnlyDashboard = React.lazy(() => import('@/pages/ViewOnlyDashboard'));
+const TradingPage = React.lazy(() => import('@/pages/TradingPage'));
+const DepositPage = React.lazy(() => import('@/pages/DepositPage'));
+const WithdrawalRequestPage = React.lazy(() => import('@/pages/WithdrawalRequestPage'));
+const SettingsPage = React.lazy(() => import('@/pages/SettingsPage'));
+const KYCPage = React.lazy(() => import('@/pages/KYCPage'));
+const SupportPage = React.lazy(() => import('@/pages/SupportPage'));
+const TradingHistoryPage = React.lazy(() => import('@/pages/TradingHistoryPage'));
+const WalletPage = React.lazy(() => import('@/pages/WalletPage'));
+const AuthCallback = React.lazy(() => import('@/pages/AuthCallback'));
+
+// Loading Spinner Component
+const LoadingSpinner = ({ size = "default" }: { size?: "sm" | "default" | "lg" }) => {
+  const sizeClasses = {
+    sm: "h-4 w-4",
+    default: "h-8 w-8", 
+    lg: "h-12 w-12"
+  };
+  
+  return (
+    <div className="flex items-center justify-center">
+      <div className={`animate-spin rounded-full border-b-2 border-primary ${sizeClasses[size]}`}></div>
+    </div>
+  );
+};
 
 // Simple environment status function
 const logEnvironmentStatus = () => {
-  console.log('🌍 Environment Status:', {
-    supabaseConnected: true,
-    isRealClient: true,
-    method: 'Centralized',
-    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server'
-  });
+  console.log('🔍 ENVIRONMENT STATUS:');
+  console.log('NODE_ENV:', import.meta.env.MODE);
+  console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? 'Defined ✓' : 'Missing ✗');
+  console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Defined ✓' : 'Missing ✗');
+  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL ? 'Defined ✓' : 'Missing ✗');
+  console.log('VITE_WS_URL:', import.meta.env.VITE_WS_URL ? 'Defined ✓' : 'Missing ✗');
 };
 
-// Simple ProtectedRoute component with error handling
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  try {
-    const { user, isAuthenticated } = useAuth();
-    return isAuthenticated && user ? <>{children}</> : <Navigate to="/auth" />;
-  } catch (error) {
-    console.error('ProtectedRoute error:', error);
-    return <Navigate to="/auth" />;
-  }
-};
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
 
-// KYC Optional Route component (KYC restrictions removed)
-const KYCOptionalRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  try {
-    const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    // Log environment status
+    logEnvironmentStatus();
     
-    // If not authenticated, redirect to auth
-    if (!isAuthenticated) {
-      return <Navigate to="/auth" />;
-    }
-    
-    // KYC restrictions removed - all authenticated users have access
-    return <>{children}</>;
-  } catch (error) {
-    console.error('KYCOptionalRoute error:', error);
-    return <Navigate to="/auth" />;
-  }
-};
+    // Simulate loading time
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
 
-// Main app content with proper routing
-const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+    return () => clearTimeout(timer);
+  }, []);
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading Kryvex Trading Platform...</p>
-        </div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <Routes>
-      {/* PUBLIC ROUTES - No Navbar */}
-      <Route element={<NoNavbarLayout />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-      </Route>
-
-      {/* PROTECTED ROUTES - With Navbar */}
-      <Route element={<NavbarLayout />}>
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
-
-        <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
-        <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
-        <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
-        <Route path="/trading-history" element={<ProtectedRoute><TradingHistoryPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
-        
-        {/* Previously KYC Required Routes - Now Optional */}
-        <Route path="/withdraw" element={<ProtectedRoute><WithdrawPage /></ProtectedRoute>} />
-        <Route path="/withdrawal-request" element={<ProtectedRoute><WithdrawalRequestPage /></ProtectedRoute>} />
-        
-        {/* Admin Routes */}
-        <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-      </Route>
-
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
-  );
-};
-
-const App: React.FC = () => {
-  useEffect(() => {
-    logEnvironmentStatus();
-  }, []);
-
-  return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <LanguageProvider>
         <AuthProvider>
-          <LanguageProvider>
-            <TooltipProvider>
-              <AppContent />
-
+          <Router>
+            <div className="min-h-screen bg-background">
+              <Suspense fallback={<LoadingSpinner size="lg" />}>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/view-only" element={<ViewOnlyDashboard />} />
+                  <Route path="/trading" element={<TradingPage />} />
+                  <Route path="/deposit" element={<DepositPage />} />
+                  <Route path="/withdrawal" element={<WithdrawalRequestPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/kyc" element={<KYCPage />} />
+                  <Route path="/support" element={<SupportPage />} />
+                  <Route path="/history" element={<TradingHistoryPage />} />
+                  <Route path="/wallet" element={<WalletPage />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
               <Toaster />
-              <Sonner />
-            </TooltipProvider>
-          </LanguageProvider>
+            </div>
+          </Router>
         </AuthProvider>
-      </BrowserRouter>
+      </LanguageProvider>
     </ErrorBoundary>
   );
-};
+}
 
 export default App;

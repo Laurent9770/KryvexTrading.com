@@ -9,64 +9,54 @@ console.log('🔍 SUPABASE CLIENT DEBUGGING:');
 console.log(`URL: "${supabaseUrl}" (length: ${supabaseUrl.length})`);
 console.log(`ANON KEY: "${supabaseAnonKey.substring(0, 20)}..." (length: ${supabaseAnonKey.length})`);
 
-// Create a mock client that mimics Supabase's interface and returns safe data
+// Create a comprehensive mock client that handles all possible edge cases
+const createMockQueryBuilder = () => ({
+  select: (columns = '*') => createMockQueryBuilder(),
+  eq: (column: string, value: any) => createMockQueryBuilder(),
+  neq: (column: string, value: any) => createMockQueryBuilder(),
+  gt: (column: string, value: any) => createMockQueryBuilder(),
+  gte: (column: string, value: any) => createMockQueryBuilder(),
+  lt: (column: string, value: any) => createMockQueryBuilder(),
+  lte: (column: string, value: any) => createMockQueryBuilder(),
+  like: (column: string, pattern: string) => createMockQueryBuilder(),
+  ilike: (column: string, pattern: string) => createMockQueryBuilder(),
+  in: (column: string, values: any[]) => createMockQueryBuilder(),
+  not: (column: string, operator: string, value: any) => createMockQueryBuilder(),
+  or: (filters: string, values: any[]) => createMockQueryBuilder(),
+  order: (column: string, options: any) => createMockQueryBuilder(),
+  limit: (count: number) => createMockQueryBuilder(),
+  range: (from: number, to: number) => createMockQueryBuilder(),
+  single: () => Promise.resolve({ data: null, error: null }),
+  maybeSingle: () => Promise.resolve({ data: null, error: null }),
+  then: (callback: any) => Promise.resolve({ data: [], error: null }).then(callback),
+  catch: (callback: any) => Promise.resolve({ data: [], error: null }).catch(callback)
+});
+
 const supabase = {
   from: (table: string) => ({
-    select: (columns = '*') => ({
-      eq: (column: string, value: any) => ({
-        single: () => Promise.resolve({ data: null, error: null }),
-        order: (column: string, options: any) => ({
-          limit: (count: number) => Promise.resolve({ data: [], error: null }),
-          range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
-        }),
-        limit: (count: number) => Promise.resolve({ data: [], error: null }),
-        range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
-      }),
-      single: () => Promise.resolve({ data: null, error: null }),
-      order: (column: string, options: any) => ({
-        limit: (count: number) => Promise.resolve({ data: [], error: null }),
-        range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
-      }),
-      limit: (count: number) => Promise.resolve({ data: [], error: null }),
-      range: (from: number, to: number) => Promise.resolve({ data: [], error: null }),
-      ilike: (column: string, pattern: string) => ({
-        order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
-      })
-    }),
+    select: (columns = '*') => createMockQueryBuilder(),
     insert: (data: any) => Promise.resolve({ data: null, error: null }),
-    update: (data: any) => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: null })
-    }),
-    delete: () => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: null })
-    }),
-    eq: (column: string, value: any) => ({
-      select: (columns = '*') => ({
-        single: () => Promise.resolve({ data: null, error: null }),
-        order: (column: string, options: any) => ({
-          limit: (count: number) => Promise.resolve({ data: [], error: null }),
-          range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
-        }),
-        limit: (count: number) => Promise.resolve({ data: [], error: null }),
-        range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
-      })
-    }),
+    upsert: (data: any) => Promise.resolve({ data: null, error: null }),
+    update: (data: any) => createMockQueryBuilder(),
+    delete: () => createMockQueryBuilder(),
+    eq: (column: string, value: any) => createMockQueryBuilder(),
+    neq: (column: string, value: any) => createMockQueryBuilder(),
+    gt: (column: string, value: any) => createMockQueryBuilder(),
+    gte: (column: string, value: any) => createMockQueryBuilder(),
+    lt: (column: string, value: any) => createMockQueryBuilder(),
+    lte: (column: string, value: any) => createMockQueryBuilder(),
+    like: (column: string, pattern: string) => createMockQueryBuilder(),
+    ilike: (column: string, pattern: string) => createMockQueryBuilder(),
+    in: (column: string, values: any[]) => createMockQueryBuilder(),
+    not: (column: string, operator: string, value: any) => createMockQueryBuilder(),
+    or: (filters: string, values: any[]) => createMockQueryBuilder(),
+    order: (column: string, options: any) => createMockQueryBuilder(),
+    limit: (count: number) => createMockQueryBuilder(),
+    range: (from: number, to: number) => createMockQueryBuilder(),
     single: () => Promise.resolve({ data: null, error: null }),
-    order: (column: string, options: any) => ({
-      limit: (count: number) => Promise.resolve({ data: [], error: null }),
-      range: (from: number, to: number) => Promise.resolve({ data: [], error: null })
-    }),
-    limit: (count: number) => Promise.resolve({ data: [], error: null }),
-    range: (from: number, to: number) => Promise.resolve({ data: [], error: null }),
-    gte: (column: string, value: any) => ({
-      lte: (column: string, value: any) => ({
-        order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
-      }),
-      order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
-    }),
-    lte: (column: string, value: any) => ({
-      order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
-    })
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    then: (callback: any) => Promise.resolve({ data: [], error: null }).then(callback),
+    catch: (callback: any) => Promise.resolve({ data: [], error: null }).catch(callback)
   }),
   auth: {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
@@ -83,21 +73,34 @@ const supabase = {
           unsubscribe: () => {}
         }
       }
-    })
+    }),
+    getAccessToken: () => Promise.resolve({ data: { access_token: null }, error: null }),
+    refreshSession: () => Promise.resolve({ data: { session: null }, error: null })
   },
   channel: (name: string) => ({
     on: (event: string, callback: any) => ({
       subscribe: () => Promise.resolve({ error: null })
     }),
-    subscribe: () => Promise.resolve({ error: null })
+    subscribe: () => Promise.resolve({ error: null }),
+    unsubscribe: () => Promise.resolve({ error: null })
   }),
   storage: {
     from: (bucket: string) => ({
       upload: (path: string, file: any, options?: any) => Promise.resolve({ data: null, error: null }),
       download: (path: string) => Promise.resolve({ data: null, error: null }),
       remove: (paths: string[]) => Promise.resolve({ data: null, error: null }),
-      list: (path?: string, options?: any) => Promise.resolve({ data: null, error: null })
+      list: (path?: string, options?: any) => Promise.resolve({ data: null, error: null }),
+      createSignedUrl: (path: string, expiresIn: number) => Promise.resolve({ data: { signedUrl: null }, error: null }),
+      createSignedUploadUrl: (path: string) => Promise.resolve({ data: { signedUrl: null }, error: null })
     })
+  },
+  functions: {
+    invoke: (name: string, options?: any) => Promise.resolve({ data: null, error: null })
+  },
+  rpc: (func: string, params?: any) => Promise.resolve({ data: null, error: null }),
+  schema: (schema: string) => supabase,
+  rest: {
+    from: (table: string) => supabase.from(table)
   }
 } as any;
 
