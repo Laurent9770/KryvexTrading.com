@@ -6372,7 +6372,7 @@ const TradingPage = () => {
                           <Button 
                             size="sm" 
                             className="mt-2"
-                            onClick={() => handleOpenStakingModal(pool)}
+                            onClick={() => handleStakeClick(pool)}
                           >
                             Stake
                           </Button>
