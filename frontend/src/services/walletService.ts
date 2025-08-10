@@ -475,3 +475,136 @@ export function subscribeToWalletTransactions(callback: (payload: any) => void) 
     return () => {};
   }
 }
+
+// Approve Withdrawal (admin function)
+export async function approveWithdrawal(withdrawalId: string, adminNotes?: string) {
+  try {
+    const isAdmin = await checkIfAdmin();
+    if (!isAdmin) throw new Error('Unauthorized: Admin access required');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Update withdrawal status to approved
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .update({
+        status: 'approved',
+        processed_by: user.id,
+        processed_date: new Date().toISOString(),
+        admin_notes: adminNotes || 'Approved by admin'
+      })
+      .eq('id', withdrawalId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Create a wallet transaction record for the approved withdrawal
+    await supabase
+      .from('wallet_transactions')
+      .insert({
+        user_id: data.user_id,
+        action: 'withdraw',
+        wallet_type: 'funding',
+        amount: data.amount,
+        asset: data.currency,
+        status: 'completed',
+        remarks: `Withdrawal approved - ${adminNotes || 'No notes'}`,
+        admin_email: user.email,
+        created_at: new Date().toISOString()
+      });
+
+    return {
+      success: true,
+      withdrawal: data,
+      message: 'Withdrawal approved successfully'
+    };
+  } catch (error) {
+    console.error('Error approving withdrawal:', error);
+    return {
+      success: false,
+      withdrawal: null,
+      message: error instanceof Error ? error.message : 'Failed to approve withdrawal'
+    };
+  }
+}
+
+// Reject Withdrawal (admin function)
+export async function rejectWithdrawal(withdrawalId: string, adminNotes?: string) {
+  try {
+    const isAdmin = await checkIfAdmin();
+    if (!isAdmin) throw new Error('Unauthorized: Admin access required');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Update withdrawal status to rejected
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .update({
+        status: 'rejected',
+        processed_by: user.id,
+        processed_date: new Date().toISOString(),
+        admin_notes: adminNotes || 'Rejected by admin'
+      })
+      .eq('id', withdrawalId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      withdrawal: data,
+      message: 'Withdrawal rejected successfully'
+    };
+  } catch (error) {
+    console.error('Error rejecting withdrawal:', error);
+    return {
+      success: false,
+      withdrawal: null,
+      message: error instanceof Error ? error.message : 'Failed to reject withdrawal'
+    };
+  }
+}
+
+// Complete Withdrawal (admin function)
+export async function completeWithdrawal(withdrawalId: string, txHash: string, adminNotes?: string) {
+  try {
+    const isAdmin = await checkIfAdmin();
+    if (!isAdmin) throw new Error('Unauthorized: Admin access required');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Update withdrawal status to completed
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .update({
+        status: 'completed',
+        processed_by: user.id,
+        processed_date: new Date().toISOString(),
+        tx_hash: txHash,
+        admin_notes: adminNotes || 'Completed by admin'
+      })
+      .eq('id', withdrawalId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      withdrawal: data,
+      message: 'Withdrawal completed successfully'
+    };
+  } catch (error) {
+    console.error('Error completing withdrawal:', error);
+    return {
+      success: false,
+      withdrawal: null,
+      message: error instanceof Error ? error.message : 'Failed to complete withdrawal'
+    };
+  }
+}
