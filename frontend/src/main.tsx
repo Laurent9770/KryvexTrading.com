@@ -5,7 +5,7 @@ import './index.css';
 import { validateEnvironment } from './utils/envChecker';
 import './lib/envDebugger';
 
-// Global error handler to catch headers errors
+// Global error handler to catch headers errors only
 window.addEventListener('error', (event) => {
   if (event.error && event.error.message && event.error.message.includes('headers')) {
     console.warn('🚨 Headers error caught by global handler:', event.error);
@@ -14,7 +14,7 @@ window.addEventListener('error', (event) => {
   }
 });
 
-// Global unhandled promise rejection handler
+// Global unhandled promise rejection handler for headers only
 window.addEventListener('unhandledrejection', (event) => {
   if (event.reason && event.reason.message && event.reason.message.includes('headers')) {
     console.warn('🚨 Headers promise rejection caught by global handler:', event.reason);
@@ -23,66 +23,33 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Comprehensive global error handler for React errors
+// Less aggressive global error handler for React errors
 window.addEventListener('error', (event) => {
-  console.error('🚨 Global error caught:', event.error);
-  console.error('🔍 Error details:', {
-    message: event.error?.message,
-    stack: event.error?.stack,
-    filename: event.filename,
-    lineno: event.lineno,
-    colno: event.colno
-  });
-  
-  // Prevent default error handling for React errors
+  // Only log React-related errors, don't prevent default
   if (event.error && event.error.message && (
     event.error.message.includes('headers') ||
     event.error.message.includes('Cannot read properties') ||
     event.error.message.includes('undefined') ||
     event.error.message.includes('null')
   )) {
-    console.warn('🚨 React-related error caught, preventing crash');
-    event.preventDefault();
-    return false;
+    console.warn('🚨 React-related error detected:', event.error.message);
+    // Don't prevent default to allow normal event handling
   }
 });
 
-// Global unhandled promise rejection handler for React errors
+// Less aggressive promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('🚨 Global promise rejection caught:', event.reason);
-  console.error('🔍 Rejection details:', {
-    message: event.reason?.message,
-    stack: event.reason?.stack
-  });
-  
-  // Prevent default rejection handling for React errors
+  // Only log React-related rejections, don't prevent default
   if (event.reason && event.reason.message && (
     event.reason.message.includes('headers') ||
     event.reason.message.includes('Cannot read properties') ||
     event.reason.message.includes('undefined') ||
     event.reason.message.includes('null')
   )) {
-    console.warn('🚨 React-related promise rejection caught, preventing crash');
-    event.preventDefault();
-    return false;
+    console.warn('🚨 React-related promise rejection detected:', event.reason.message);
+    // Don't prevent default to allow normal event handling
   }
 });
-
-// Override console.error to catch React errors
-const originalConsoleError = console.error;
-console.error = (...args) => {
-  // Check if this is a React error
-  const errorMessage = args.join(' ');
-  if (errorMessage.includes('headers') || 
-      errorMessage.includes('Cannot read properties') ||
-      errorMessage.includes('undefined') ||
-      errorMessage.includes('null')) {
-    console.warn('🚨 React error detected in console.error:', errorMessage);
-  }
-  
-  // Call original console.error
-  originalConsoleError.apply(console, args);
-};
 
 // Validate environment variables before app initialization
 try {

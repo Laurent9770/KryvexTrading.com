@@ -50,19 +50,8 @@ class SafeComponent extends Component<SafeComponentProps, SafeComponentState> {
       );
     }
 
-    try {
-      return this.props.children;
-    } catch (error) {
-      console.error('🚨 Error in SafeComponent render:', error);
-      return (
-        <div className="p-4 text-center">
-          <div className="text-red-500 text-2xl mb-2">⚠️</div>
-          <p className="text-sm text-muted-foreground">
-            Component render failed
-          </p>
-        </div>
-      );
-    }
+    // Don't wrap in try-catch to avoid interfering with event handling
+    return this.props.children;
   }
 }
 
@@ -106,7 +95,7 @@ export function useSafeEffect(effect: () => void | (() => void), deps?: React.De
     try {
       return effect();
     } catch (error) {
-      console.error('🚨 Safe effect caught error:', error);
+      console.error('❌ Safe effect caught error:', error);
     }
   }, deps);
 }
@@ -119,7 +108,7 @@ export function useSafeState<T>(initialState: T): [T, React.Dispatch<React.SetSt
     try {
       setState(value);
     } catch (error) {
-      console.error('🚨 Safe setState caught error:', error);
+      console.error('❌ Safe setState caught error:', error);
     }
   }, []);
   

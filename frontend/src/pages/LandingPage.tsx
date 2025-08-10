@@ -28,6 +28,31 @@ const LandingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Safe navigation function with error handling
+  const safeNavigate = (path: string) => {
+    try {
+      console.log('🔗 Attempting to navigate to:', path);
+      navigate(path);
+      console.log('✅ Navigation successful to:', path);
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      // Fallback to window.location if navigate fails
+      window.location.href = path;
+    }
+  };
+
+  // Safe button click handler
+  const handleButtonClick = (action: string, path?: string) => {
+    try {
+      console.log('🖱️ Button clicked:', action);
+      if (path) {
+        safeNavigate(path);
+      }
+    } catch (error) {
+      console.error('❌ Button click error:', error);
+    }
+  };
+
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
 
@@ -133,7 +158,7 @@ const LandingPage: React.FC = () => {
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h1 className="text-xl font-bold text-foreground mb-2">Market Data Error</h1>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} className="w-full">
+          <Button onClick={() => handleButtonClick('reload')} className="w-full">
             Try Again
           </Button>
         </div>
@@ -154,11 +179,18 @@ const LandingPage: React.FC = () => {
               <span className="text-xl font-bold text-foreground">Kryvex Trading</span>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={() => navigate('/auth')}>
+              <Button 
+                variant="outline" 
+                onClick={() => handleButtonClick('signIn', '/auth')}
+                className="cursor-pointer"
+              >
                 <LogIn className="w-4 h-4 mr-2" />
                 Sign In
               </Button>
-              <Button onClick={() => navigate('/auth')}>
+              <Button 
+                onClick={() => handleButtonClick('getStarted', '/auth')}
+                className="cursor-pointer"
+              >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Get Started
               </Button>
@@ -182,11 +214,20 @@ const LandingPage: React.FC = () => {
             Join thousands of traders worldwide on Kryvex Trading Platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" onClick={() => navigate('/auth')} className="text-lg px-8 py-3">
+            <Button 
+              size="lg" 
+              onClick={() => handleButtonClick('startTrading', '/auth')} 
+              className="text-lg px-8 py-3 cursor-pointer"
+            >
               <Play className="w-5 h-5 mr-2" />
               Start Trading Now
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/auth')} className="text-lg px-8 py-3">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              onClick={() => handleButtonClick('learnMore', '/auth')} 
+              className="text-lg px-8 py-3 cursor-pointer"
+            >
               <ArrowRight className="w-5 h-5 mr-2" />
               Learn More
             </Button>
@@ -291,7 +332,12 @@ const LandingPage: React.FC = () => {
           <p className="text-blue-100 mb-8 max-w-2xl mx-auto">
             Join thousands of traders who trust Kryvex Trading Platform for their cryptocurrency trading needs.
           </p>
-          <Button size="lg" variant="secondary" onClick={() => navigate('/auth')} className="text-lg px-8 py-3">
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            onClick={() => handleButtonClick('createAccount', '/auth')} 
+            className="text-lg px-8 py-3 cursor-pointer"
+          >
             <UserPlus className="w-5 h-5 mr-2" />
             Create Free Account
           </Button>
