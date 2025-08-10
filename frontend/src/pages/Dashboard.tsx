@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,7 @@ interface KYCStatus {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
   const { t } = useLanguage();
@@ -117,6 +118,14 @@ const Dashboard = () => {
       loadKYCStatus();
     }
   }, [isAuthenticated, user]);
+
+  // Handle URL parameter for tab switching
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['overview', 'trading', 'portfolio', 'activity', 'kyc'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // KYC Functions
   const loadKYCStatus = async () => {

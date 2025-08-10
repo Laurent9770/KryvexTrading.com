@@ -132,14 +132,14 @@ export function Sidebar() {
       requiresAuth: true,
       requiresKYC: true
     },
-    {
-      title: "KYC Verification",
-      href: "/kyc",
-      icon: Shield,
-      shortcut: "K",
-      description: "Complete identity verification",
-      requiresAuth: true
-    },
+                    {
+                  title: "KYC Verification",
+                  href: "/dashboard?tab=kyc",
+                  icon: Shield,
+                  shortcut: "K",
+                  description: "Complete identity verification",
+                  requiresAuth: true
+                },
     {
       title: "Settings",
       href: "/settings",

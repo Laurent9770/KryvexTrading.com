@@ -35,7 +35,7 @@ const TradingPage = safeLazyLoad(() => import('@/pages/TradingPage'));
 const DepositPage = safeLazyLoad(() => import('@/pages/DepositPage'));
 const WithdrawalRequestPage = safeLazyLoad(() => import('@/pages/WithdrawalRequestPage'));
 const SettingsPage = safeLazyLoad(() => import('@/pages/SettingsPage'));
-const KYCPage = safeLazyLoad(() => import('@/pages/KYCPage'));
+
 const SupportPage = safeLazyLoad(() => import('@/pages/SupportPage'));
 const TradingHistoryPage = safeLazyLoad(() => import('@/pages/TradingHistoryPage'));
 const WalletPage = safeLazyLoad(() => import('@/pages/WalletPage'));
@@ -188,11 +188,7 @@ function App() {
                           <SettingsPage />
                         </SafeRoute>
                       } />
-                      <Route path="/kyc" element={
-                        <SafeRoute>
-                          <KYCPage />
-                        </SafeRoute>
-                      } />
+                      
                       <Route path="/support" element={
                         <SafeRoute>
                           <SupportPage />
