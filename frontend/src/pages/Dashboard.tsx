@@ -43,6 +43,8 @@ const Dashboard = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tradingStats, setTradingStats] = useState({
     totalTrades: 0,
     wins: 0,
@@ -82,46 +84,61 @@ const Dashboard = () => {
   const loadUserData = async () => {
     if (!user) return;
 
+    setIsLoadingData(true);
+    setError(null);
+
     try {
-      // Load trading stats
-      const { success: statsSuccess, stats } = await supabaseTradingService.getTradingStats(user.id);
-      if (statsSuccess && stats) {
-        setTradingStats({
-          totalTrades: stats.totalTrades,
-          wins: stats.winningTrades,
-          losses: stats.losingTrades,
-          netProfit: stats.netProfit,
-          winRate: stats.winRate
-        });
+      // Load trading stats with error handling
+      try {
+        const { success: statsSuccess, stats } = await supabaseTradingService.getTradingStats(user.id);
+        if (statsSuccess && stats) {
+          setTradingStats({
+            totalTrades: stats.totalTrades || 0,
+            wins: stats.winningTrades || 0,
+            losses: stats.losingTrades || 0,
+            netProfit: stats.netProfit || 0,
+            winRate: stats.winRate || 0
+          });
+        }
+      } catch (statsError) {
+        console.warn('Failed to load trading stats:', statsError);
+        // Keep default values
       }
 
-      // Load recent trades
-      const { success: tradesSuccess, trades } = await supabaseTradingService.getRecentTrades(user.id, 10);
-      if (tradesSuccess && trades) {
-        setRecentTrades(trades.map(trade => ({
-          id: trade.id,
-          symbol: 'BTC/USDT', // Default symbol
-          type: trade.tradeType,
-          amount: trade.amount,
-          price: trade.price,
-          pnl: trade.profitLoss,
-          status: trade.result,
-          timestamp: trade.createdAt
-        })));
+      // Load recent trades with error handling
+      try {
+        const { success: tradesSuccess, trades } = await supabaseTradingService.getRecentTrades(user.id, 10);
+        if (tradesSuccess && trades && Array.isArray(trades)) {
+          setRecentTrades(trades);
+        } else {
+          setRecentTrades([]);
+        }
+      } catch (tradesError) {
+        console.warn('Failed to load recent trades:', tradesError);
+        setRecentTrades([]);
       }
 
-      // Load portfolio data
-      const { success: portfolioSuccess, portfolio } = await supabaseTradingService.getPortfolioData(user.id);
-      if (portfolioSuccess && portfolio) {
-        setPortfolioData({
-          totalBalance: portfolio.totalBalance,
-          totalValue: portfolio.totalValue,
-          totalPnL: portfolio.totalPnL,
-          pnlPercentage: portfolio.pnlPercentage
-        });
+      // Load portfolio data with error handling
+      try {
+        const { success: portfolioSuccess, portfolio } = await supabaseTradingService.getPortfolioData(user.id);
+        if (portfolioSuccess && portfolio) {
+          setPortfolioData({
+            totalBalance: portfolio.totalBalance || 0,
+            totalValue: portfolio.totalValue || 0,
+            totalPnL: portfolio.totalPnL || 0,
+            pnlPercentage: portfolio.pnlPercentage || 0
+          });
+        }
+      } catch (portfolioError) {
+        console.warn('Failed to load portfolio data:', portfolioError);
+        // Keep default values
       }
+
     } catch (error) {
       console.error('Error loading user data:', error);
+      setError('Failed to load dashboard data. Please try again.');
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -129,17 +146,16 @@ const Dashboard = () => {
     setIsRefreshing(true);
     try {
       await loadUserData();
-      updatePortfolioStats();
       toast({
-        title: "Dashboard Updated",
-        description: "All data has been refreshed successfully",
+        title: "Dashboard refreshed",
+        description: "Your dashboard data has been updated.",
       });
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error('Error refreshing dashboard:', error);
       toast({
+        title: "Refresh failed",
+        description: "Failed to refresh dashboard data. Please try again.",
         variant: "destructive",
-        title: "Refresh Failed",
-        description: "Failed to refresh dashboard data",
       });
     } finally {
       setIsRefreshing(false);
@@ -147,50 +163,77 @@ const Dashboard = () => {
   };
 
   const handleViewDetails = (activity: any) => {
-    switch (activity.type) {
-      case "spot":
-      case "futures":
-      case "options":
-      case "binary":
-      case "quant":
-        navigate('/trading');
-        break;
-      case "wallet":
-        navigate('/wallet');
-        break;
-      case "bot":
-        navigate('/trading');
-        break;
-      case "staking":
-        navigate('/trading');
-        break;
-      case "profile":
-        navigate('/settings');
-        break;
-      default:
-        break;
+    if (!activity || !activity.id) {
+      console.warn('Invalid activity data:', activity);
+      return;
+    }
+    
+    try {
+      navigate(`/trading-history/${activity.id}`);
+    } catch (error) {
+      console.error('Error navigating to activity details:', error);
     }
   };
 
-  if (isLoading) {
+  // Safe data access helpers
+  const safeArray = (data: any): any[] => {
+    return Array.isArray(data) ? data : [];
+  };
+
+  const safeNumber = (value: any): number => {
+    return typeof value === 'number' && !isNaN(value) ? value : 0;
+  };
+
+  const safeString = (value: any): string => {
+    return typeof value === 'string' ? value : '';
+  };
+
+  // Get safe data from auth context
+  const safeTradingAccount = tradingAccount || {};
+  const safeFundingAccount = fundingAccount || {};
+  const safeActivityFeed = safeArray(activityFeed);
+  const safeTradingHistory = safeArray(tradingHistory);
+  const safePortfolioStats = portfolioStats || {};
+  const safeRealTimePrices = realTimePrices || {};
+
+  // Show loading state
+  if (isLoading || isLoadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-kucoin-green mx-auto"></div>
-          <p className="mt-4 text-slate-400">Loading your dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h1 className="text-xl font-bold text-foreground mb-2">Dashboard Error</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={loadUserData} className="w-full">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication required
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Welcome to Kryvex Trading</h1>
-          <p className="text-slate-400 mb-6">Please log in to access your dashboard</p>
-          <Button onClick={() => navigate('/auth')} className="bg-kucoin-green hover:bg-kucoin-green/90">
-            Sign In
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="text-blue-500 text-4xl mb-4">🔐</div>
+          <h1 className="text-xl font-bold text-foreground mb-2">Authentication Required</h1>
+          <p className="text-muted-foreground mb-4">Please sign in to access your dashboard.</p>
+          <Button onClick={() => navigate('/')} className="w-full">
+            Go to Home
           </Button>
         </div>
       </div>
@@ -198,256 +241,190 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="kucoin-container py-4 sm:py-6 lg:py-8">
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
-              <AvatarImage 
-                src={user?.avatar || "/placeholder.svg"} 
-                alt="Profile Picture"
-              />
-              <AvatarFallback className="bg-gradient-to-br from-kucoin-green to-kucoin-blue text-white text-sm sm:text-base">
-                {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">Kryvex Trading Platform</h1>
-              <p className="text-sm sm:text-base text-slate-400">
-                Welcome back, {user?.firstName || user?.email?.split('@')[0] || 'User'}!
-              </p>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Welcome back, {safeString(user?.email || 'User')}!
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Here's what's happening with your trading account
+            </p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button 
-              variant="outline" 
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Market Analysis
-            </Button>
-            <Button 
-              className="bg-kucoin-green hover:bg-kucoin-green/90 text-white"
-              onClick={() => navigate('/trading')}
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Start Trading
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+          <Button 
+            onClick={handleRefresh} 
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
 
-        {/* KYC Setup Card - Now Optional */}
-        {false && (
-          <Card className="bg-orange-500/10 border-orange-500/20 p-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <FileText className="w-8 h-8 text-orange-400" />
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Complete Your Account Setup</h3>
-                  <p className="text-slate-300">Your account requires verification to access all trading features.</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm text-slate-400">KYC Status:</span>
-                    <Badge variant="outline" className="border-orange-500/20 text-orange-400">
-                      pending
-                    </Badge>
-                    <div className="w-32 bg-slate-700 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{ width: '60%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <Button 
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-                onClick={() => navigate('/kyc')}
-              >
-                Complete Verification
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Account Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm text-slate-400">Account Balance</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
-                  ${(portfolioData.totalBalance || 0).toFixed(2)}
-                </p>
-                <p className="text-xs sm:text-sm text-green-400">+0.5% from last week</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm text-slate-400">Active Trades</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white">0</p>
-                <p className="text-xs sm:text-sm text-slate-400">No active positions</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm text-slate-400">Total P&L</p>
-                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${(portfolioData.totalPnL || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {(portfolioData.totalPnL || 0) >= 0 ? '+' : ''}${(portfolioData.totalPnL || 0).toFixed(2)}
-                </p>
-                <p className="text-xs sm:text-sm text-slate-400">All time profit/loss</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm text-slate-400">Win Rate</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-yellow-400">
-                  {tradingStats.totalTrades > 0 ? `${(tradingStats.winRate || 0).toFixed(1)}%` : '--%'}
-                </p>
-                <p className="text-xs sm:text-sm text-slate-400">No trades yet</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Market Overview</TabsTrigger>
-            <TabsTrigger value="positions" className="text-xs sm:text-sm">My Positions</TabsTrigger>
-            <TabsTrigger value="activity" className="text-xs sm:text-sm">Recent Activity</TabsTrigger>
+        {/* Main Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="trading">Trading</TabsTrigger>
+            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
 
-          {/* Market Overview Tab */}
+          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-white">Top Trading Pairs</h2>
-                  <p className="text-slate-400">Real-time market data for popular trading pairs.</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-slate-700 rounded-lg hover:bg-slate-700/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold">B</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">BTC/USDT</p>
-                      <p className="text-sm text-slate-400">Vol: $427,500,000</p>
-                    </div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Balance</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      ${safeNumber(safeTradingAccount.balance || 0).toFixed(2)}
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-white">$95,250.75</p>
-                    <p className="text-sm text-green-400">+3.42%</p>
-                  </div>
+                  <Wallet className="h-8 w-8 text-primary" />
                 </div>
-              </div>
-            </Card>
-          </TabsContent>
+              </Card>
 
-          {/* My Positions Tab */}
-          <TabsContent value="positions" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Active Positions</h2>
-                <Button 
-                  variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                  onClick={() => navigate('/trading')}
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Open New Position
-                </Button>
-              </div>
-              
-              <div className="text-center py-8">
-                <Activity className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-400">No active positions</p>
-                <p className="text-sm text-slate-500 mt-2">Start trading to see your positions here</p>
-              </div>
-            </Card>
-          </TabsContent>
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Trades</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {safeNumber(tradingStats.totalTrades)}
+                    </p>
+                  </div>
+                  <BarChart3 className="h-8 w-8 text-primary" />
+                </div>
+              </Card>
 
-          {/* Recent Activity Tab */}
-          <TabsContent value="activity" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Recent Activity</h2>
-                <Button 
-                  variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                  onClick={() => navigate('/trading-history')}
-                >
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Win Rate</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {safeNumber(tradingStats.winRate).toFixed(1)}%
+                    </p>
+                  </div>
+                  <Target className="h-8 w-8 text-primary" />
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Net Profit</p>
+                    <p className={`text-2xl font-bold ${safeNumber(tradingStats.netProfit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ${safeNumber(tradingStats.netProfit).toFixed(2)}
+                    </p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-primary" />
+                </div>
+              </Card>
+            </div>
+
+            {/* Recent Activity */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
+                <Button variant="outline" size="sm" onClick={() => setActiveTab("activity")}>
                   View All
                 </Button>
               </div>
-              
-              <div className="space-y-4">
-                {recentTrades.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-400">No recent activity</p>
-                    <p className="text-sm text-slate-500 mt-2">Your trading activity will appear here</p>
-                  </div>
-                ) : (
-                  recentTrades.map((trade) => (
-                    <div 
-                      key={trade.id}
-                      className="flex items-center justify-between p-4 border border-slate-700 rounded-lg hover:bg-slate-700/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="text-2xl">📈</div>
-                        <div>
-                          <p className="font-medium text-white">
-                            {trade.type.toUpperCase()} {trade.symbol}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {new Date(trade.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-medium ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
-                        </p>
-                        <Badge className={`mt-1 ${
-                          trade.status === 'win' ? 'bg-green-500/10 text-green-400' :
-                          trade.status === 'loss' ? 'bg-red-500/10 text-red-400' :
-                          'bg-yellow-500/10 text-yellow-400'
-                        }`}>
-                          {trade.status}
-                        </Badge>
-                      </div>
+              <div className="space-y-3">
+                {safeActivityFeed.slice(0, 5).map((activity, index) => (
+                  <div key={activity?.id || index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm text-foreground">
+                        {safeString(activity?.description || 'Activity')}
+                      </span>
                     </div>
-                  ))
+                    <span className="text-xs text-muted-foreground">
+                      {activity?.timestamp ? new Date(activity.timestamp).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                ))}
+                {safeActivityFeed.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">No recent activity</p>
+                )}
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* Trading Tab */}
+          <TabsContent value="trading" className="space-y-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Recent Trades</h3>
+              <div className="space-y-3">
+                {safeArray(recentTrades).slice(0, 10).map((trade, index) => (
+                  <div key={trade?.id || index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${trade?.outcome === 'win' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                      <span className="text-sm text-foreground">
+                        {safeString(trade?.pair || 'Unknown Pair')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium ${safeNumber(trade?.profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ${safeNumber(trade?.profit || 0).toFixed(2)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {trade?.timestamp ? new Date(trade.timestamp).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {safeArray(recentTrades).length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">No recent trades</p>
+                )}
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* Portfolio Tab */}
+          <TabsContent value="portfolio" className="space-y-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Portfolio Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total Value</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${safeNumber(portfolioData.totalValue).toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total P&L</p>
+                  <p className={`text-2xl font-bold ${safeNumber(portfolioData.totalPnL) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${safeNumber(portfolioData.totalPnL).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* Activity Tab */}
+          <TabsContent value="activity" className="space-y-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">All Activity</h3>
+              <div className="space-y-3">
+                {safeActivityFeed.map((activity, index) => (
+                  <div key={activity?.id || index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm text-foreground">
+                        {safeString(activity?.description || 'Activity')}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {activity?.timestamp ? new Date(activity.timestamp).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                ))}
+                {safeActivityFeed.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">No activity found</p>
                 )}
               </div>
             </Card>
