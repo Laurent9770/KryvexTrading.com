@@ -169,7 +169,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔄 Storage auth change detected, refreshing state...');
           // Trigger a refresh of the auth state
           if (e.newValue) {
-            supabaseAuthService.checkSession();
+            // Refresh auth state by getting current session
+            supabaseAuthService.getAuthState();
           } else {
             // Session was cleared
             setUser(null);
@@ -183,7 +184,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const handleAuthStateEvent = (e: CustomEvent) => {
         console.log('🔄 Custom auth state change detected:', e.detail);
         if (e.detail?.user) {
-          supabaseAuthService.checkSession();
+          // Refresh auth state by getting current session
+          supabaseAuthService.getAuthState();
         }
       };
       

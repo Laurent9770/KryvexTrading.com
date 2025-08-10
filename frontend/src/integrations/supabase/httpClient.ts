@@ -340,6 +340,37 @@ export const httpDb = {
       console.error('❌ HTTP insert failed:', error);
       return { data: null, error: { message: 'Network error during insert' } };
     }
+  },
+
+  // Update data
+  async update(table: string, data: any, filters?: any) {
+    try {
+      const session = httpAuth.getSession();
+      let url = `${SUPABASE_URL}/rest/v1/${table}`;
+      
+      if (filters) {
+        Object.entries(filters).forEach(([key, value], index) => {
+          url += `${index === 0 ? '?' : '&'}${key}=eq.${value}`;
+        });
+      }
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: getHeaders(session?.access_token),
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: result };
+      }
+
+      return { data: result, error: null };
+    } catch (error) {
+      console.error('❌ HTTP update failed:', error);
+      return { data: null, error: { message: 'Network error during update' } };
+    }
   }
 };
 
