@@ -291,7 +291,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Auto-redirect effect when authentication state changes
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
+    console.log('🔄 Auth state check - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading, 'user:', user?.email);
+    
+    if (isAuthenticated && !isLoading && user) {
       console.log('🔄 Auth state changed - user is authenticated, checking current location...');
       console.log('🔍 User is admin:', isAdmin);
       console.log('🔍 Current user email:', user?.email);
@@ -314,6 +316,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }, 200);
       }
+    } else if (!isAuthenticated && !isLoading) {
+      console.log('🔄 User is not authenticated, should be on public pages');
     }
   }, [isAuthenticated, isLoading, isAdmin, user?.email]);
 

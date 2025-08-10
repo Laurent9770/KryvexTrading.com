@@ -55,6 +55,9 @@ export function Sidebar() {
   const { user, logout, isAdmin, isAuthenticated } = useAuth();
   const { t } = useLanguage();
 
+  // Debug authentication state
+  console.log('🔍 Sidebar - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'user:', user?.email);
+  
   // Different navigation items for admin vs regular users
   const mainNavItems: NavItem[] = isAdmin ? [
     // Admin navigation - simplified and focused on admin tasks
