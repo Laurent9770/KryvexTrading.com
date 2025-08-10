@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabase client initialization
 const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL!, // Fixed: Use REACT_APP_ prefix for React
-  process.env.REACT_APP_SUPABASE_ANON_KEY!
+  import.meta.env.VITE_SUPABASE_URL!, // Fixed: Use VITE_ prefix for Vite
+  import.meta.env.VITE_SUPABASE_ANON_KEY!
 );
 
 // Wallet Transactions Types
