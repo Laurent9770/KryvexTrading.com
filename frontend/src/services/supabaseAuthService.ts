@@ -302,6 +302,10 @@ class SupabaseAuthService {
       }
 
       console.log('✅ Google OAuth initiated successfully');
+      
+      // For OAuth, we need to handle the redirect and session processing
+      // The user will be redirected back to the callback URL
+      // We'll process the session when they return
       return { success: true };
     } catch (error) {
       console.error('❌ Google sign in failed:', error);
@@ -345,28 +349,9 @@ class SupabaseAuthService {
         return { success: false, error: 'Failed to create user account' };
       }
 
-      // Create user profile in database
-      const userData: AuthUser = {
-        id: authData.user.id,
-        email: authData.user.email || '',
-        fullName: 'Phone User',
-        phone: phoneNumber,
-        accountBalance: 0, // Real balance starts at 0
-        isVerified: true,
-        kycStatus: 'unverified',
-        isAdmin: false,
-        accountStatus: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      this.authState = {
-        user: userData,
-        isLoading: false,
-        isAuthenticated: true,
-        isAdmin: false,
-      };
-      this.notifyListeners();
+      // Process the user session to update authentication state
+      console.log('✅ Phone authentication successful, processing user session...');
+      await this.handleUserSession(authData.user);
 
       console.log('✅ Phone authentication successful');
       return { 
@@ -471,6 +456,12 @@ class SupabaseAuthService {
               };
             }
             
+            // If we have a session, process the user immediately
+            if (authData.session) {
+              console.log('✅ Registration complete with session, processing user...');
+              await this.handleUserSession(authData.user);
+            }
+            
             console.log('✅ Registration complete - user can login immediately');
             return { success: true };
           }
@@ -516,6 +507,13 @@ class SupabaseAuthService {
 
       if (authData?.user) {
         console.log('✅ HTTP sign up successful, user ID:', authData.user.id);
+        
+        // If we have a session, process the user immediately
+        if (authData.session) {
+          console.log('✅ Registration complete with session, processing user...');
+          await this.handleUserSession(authData.user);
+        }
+        
         console.log('✅ Registration complete');
         return { success: true };
       }
