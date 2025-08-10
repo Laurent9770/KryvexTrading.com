@@ -255,6 +255,21 @@ class SupabaseWalletService {
   // Wallet Transactions
   async getWalletTransactions(): Promise<WalletTransaction[]> {
     try {
+      console.log('Fetching wallet transactions...');
+      
+      // First, verify the table exists and is accessible
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('transactions')
+        .select('id')
+        .limit(1);
+      
+      if (tableError) {
+        console.error('Table access error:', tableError);
+        console.error('Error details:', tableError.details);
+        console.error('Error hint:', tableError.hint);
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -263,32 +278,48 @@ class SupabaseWalletService {
 
       if (error) {
         console.error('Error fetching wallet transactions:', error);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
         return [];
       }
+
+      if (!data) {
+        console.warn('No data returned from wallet transactions query');
+        return [];
+      }
+
+      console.log(`Successfully fetched ${data.length} wallet transactions`);
 
       return data.map(transaction => ({
         id: transaction.id,
         userId: transaction.user_id,
         username: transaction.username || '',
-        action: transaction.action,
-        walletType: transaction.wallet_type,
+        action: transaction.action || transaction.type,
+        walletType: transaction.wallet_type || 'funding',
         amount: transaction.amount,
-        asset: transaction.asset,
+        asset: transaction.asset || transaction.currency || 'USDT',
         performedBy: transaction.performed_by,
         timestamp: transaction.created_at,
-        remarks: transaction.remarks,
+        remarks: transaction.remarks || transaction.description,
         status: transaction.status,
         balance: transaction.balance,
         adminEmail: transaction.admin_email
       }));
     } catch (error) {
-      console.error('Error fetching wallet transactions:', error);
+      console.error('Exception in getWalletTransactions:', error);
       return [];
     }
   }
 
   async getWalletTransactionsByUser(userId: string): Promise<WalletTransaction[]> {
     try {
+      console.log(`Fetching wallet transactions for user: ${userId}`);
+      
+      if (!userId) {
+        console.error('No userId provided to getWalletTransactionsByUser');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -298,26 +329,35 @@ class SupabaseWalletService {
 
       if (error) {
         console.error('Error fetching user wallet transactions:', error);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
         return [];
       }
+
+      if (!data) {
+        console.warn(`No data returned for user ${userId}`);
+        return [];
+      }
+
+      console.log(`Successfully fetched ${data.length} transactions for user ${userId}`);
 
       return data.map(transaction => ({
         id: transaction.id,
         userId: transaction.user_id,
         username: transaction.username || '',
-        action: transaction.action,
-        walletType: transaction.wallet_type,
+        action: transaction.action || transaction.type,
+        walletType: transaction.wallet_type || 'funding',
         amount: transaction.amount,
-        asset: transaction.asset,
+        asset: transaction.asset || transaction.currency || 'USDT',
         performedBy: transaction.performed_by,
         timestamp: transaction.created_at,
-        remarks: transaction.remarks,
+        remarks: transaction.remarks || transaction.description,
         status: transaction.status,
         balance: transaction.balance,
         adminEmail: transaction.admin_email
       }));
     } catch (error) {
-      console.error('Error fetching user wallet transactions:', error);
+      console.error('Exception in getWalletTransactionsByUser:', error);
       return [];
     }
   }
@@ -325,27 +365,43 @@ class SupabaseWalletService {
   // User Wallets
   async getUserWallet(userId: string): Promise<UserWallet | null> {
     try {
+      console.log(`Fetching user wallet for: ${userId}`);
+      
+      if (!userId) {
+        console.error('No userId provided to getUserWallet');
+        return null;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
         console.error('Error fetching user wallet:', error);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
         return null;
       }
 
+      if (!data) {
+        console.warn(`No profile data found for user ${userId}`);
+        return null;
+      }
+
+      console.log(`Successfully fetched wallet for user ${userId}`);
+
       return {
         userId: data.id,
-        username: data.username || '',
+        username: data.username || data.full_name || '',
         email: data.email,
         fundingWallet: data.funding_wallet || {},
         tradingWallet: data.trading_wallet || {},
         lastUpdated: data.updated_at
       };
     } catch (error) {
-      console.error('Error fetching user wallet:', error);
+      console.error('Exception in getUserWallet:', error);
       return null;
     }
   }

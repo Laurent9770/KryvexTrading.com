@@ -163,7 +163,7 @@ class SupabaseAuthService {
       };
 
       console.log('✅ User session processed:', authUser);
-      
+
       this.updateAuthState({
         user: authUser,
         isLoading: false,
@@ -392,21 +392,21 @@ class SupabaseAuthService {
         
         try {
           const { data: authData, error } = await client.auth.signUp({
-            email: data.email,
-            password: data.password,
-            options: {
+        email: data.email,
+        password: data.password,
+        options: {
               emailRedirectTo: `${window.location.origin}/auth/callback`,
-              data: {
-                full_name: data.fullName,
+          data: {
+            full_name: data.fullName,
                 first_name: data.fullName.split(' ')[0],
                 last_name: data.fullName.split(' ').slice(1).join(' '),
-                phone: data.phone,
-                country: data.country
-              }
-            }
+            phone: data.phone,
+            country: data.country
+          }
+        }
           });
 
-          if (error) {
+      if (error) {
             console.error('❌ SDK sign up error:', error);
             // Provide more specific error messages
             let errorMessage = error.message || 'Registration failed';
@@ -588,7 +588,7 @@ class SupabaseAuthService {
   async promoteToAdmin(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🔐 Promoting user to admin:', userId);
-      
+
       const { error } = await supabase
         .from('user_roles')
         .upsert({
@@ -612,7 +612,7 @@ class SupabaseAuthService {
   async demoteFromAdmin(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🔐 Demoting user from admin:', userId);
-      
+
       const { error } = await supabase
         .from('user_roles')
         .update({ role: 'user' })
@@ -812,7 +812,7 @@ class SupabaseAuthService {
   cleanup() {
     this.subscriptions.forEach(subscription => {
       if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
+          subscription.unsubscribe();
       }
     });
     this.subscriptions = [];
