@@ -46,6 +46,9 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import supabaseAdminService from '@/services/supabaseAdminService';
+import { supabase } from '@/integrations/supabase/client';
+import userActivityService from '@/services/userActivityService';
+import userPersistenceService from '@/services/userPersistenceService';
 
 interface User {
   id: string;
@@ -264,19 +267,24 @@ export default function AdminUserManagement() {
     filterUsers();
   }, [users, searchTerm, statusFilter, kycFilter, dateFilter]);
 
-  // Load initial data from userActivityService
+  // Load initial data from localStorage
   useEffect(() => {
-    const activities = userActivityService.getActivities();
-    const notifications = userActivityService.getNotifications();
-    setLiveActivity(activities.map(activity => ({
-      id: activity.id,
-      userId: activity.userId,
-      userName: activity.userName,
-      action: activity.action,
-      details: activity.details,
-      timestamp: activity.timestamp
-    })));
-    setNotifications(notifications);
+    try {
+      const activities = JSON.parse(localStorage.getItem('user_activities') || '[]');
+      const notifications = JSON.parse(localStorage.getItem('user_notifications') || '[]');
+      
+      setLiveActivity(activities.slice(0, 50).map((activity: any) => ({
+        id: activity.id,
+        userId: activity.userId,
+        userName: activity.userName || 'Unknown User',
+        action: activity.action || activity.activityType,
+        details: activity.description || activity.details,
+        timestamp: activity.timestamp
+      })));
+      setNotifications(notifications.slice(0, 20));
+    } catch (error) {
+      console.warn('Error loading activity data:', error);
+    }
   }, []);
 
   const setupWebSocketListeners = () => {
@@ -299,7 +307,12 @@ export default function AdminUserManagement() {
         }
         return user;
       });
-      userPersistenceService.storeUsers(updatedUsers);
+      // Store users in localStorage
+      try {
+        localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
+      } catch (error) {
+        console.warn('Failed to store users in localStorage:', error);
+      }
       calculateStats(updatedUsers);
       return updatedUsers;
     });
@@ -318,7 +331,12 @@ export default function AdminUserManagement() {
         }
         return user;
       });
-      userPersistenceService.storeUsers(updatedUsers);
+      // Store users in localStorage
+      try {
+        localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
+      } catch (error) {
+        console.warn('Failed to store users in localStorage:', error);
+      }
       calculateStats(updatedUsers);
       return updatedUsers;
     });
@@ -337,7 +355,12 @@ export default function AdminUserManagement() {
         }
         return user;
       });
-      userPersistenceService.storeUsers(updatedUsers);
+      // Store users in localStorage
+      try {
+        localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
+      } catch (error) {
+        console.warn('Failed to store users in localStorage:', error);
+      }
       calculateStats(updatedUsers);
       return updatedUsers;
     });
@@ -439,7 +462,64 @@ export default function AdminUserManagement() {
     try {
       setIsLoading(true);
       
-      // Use demo data for now since Supabase client has issues
+      // Try to load real users from database first
+      try {
+        // Use HTTP client for database queries
+        const { httpDb } = await import('@/integrations/supabase/httpClient');
+        const { data: profiles, error } = await httpDb.select('profiles', `
+          id,
+          user_id,
+          email,
+          full_name,
+          phone,
+          country,
+          account_balance,
+          is_verified,
+          kyc_status,
+          account_status,
+          created_at,
+          updated_at
+        `);
+
+        if (error) {
+          console.error('Database error:', error);
+          throw error;
+        }
+
+        if (profiles && profiles.length > 0) {
+          // Transform database data to match User interface
+          const realUsers: User[] = profiles.map((profile: any) => ({
+            id: profile.user_id || profile.id,
+            email: profile.email || '',
+            firstName: profile.full_name ? profile.full_name.split(' ')[0] : '',
+            lastName: profile.full_name ? profile.full_name.split(' ').slice(1).join(' ') : '',
+            phone: profile.phone || '',
+            username: profile.full_name || profile.email?.split('@')[0] || '',
+            kycLevel: profile.kyc_status === 'approved' ? 2 : profile.kyc_status === 'pending' ? 1 : 0,
+            kycStatus: profile.kyc_status || 'pending',
+            accountStatus: profile.account_status || 'active',
+            walletBalance: parseFloat(profile.account_balance?.toString() || '0'),
+            tradingBalance: parseFloat(profile.account_balance?.toString() || '0') * 0.8, // Estimate
+            totalTrades: 0, // Will be fetched separately
+            winRate: 0, // Will be calculated from trades
+            totalProfit: 0, // Will be calculated from trades
+            lastLogin: profile.updated_at || profile.created_at,
+            createdAt: profile.created_at,
+            isVerified: profile.is_verified || false,
+            country: profile.country || '',
+            emailVerified: profile.is_verified || false
+          }));
+
+          setUsers(realUsers);
+          calculateStats(realUsers);
+          console.log('✅ Loaded', realUsers.length, 'real users from database');
+          return;
+        }
+      } catch (dbError) {
+        console.warn('⚠️ Database loading failed, using demo data:', dbError);
+      }
+
+      // Fallback to demo data if database fails
       const demoUsers: User[] = [
         {
           id: '1',
@@ -484,6 +564,7 @@ export default function AdminUserManagement() {
       ];
       setUsers(demoUsers);
       calculateStats(demoUsers);
+      console.log('⚠️ Using demo data due to database connection issues');
     } catch (error) {
       console.error('Error loading users:', error);
       toast({

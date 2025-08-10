@@ -123,6 +123,22 @@ const supabase = {
                 return { data: null, error: result.error || { message: 'No data found' } };
               }
             };
+          },
+          order(column: string, options?: any) {
+            return {
+              eq(column: string, value: any) {
+                return {
+                  async single() {
+                    console.log('📊 HTTP Select single with order from', table);
+                    const result = await httpDb.select(table, columns || '*', { [column]: value });
+                    if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+                      return { data: result.data[0], error: null };
+                    }
+                    return { data: null, error: result.error || { message: 'No data found' } };
+                  }
+                };
+              }
+            };
           }
         };
       },
@@ -142,6 +158,28 @@ const supabase = {
         }
       };
     }
+  },
+  
+  channel(channelName: string) {
+    console.log('📡 HTTP Channel created:', channelName);
+    return {
+      on(event: string, callback: Function) {
+        console.log('📡 HTTP Channel event listener:', event);
+        return this;
+      },
+      subscribe() {
+        console.log('📡 HTTP Channel subscribed');
+        return {
+          data: {
+            subscription: {
+              id: `http-${channelName}`,
+              callback: () => {},
+              unsubscribe: () => {}
+            }
+          }
+        };
+      }
+    };
   }
 };
 

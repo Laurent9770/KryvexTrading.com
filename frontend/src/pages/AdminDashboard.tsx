@@ -422,11 +422,11 @@ export default function AdminDashboard() {
       // Get real trade data from Supabase
       const tradeHistoryResponse = await supabaseTradingService.getTradeHistory('all', 1, 100);
       const tradeStatsResponse = await supabaseTradingService.getTradingStats('all');
-      const spotTradesResponse = await supabaseTradingService.getTrades('all', 100);
+      const spotTradesResponse = await supabaseTradingService.getTrades('all');
       
-      const tradeHistory = tradeHistoryResponse.success ? tradeHistoryResponse.trades || [] : [];
+      const tradeHistory = tradeHistoryResponse.success ? tradeHistoryResponse.data || [] : [];
       const tradeStats = tradeStatsResponse.success ? tradeStatsResponse.stats : null;
-      const spotTrades = spotTradesResponse.success ? spotTradesResponse.trades || [] : [];
+      const spotTrades = spotTradesResponse.success ? spotTradesResponse.data || [] : [];
       
       // Get real wallet data
       let allUserWallets: any[] = [];
@@ -486,12 +486,12 @@ export default function AdminDashboard() {
         .map(trade => ({
           id: trade.id,
           amount: trade.amount,
-          trade_type: trade.trade_type,
+          trade_type: trade.tradeType,
           status: trade.status,
           result: trade.result,
-          profit_loss: trade.profit_loss || 0,
-          created_at: trade.created_at,
-          user_id: trade.user_id,
+          profit_loss: trade.profitLoss || 0,
+          created_at: trade.createdAt,
+          user_id: trade.userId,
           profiles: { full_name: 'User', email: 'user@example.com' }
         }));
 
@@ -506,7 +506,7 @@ export default function AdminDashboard() {
       const totalVolume = tradeHistory.reduce((sum, t) => sum + Number(t.amount), 0);
 
       // Calculate average win rate from trades
-      const completedTrades = tradeHistory.filter(t => t.status === 'completed');
+      const completedTrades = tradeHistory.filter(t => t.status === 'closed');
       const avgWinRate = completedTrades.length > 0 
         ? (completedTrades.filter(t => t.result === 'win').length / completedTrades.length) * 100
         : 0;
