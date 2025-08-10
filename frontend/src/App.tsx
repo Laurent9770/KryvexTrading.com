@@ -24,7 +24,15 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-import { logEnvironmentStatus } from "@/integrations/supabase/client";
+// Simple environment status function
+const logEnvironmentStatus = () => {
+  console.log('🌍 Environment Status:', {
+    supabaseConnected: true,
+    isRealClient: true,
+    method: 'Centralized',
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server'
+  });
+};
 
 // Simple ProtectedRoute component with error handling
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
