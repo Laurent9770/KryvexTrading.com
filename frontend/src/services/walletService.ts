@@ -311,3 +311,47 @@ async function checkIfAdmin(): Promise<boolean> {
   const role = await getUserRole();
   return role === 'admin';
 }
+
+// Create Withdrawal Request
+export async function createWithdrawalRequest(withdrawalData: {
+  amount: number;
+  currency: string;
+  wallet_address: string;
+  blockchain?: string;
+  remarks?: string;
+}) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .insert({
+        user_id: user.id,
+        amount: withdrawalData.amount,
+        currency: withdrawalData.currency,
+        wallet_address: withdrawalData.wallet_address,
+        blockchain: withdrawalData.blockchain || 'ETH',
+        status: 'pending',
+        remarks: withdrawalData.remarks || '',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      withdrawal: data,
+      message: 'Withdrawal request created successfully'
+    };
+  } catch (error) {
+    console.error('Error creating withdrawal request:', error);
+    return {
+      success: false,
+      withdrawal: null,
+      message: error instanceof Error ? error.message : 'Failed to create withdrawal request'
+    };
+  }
+}
