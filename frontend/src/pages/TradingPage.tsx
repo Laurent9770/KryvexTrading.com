@@ -6429,18 +6429,18 @@ const TradingPage = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="calculatorPeriod">Period (days)</Label>
+                    <Label htmlFor="calculatorDuration">Period (days)</Label>
                     <Input
-                      id="calculatorPeriod"
+                      id="calculatorDuration"
                       type="number"
                       placeholder="Enter days"
-                      value={calculatorPeriod}
-                      onChange={(e) => setCalculatorPeriod(e.target.value)}
+                      value={calculatorDuration}
+                      onChange={(e) => setCalculatorDuration(e.target.value)}
                     />
                   </div>
                 </div>
                 
-                {calculatorToken && calculatorAmount && calculatorPeriod && (
+                {calculatorToken && calculatorAmount && calculatorDuration && (
                   <div className="mt-6 p-4 bg-muted/20 rounded-lg">
                     <h4 className="font-semibold text-foreground mb-2">Estimated Returns</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
