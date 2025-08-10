@@ -31,7 +31,6 @@ const LandingPage = safeLazyLoad(() => import('@/pages/LandingPage'));
 const Auth = safeLazyLoad(() => import('@/pages/Auth'));
 const Dashboard = safeLazyLoad(() => import('@/pages/Dashboard'));
 const AdminDashboard = safeLazyLoad(() => import('@/pages/AdminDashboard'));
-
 const TradingPage = safeLazyLoad(() => import('@/pages/TradingPage'));
 const DepositPage = safeLazyLoad(() => import('@/pages/DepositPage'));
 const WithdrawalRequestPage = safeLazyLoad(() => import('@/pages/WithdrawalRequestPage'));

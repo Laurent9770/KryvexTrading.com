@@ -137,6 +137,7 @@ const KYCPage = () => {
       console.log('🆔 KYC status result:', { success, data });
       
       if (success && data) {
+        console.log('🆔 Raw KYC data received:', data);
         const newStatus: KYCStatus = {
           level1: { status: data.isVerified ? 'verified' : 'unverified' },
           level2: { status: data.status as 'not_started' | 'pending' | 'approved' | 'rejected' }
@@ -144,7 +145,8 @@ const KYCPage = () => {
         console.log('🆔 Setting KYC status:', newStatus);
         setKycStatus(newStatus);
       } else {
-        console.log('🆔 KYC status load failed or no data');
+        console.log('🆔 KYC status load failed or no data, keeping default status');
+        // Keep the default status if loading fails
       }
     } catch (error) {
       console.error('Error loading KYC status:', error);
@@ -571,7 +573,7 @@ const KYCPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {kycStatus.level2.status === 'not_started' ? (
+                {(kycStatus.level2.status === 'not_started' || !kycStatus.level2.status) ? (
                   <div className="space-y-6">
                     <div className="p-4 bg-blue-500/10 rounded-lg">
                       <p className="text-sm text-blue-600">
