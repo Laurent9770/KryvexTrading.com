@@ -457,6 +457,61 @@ class SupabaseTradingPageService {
     }
   }
 
+  // Trading Statistics Methods
+  async getTradingStats(userId?: string): Promise<{ success: boolean; stats?: any; error?: string }> {
+    try {
+      const targetUserId = userId || this.userId;
+      if (!targetUserId) {
+        return {
+          success: false,
+          error: 'User ID not provided'
+        };
+      }
+
+      // Get user's trading statistics
+      const { data: trades, error: tradesError } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('user_id', targetUserId);
+
+      if (tradesError) {
+        console.error('Error fetching trades for stats:', tradesError);
+        return {
+          success: false,
+          error: 'Failed to fetch trading data'
+        };
+      }
+
+      // Calculate statistics
+      const totalTrades = trades?.length || 0;
+      const completedTrades = trades?.filter(t => t.status === 'completed').length || 0;
+      const winningTrades = trades?.filter(t => t.result === 'win').length || 0;
+      const totalProfit = trades?.reduce((sum, trade) => sum + (trade.profit_loss || 0), 0) || 0;
+      const winRate = completedTrades > 0 ? (winningTrades / completedTrades) * 100 : 0;
+
+      const stats = {
+        totalTrades,
+        completedTrades,
+        winningTrades,
+        totalProfit,
+        winRate: Math.round(winRate * 100) / 100,
+        averageProfit: completedTrades > 0 ? totalProfit / completedTrades : 0
+      };
+
+      return {
+        success: true,
+        stats
+      };
+
+    } catch (error: any) {
+      console.error('Error getting trading stats:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get trading statistics'
+      };
+    }
+  }
+
   // Cleanup
   cleanup() {
     // Unsubscribe from all channels
