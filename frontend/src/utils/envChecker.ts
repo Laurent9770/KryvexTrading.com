@@ -11,12 +11,13 @@ export function checkRequiredEnvVars() {
   const missingVars = requiredVars.filter(v => !v.value);
 
   if (missingVars.length > 0) {
-    console.warn('⚠️ Some environment variables are missing, using fallback values:');
+    console.error('🚨 MISSING REQUIRED ENVIRONMENT VARIABLES:');
     missingVars.forEach(v => {
-      console.warn(`  - ${v.name}`);
+      console.error(`  - ${v.name}`);
     });
-    console.warn('This is okay for development, but should be set in production.');
-    return true; // Allow app to continue with fallbacks
+    console.error('Please check your .env file or deployment configuration.');
+    console.error('Using fallback values for development, but this should be fixed in production.');
+    return false;
   }
 
   console.log('✅ All required environment variables are defined.');
