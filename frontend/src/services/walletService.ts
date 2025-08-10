@@ -179,6 +179,75 @@ export async function getWithdrawalStats() {
   }
 }
 
+// Deposit Stats
+export async function getDepositStats() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { totalDeposits24h: 0, pendingDeposits: 0, averageTime: "~15 minutes" };
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('type', 'deposit');
+
+    if (error) throw error;
+
+    const transactions = data || [];
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const deposits24h = transactions.filter(tx => 
+      new Date(tx.created_at) > yesterday
+    );
+
+    const pendingDeposits = transactions.filter(tx => 
+      tx.status === 'pending'
+    );
+
+    return {
+      totalDeposits24h: deposits24h.length,
+      pendingDeposits: pendingDeposits.length,
+      averageTime: "~15 minutes"
+    };
+  } catch (error) {
+    console.error('Error fetching deposit stats:', error);
+    return {
+      totalDeposits24h: 0,
+      pendingDeposits: 0,
+      averageTime: "~15 minutes"
+    };
+  }
+}
+
+// Recent Deposits
+export async function getRecentDeposits() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('type', 'deposit')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    return (data || []).map(tx => ({
+      amount: tx.amount.toString(),
+      symbol: tx.currency,
+      time: new Date(tx.created_at).toLocaleString(),
+      status: tx.status
+    }));
+  } catch (error) {
+    console.error('Error fetching recent deposits:', error);
+    return [];
+  }
+}
+
 // Wallet Balance Summary
 export async function getWalletBalanceSummary() {
   try {
