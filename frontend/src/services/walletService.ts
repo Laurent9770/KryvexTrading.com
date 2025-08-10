@@ -608,3 +608,152 @@ export async function completeWithdrawal(withdrawalId: string, txHash: string, a
     };
   }
 }
+
+// Fund User Wallet (admin function)
+export async function fundUserWallet(userId: string, amount: number, currency: string, remarks?: string) {
+  try {
+    const isAdmin = await checkIfAdmin();
+    if (!isAdmin) throw new Error('Unauthorized: Admin access required');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get current user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    // Update funding wallet balance
+    const currentFundingWallet = profile.funding_wallet || {};
+    const currentBalance = currentFundingWallet[currency] || 0;
+    const newBalance = currentBalance + amount;
+
+    const updatedFundingWallet = {
+      ...currentFundingWallet,
+      [currency]: newBalance
+    };
+
+    // Update profile with new balance
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        funding_wallet: updatedFundingWallet,
+        account_balance: profile.account_balance + amount
+      })
+      .eq('user_id', userId);
+
+    if (updateError) throw updateError;
+
+    // Create wallet transaction record
+    const { error: transactionError } = await supabase
+      .from('wallet_transactions')
+      .insert({
+        user_id: userId,
+        action: 'admin_fund',
+        wallet_type: 'funding',
+        amount: amount,
+        asset: currency,
+        status: 'completed',
+        remarks: remarks || 'Funded by admin',
+        admin_email: user.email,
+        balance: newBalance,
+        created_at: new Date().toISOString()
+      });
+
+    if (transactionError) throw transactionError;
+
+    return {
+      success: true,
+      newBalance: newBalance,
+      message: `Successfully funded ${amount} ${currency} to user wallet`
+    };
+  } catch (error) {
+    console.error('Error funding user wallet:', error);
+    return {
+      success: false,
+      newBalance: 0,
+      message: error instanceof Error ? error.message : 'Failed to fund user wallet'
+    };
+  }
+}
+
+// Deduct From User Wallet (admin function)
+export async function deductFromWallet(userId: string, amount: number, currency: string, remarks?: string) {
+  try {
+    const isAdmin = await checkIfAdmin();
+    if (!isAdmin) throw new Error('Unauthorized: Admin access required');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get current user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    // Check if user has sufficient balance
+    const currentFundingWallet = profile.funding_wallet || {};
+    const currentBalance = currentFundingWallet[currency] || 0;
+
+    if (currentBalance < amount) {
+      throw new Error(`Insufficient balance. Current: ${currentBalance} ${currency}, Required: ${amount} ${currency}`);
+    }
+
+    const newBalance = currentBalance - amount;
+
+    const updatedFundingWallet = {
+      ...currentFundingWallet,
+      [currency]: newBalance
+    };
+
+    // Update profile with new balance
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        funding_wallet: updatedFundingWallet,
+        account_balance: profile.account_balance - amount
+      })
+      .eq('user_id', userId);
+
+    if (updateError) throw updateError;
+
+    // Create wallet transaction record
+    const { error: transactionError } = await supabase
+      .from('wallet_transactions')
+      .insert({
+        user_id: userId,
+        action: 'admin_deduct',
+        wallet_type: 'funding',
+        amount: amount,
+        asset: currency,
+        status: 'completed',
+        remarks: remarks || 'Deducted by admin',
+        admin_email: user.email,
+        balance: newBalance,
+        created_at: new Date().toISOString()
+      });
+
+    if (transactionError) throw transactionError;
+
+    return {
+      success: true,
+      newBalance: newBalance,
+      message: `Successfully deducted ${amount} ${currency} from user wallet`
+    };
+  } catch (error) {
+    console.error('Error deducting from user wallet:', error);
+    return {
+      success: false,
+      newBalance: 0,
+      message: error instanceof Error ? error.message : 'Failed to deduct from user wallet'
+    };
+  }
+}
