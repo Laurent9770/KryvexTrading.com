@@ -377,6 +377,22 @@ DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
 
+-- Conditional policy creation for profiles (only if user_id column exists)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all profiles" ON public.profiles FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
+
 DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
 DROP POLICY IF EXISTS "Admins can view all roles" ON public.user_roles;
 DROP POLICY IF EXISTS "Admins can manage roles" ON public.user_roles;
@@ -466,85 +482,229 @@ CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING
 CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (public.has_admin_role(auth.uid()));
 CREATE POLICY "Admins can update all profiles" ON public.profiles FOR UPDATE USING (public.has_admin_role(auth.uid()));
 
--- User roles policies
-CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all roles" ON public.user_roles FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL USING (public.has_admin_role(auth.uid()));
+-- User roles policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_roles' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all roles" ON public.user_roles FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- KYC documents policies
-CREATE POLICY "Users can view own KYC documents" ON public.kyc_documents FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own KYC documents" ON public.kyc_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own KYC documents" ON public.kyc_documents FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all KYC documents" ON public.kyc_documents FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all KYC documents" ON public.kyc_documents FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- KYC documents policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'kyc_documents' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own KYC documents" ON public.kyc_documents FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert own KYC documents" ON public.kyc_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Users can update own KYC documents" ON public.kyc_documents FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all KYC documents" ON public.kyc_documents FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all KYC documents" ON public.kyc_documents FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Trading pairs policies (public read, admin write)
-CREATE POLICY "Anyone can view trading pairs" ON public.trading_pairs FOR SELECT USING (true);
-CREATE POLICY "Admins can manage trading pairs" ON public.trading_pairs FOR ALL USING (public.has_admin_role(auth.uid()));
+-- Trading pairs policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trading_pairs'
+    ) THEN
+        CREATE POLICY "Anyone can view trading pairs" ON public.trading_pairs FOR SELECT USING (true);
+        CREATE POLICY "Admins can manage trading pairs" ON public.trading_pairs FOR ALL USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Trades policies
-CREATE POLICY "Users can view own trades" ON public.trades FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own trades" ON public.trades FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all trades" ON public.trades FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all trades" ON public.trades FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- Trades policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trades' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own trades" ON public.trades FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert own trades" ON public.trades FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all trades" ON public.trades FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all trades" ON public.trades FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Transactions policies
-CREATE POLICY "Users can view own transactions" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own transactions" ON public.transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all transactions" ON public.transactions FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all transactions" ON public.transactions FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- Transactions policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transactions' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own transactions" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert own transactions" ON public.transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all transactions" ON public.transactions FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all transactions" ON public.transactions FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Deposits policies
-CREATE POLICY "Users can view own deposits" ON public.deposits FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own deposits" ON public.deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all deposits" ON public.deposits FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all deposits" ON public.deposits FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- Deposits policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'deposits' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own deposits" ON public.deposits FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert own deposits" ON public.deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all deposits" ON public.deposits FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all deposits" ON public.deposits FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Withdrawals policies
-CREATE POLICY "Users can view own withdrawals" ON public.withdrawals FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own withdrawals" ON public.withdrawals FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can view all withdrawals" ON public.withdrawals FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all withdrawals" ON public.withdrawals FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- Withdrawals policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'withdrawals' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own withdrawals" ON public.withdrawals FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert own withdrawals" ON public.withdrawals FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all withdrawals" ON public.withdrawals FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all withdrawals" ON public.withdrawals FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Support tickets policies
-CREATE POLICY "Users can view own tickets" ON public.support_tickets FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own tickets" ON public.support_tickets FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own tickets" ON public.support_tickets FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all tickets" ON public.support_tickets FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update all tickets" ON public.support_tickets FOR UPDATE USING (public.has_admin_role(auth.uid()));
+-- Support tickets policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'support_tickets' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own tickets" ON public.support_tickets FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert own tickets" ON public.support_tickets FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Users can update own tickets" ON public.support_tickets FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all tickets" ON public.support_tickets FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update all tickets" ON public.support_tickets FOR UPDATE USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Support messages policies
-CREATE POLICY "Users can view messages in own tickets" ON public.support_messages FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.support_tickets WHERE id = ticket_id AND user_id = auth.uid())
-);
-CREATE POLICY "Users can insert messages in own tickets" ON public.support_messages FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.support_tickets WHERE id = ticket_id AND user_id = auth.uid())
-);
-CREATE POLICY "Admins can view all messages" ON public.support_messages FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can insert messages" ON public.support_messages FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+-- Support messages policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'support_messages'
+    ) THEN
+        CREATE POLICY "Users can view messages in own tickets" ON public.support_messages FOR SELECT USING (
+            EXISTS (SELECT 1 FROM public.support_tickets WHERE id = ticket_id AND user_id = auth.uid())
+        );
+        CREATE POLICY "Users can insert messages in own tickets" ON public.support_messages FOR INSERT WITH CHECK (
+            EXISTS (SELECT 1 FROM public.support_tickets WHERE id = ticket_id AND user_id = auth.uid())
+        );
+        CREATE POLICY "Admins can view all messages" ON public.support_messages FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can insert messages" ON public.support_messages FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Notifications policies
-CREATE POLICY "Users can view own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all notifications" ON public.notifications FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can insert notifications" ON public.notifications FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+-- Notifications policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'notifications' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all notifications" ON public.notifications FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can insert notifications" ON public.notifications FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
--- Admin tables policies
-CREATE POLICY "Admins can view admin actions" ON public.admin_actions FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can insert admin actions" ON public.admin_actions FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+-- Admin tables policies (conditional)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'admin_actions'
+    ) THEN
+        CREATE POLICY "Admins can view admin actions" ON public.admin_actions FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can insert admin actions" ON public.admin_actions FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
-CREATE POLICY "Admins can view admin notifications" ON public.admin_notifications FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can insert admin notifications" ON public.admin_notifications FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can update own notifications" ON public.admin_notifications FOR UPDATE USING (auth.uid() = admin_id);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'admin_notifications'
+    ) THEN
+        CREATE POLICY "Admins can view admin notifications" ON public.admin_notifications FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can insert admin notifications" ON public.admin_notifications FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can update own notifications" ON public.admin_notifications FOR UPDATE USING (auth.uid() = admin_id);
+    END IF;
+END $$;
 
-CREATE POLICY "Admins can view wallet adjustments" ON public.wallet_adjustments FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can insert wallet adjustments" ON public.wallet_adjustments FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'wallet_adjustments'
+    ) THEN
+        CREATE POLICY "Admins can view wallet adjustments" ON public.wallet_adjustments FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can insert wallet adjustments" ON public.wallet_adjustments FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
-CREATE POLICY "Users can view own sessions" ON public.user_sessions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all sessions" ON public.user_sessions FOR SELECT USING (public.has_admin_role(auth.uid()));
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_sessions' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE POLICY "Users can view own sessions" ON public.user_sessions FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all sessions" ON public.user_sessions FOR SELECT USING (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
-CREATE POLICY "Admins can view trade outcome logs" ON public.trade_outcome_logs FOR SELECT USING (public.has_admin_role(auth.uid()));
-CREATE POLICY "Admins can insert trade outcome logs" ON public.trade_outcome_logs FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trade_outcome_logs'
+    ) THEN
+        CREATE POLICY "Admins can view trade outcome logs" ON public.trade_outcome_logs FOR SELECT USING (public.has_admin_role(auth.uid()));
+        CREATE POLICY "Admins can insert trade outcome logs" ON public.trade_outcome_logs FOR INSERT WITH CHECK (public.has_admin_role(auth.uid()));
+    END IF;
+END $$;
 
 -- =====================================================
 -- INDEXES FOR PERFORMANCE
