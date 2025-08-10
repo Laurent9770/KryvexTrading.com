@@ -32,11 +32,21 @@ const LandingPage: React.FC = () => {
   const safeNavigate = (path: string) => {
     try {
       console.log('🔗 Attempting to navigate to:', path);
-      navigate(path);
-      console.log('✅ Navigation successful to:', path);
+      console.log('🔗 Current location:', window.location.pathname);
+      console.log('🔗 Navigate function:', typeof navigate);
+      
+      // Try React Router navigation first
+      if (typeof navigate === 'function') {
+        navigate(path);
+        console.log('✅ React Router navigation successful to:', path);
+      } else {
+        console.warn('⚠️ React Router navigate not available, using window.location');
+        window.location.href = path;
+      }
     } catch (error) {
       console.error('❌ Navigation error:', error);
       // Fallback to window.location if navigate fails
+      console.log('🔄 Falling back to window.location.href');
       window.location.href = path;
     }
   };
@@ -45,8 +55,14 @@ const LandingPage: React.FC = () => {
   const handleButtonClick = (action: string, path?: string) => {
     try {
       console.log('🖱️ Button clicked:', action);
+      console.log('🖱️ Target path:', path);
+      console.log('🖱️ Event handler called successfully');
+      
       if (path) {
+        console.log('🖱️ About to call safeNavigate with path:', path);
         safeNavigate(path);
+      } else {
+        console.log('🖱️ No path provided for action:', action);
       }
     } catch (error) {
       console.error('❌ Button click error:', error);

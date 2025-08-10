@@ -25,6 +25,7 @@ const safeLazyLoad = (importFunc: () => Promise<any>) => {
 
 // Lazy load pages with error boundaries
 const LandingPage = safeLazyLoad(() => import('@/pages/LandingPage'));
+const Auth = safeLazyLoad(() => import('@/pages/Auth'));
 const Dashboard = safeLazyLoad(() => import('@/pages/Dashboard'));
 const AdminDashboard = safeLazyLoad(() => import('@/pages/AdminDashboard'));
 const ViewOnlyDashboard = safeLazyLoad(() => import('@/pages/ViewOnlyDashboard'));
@@ -137,6 +138,11 @@ function App() {
                   <Route path="/" element={
                     <SafeRoute>
                       <LandingPage />
+                    </SafeRoute>
+                  } />
+                  <Route path="/auth" element={
+                    <SafeRoute>
+                      <Auth />
                     </SafeRoute>
                   } />
                   <Route path="/dashboard" element={
