@@ -11,7 +11,7 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, Target, Book
 import TradeHistory from "@/components/TradeHistory";
 import { useCryptoPrices } from "@/hooks/useCryptoPrices";
 import TradingViewChart from "@/components/TradingViewChart";
-import BinanceTrading from "@/components/BinanceTrading";
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -3164,7 +3164,6 @@ const TradingPage = () => {
             <TabsTrigger value="quant" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Quant</TabsTrigger>
             <TabsTrigger value="bots" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Bots</TabsTrigger>
             <TabsTrigger value="staking" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Staking</TabsTrigger>
-        <TabsTrigger value="binance" className="text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground whitespace-nowrap flex-shrink-0">Binance</TabsTrigger>
           </TabsList>
 
           {/* Spot Trading Tab */}
@@ -6273,6 +6272,200 @@ const TradingPage = () => {
                   </Card>
                 </TabsContent>
               </Tabs>
+            </div>
+          </TabsContent>
+
+          {/* Staking Tab */}
+          <TabsContent value="staking" className="space-y-6">
+            <div className="max-w-7xl mx-auto">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Staking</h2>
+                  <p className="text-muted-foreground">Earn rewards by staking your cryptocurrencies</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              {/* Staking Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Card className="border-0 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Total Staked</p>
+                      <p className="text-2xl font-bold text-foreground">$0.00</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                      <Coins className="w-6 h-6 text-blue-500" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="border-0 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Total Rewards</p>
+                      <p className="text-2xl font-bold text-foreground">$0.00</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
+                      <Award className="w-6 h-6 text-green-500" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="border-0 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Active Stakes</p>
+                      <p className="text-2xl font-bold text-foreground">0</p>
+                    </div>
+                    <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-purple-500" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="border-0 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Avg. APY</p>
+                      <p className="text-2xl font-bold text-foreground">0.00%</p>
+                    </div>
+                    <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
+                      <Percent className="w-6 h-6 text-orange-500" />
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Staking Pools */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="border-0 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-foreground">Available Staking Pools</h3>
+                    <Button variant="outline" size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Pool
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {stakingPools.map((pool) => (
+                      <div key={pool.token} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+                            <span className="text-lg">{pool.icon}</span>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-foreground">{pool.name}</h4>
+                            <p className="text-sm text-muted-foreground">{pool.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-foreground">{pool.apy}% APY</p>
+                          <p className="text-sm text-muted-foreground">Min: {pool.minStake} {pool.token}</p>
+                          <Button 
+                            size="sm" 
+                            className="mt-2"
+                            onClick={() => handleOpenStakingModal(pool)}
+                          >
+                            Stake
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="border-0 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-foreground">Your Active Stakes</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="text-center py-8">
+                      <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No active stakes</p>
+                      <p className="text-sm text-muted-foreground mt-2">Start staking to earn rewards</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Staking Calculator */}
+              <Card className="border-0 p-6 mt-6">
+                <h3 className="text-xl font-bold text-foreground mb-6">Staking Calculator</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <Label htmlFor="calculatorToken">Token</Label>
+                    <Select value={calculatorToken} onValueChange={setCalculatorToken}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select token" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stakingPools.map((pool) => (
+                          <SelectItem key={pool.token} value={pool.token}>
+                            {pool.token}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="calculatorAmount">Amount</Label>
+                    <Input
+                      id="calculatorAmount"
+                      type="number"
+                      placeholder="Enter amount"
+                      value={calculatorAmount}
+                      onChange={(e) => setCalculatorAmount(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="calculatorPeriod">Period (days)</Label>
+                    <Input
+                      id="calculatorPeriod"
+                      type="number"
+                      placeholder="Enter days"
+                      value={calculatorPeriod}
+                      onChange={(e) => setCalculatorPeriod(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                {calculatorToken && calculatorAmount && calculatorPeriod && (
+                  <div className="mt-6 p-4 bg-muted/20 rounded-lg">
+                    <h4 className="font-semibold text-foreground mb-2">Estimated Returns</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Rewards</p>
+                        <p className="text-lg font-bold text-foreground">
+                          ${calculateStakingRewards().toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">APY</p>
+                        <p className="text-lg font-bold text-foreground">
+                          {stakingPools.find(p => p.token === calculatorToken)?.apy || 0}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Value</p>
+                        <p className="text-lg font-bold text-foreground">
+                          ${(parseFloat(calculatorAmount) + calculateStakingRewards()).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
