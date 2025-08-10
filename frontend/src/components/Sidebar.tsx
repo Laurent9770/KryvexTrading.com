@@ -134,7 +134,7 @@ export function Sidebar() {
     },
                     {
                   title: "KYC Verification",
-                  href: "/dashboard?tab=kyc",
+                  href: "/kyc",
                   icon: Shield,
                   shortcut: "K",
                   description: "Complete identity verification",
