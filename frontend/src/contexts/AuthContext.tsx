@@ -225,13 +225,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(false);
 
             // Update trading account with user's balance
-            if (authState.user.accountBalance > 0) {
+            if (authState.user.accountBalance && authState.user.accountBalance > 0) {
               setTradingAccount(prev => ({
                 ...prev,
                 USDT: {
-                  balance: authState.user.accountBalance.toFixed(8),
-                  usdValue: `$${authState.user.accountBalance.toFixed(2)}`,
-                  available: authState.user.accountBalance.toFixed(8)
+                  balance: (authState.user.accountBalance || 0).toFixed(8),
+                  usdValue: `$${(authState.user.accountBalance || 0).toFixed(2)}`,
+                  available: (authState.user.accountBalance || 0).toFixed(8)
                 }
               }));
             }
@@ -648,13 +648,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setTradingAccount(prev => {
       const currentBalance = parseFloat(prev[asset]?.balance || '0');
       const newBalance = operation === 'add' ? currentBalance + amount : currentBalance - amount;
-      const newBalanceStr = newBalance.toFixed(8);
+      const newBalanceStr = (newBalance || 0).toFixed(8);
       
       return {
         ...prev,
         [asset]: {
           balance: newBalanceStr,
-          usdValue: `$${newBalance.toFixed(2)}`,
+          usdValue: `$${(newBalance || 0).toFixed(2)}`,
           available: newBalanceStr
         }
       };
@@ -663,14 +663,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateFundingBalance = useCallback((amount: number, operation: 'add' | 'subtract') => {
     setFundingAccount(prev => {
-      const currentBalance = parseFloat(prev.USDT.balance);
+      const currentBalance = parseFloat(prev.USDT?.balance || '0');
       const newBalance = operation === 'add' ? currentBalance + amount : currentBalance - amount;
-      const newBalanceStr = newBalance.toFixed(2);
+      const newBalanceStr = (newBalance || 0).toFixed(2);
       
       return {
         USDT: {
           balance: newBalanceStr,
-          usdValue: `$${newBalance.toFixed(2)}`,
+          usdValue: `$${(newBalance || 0).toFixed(2)}`,
           available: newBalanceStr
         }
       };
@@ -701,7 +701,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     setPortfolioStats(prev => ({
       ...prev,
-      totalBalance: `$${totalBalance.toFixed(2)}`
+      totalBalance: `$${(totalBalance || 0).toFixed(2)}`
     }));
   }, [tradingAccount]);
 

@@ -101,12 +101,12 @@ const Dashboard = () => {
         setRecentTrades(trades.map(trade => ({
           id: trade.id,
           symbol: 'BTC/USDT', // Default symbol
-          type: trade.trade_type,
+          type: trade.tradeType,
           amount: trade.amount,
           price: trade.price,
-          pnl: trade.profit_loss,
+          pnl: trade.profitLoss,
           status: trade.result,
-          timestamp: trade.created_at
+          timestamp: trade.createdAt
         })));
       }
 
@@ -285,7 +285,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-xs sm:text-sm text-slate-400">Account Balance</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
-                  ${portfolioData.totalBalance.toFixed(2)}
+                  ${(portfolioData.totalBalance || 0).toFixed(2)}
                 </p>
                 <p className="text-xs sm:text-sm text-green-400">+0.5% from last week</p>
               </div>
@@ -312,8 +312,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-slate-400">Total P&L</p>
-                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${portfolioData.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {portfolioData.totalPnL >= 0 ? '+' : ''}${portfolioData.totalPnL.toFixed(2)}
+                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${(portfolioData.totalPnL || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {(portfolioData.totalPnL || 0) >= 0 ? '+' : ''}${(portfolioData.totalPnL || 0).toFixed(2)}
                 </p>
                 <p className="text-xs sm:text-sm text-slate-400">All time profit/loss</p>
               </div>
@@ -328,7 +328,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-xs sm:text-sm text-slate-400">Win Rate</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-yellow-400">
-                  {tradingStats.totalTrades > 0 ? `${tradingStats.winRate.toFixed(1)}%` : '--%'}
+                  {tradingStats.totalTrades > 0 ? `${(tradingStats.winRate || 0).toFixed(1)}%` : '--%'}
                 </p>
                 <p className="text-xs sm:text-sm text-slate-400">No trades yet</p>
               </div>
@@ -435,8 +435,8 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-medium ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                        <p className={`font-medium ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
                         </p>
                         <Badge className={`mt-1 ${
                           trade.status === 'win' ? 'bg-green-500/10 text-green-400' :
