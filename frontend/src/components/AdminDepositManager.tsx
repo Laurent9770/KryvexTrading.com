@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import supabaseWalletService from '@/services/supabaseWalletService';
+import { subscribeToTransactions } from '@/services/walletService';
 import supabaseAdminDataService, { AdminDepositRequest } from '@/services/supabaseAdminDataService';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,7 +83,7 @@ const AdminDepositManager = () => {
     };
     
     // Subscribe to Supabase real-time events
-    const depositSubscription = supabaseWalletService.subscribeToTransactions(handleNewDepositRequest);
+    const depositSubscription = subscribeToTransactions(handleNewDepositRequest);
     
     // Set up periodic refresh
     const interval = setInterval(fetchDepositRequests, 30000);

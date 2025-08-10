@@ -52,7 +52,13 @@ import AdminWalletManager from '@/components/AdminWalletManager';
 import { AdminRoomManagement } from '@/components/AdminRoomManagement';
 import AdminBinanceControl from '@/components/AdminBinanceControl';
 import supabaseTradingService from "@/services/supabaseTradingService";
-import supabaseWalletService from "@/services/supabaseWalletService";
+import { 
+  subscribeToTransactions, 
+  subscribeToWithdrawalRequests, 
+  getAllUsers, 
+  getWithdrawalStats, 
+  getWalletTransactions 
+} from "@/services/walletService";
 import supabaseAdminDataService from "@/services/supabaseAdminDataService";
 
 interface User {
@@ -382,8 +388,8 @@ export default function AdminDashboard() {
     };
 
     // Subscribe to Supabase real-time events
-    const walletSubscription = supabaseWalletService.subscribeToTransactions(handleWalletUpdate);
-    const withdrawalSubscription = supabaseWalletService.subscribeToWithdrawalRequests(handleWithdrawalRequest);
+    const walletSubscription = subscribeToTransactions(handleWalletUpdate);
+    const withdrawalSubscription = subscribeToWithdrawalRequests(handleWithdrawalRequest);
 
     // Initial data fetch
     fetchDashboardData();
@@ -393,8 +399,8 @@ export default function AdminDashboard() {
 
     return () => {
       // Cleanup Supabase subscriptions
-      if (walletSubscription) walletSubscription.unsubscribe();
-      if (withdrawalSubscription) withdrawalSubscription.unsubscribe();
+      if (walletSubscription) walletSubscription();
+      if (withdrawalSubscription) withdrawalSubscription();
       
       clearInterval(interval);
     };
@@ -432,8 +438,8 @@ export default function AdminDashboard() {
       let allUserWallets: any[] = [];
       let withdrawalStats: any = { totalRequests: 0, pending: 0, approved: 0, rejected: 0, totalAmount: 0 };
       try {
-        allUserWallets = await supabaseWalletService.getAllUserWallets();
-        withdrawalStats = await supabaseWalletService.getWithdrawalStats();
+        allUserWallets = await getAllUsers();
+        withdrawalStats = await getWithdrawalStats();
       } catch (error) {
         console.warn('Error loading wallet data from Supabase:', error);
       }
@@ -441,7 +447,7 @@ export default function AdminDashboard() {
       // Get real deposit data (from wallet transactions)
       let walletTransactions: any[] = [];
       try {
-        walletTransactions = await supabaseWalletService.getWalletTransactions();
+        walletTransactions = await getWalletTransactions();
       } catch (error) {
         console.warn('Error loading wallet transactions from Supabase:', error);
       }

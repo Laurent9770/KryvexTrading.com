@@ -251,6 +251,370 @@ export class WalletService {
       };
     }
   }
+
+  // Get deposit statistics
+  static async getDepositStats(userId?: string) {
+    try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        console.error('User not authenticated for getDepositStats');
+        return {
+          totalDeposits24h: 0,
+          pendingDeposits: 0,
+          averageTime: "~15 minutes"
+        };
+      }
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId || user.id)
+        .eq('type', 'deposit');
+
+      if (error) {
+        console.error('Error fetching deposit stats:', error);
+        return {
+          totalDeposits24h: 0,
+          pendingDeposits: 0,
+          averageTime: "~15 minutes"
+        };
+      }
+
+      const transactions = data || [];
+      const now = new Date();
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      const deposits24h = transactions.filter(tx => 
+        new Date(tx.created_at) > yesterday
+      );
+
+      const pendingDeposits = transactions.filter(tx => 
+        tx.status === 'pending'
+      );
+
+      return {
+        totalDeposits24h: deposits24h.length,
+        pendingDeposits: pendingDeposits.length,
+        averageTime: "~15 minutes"
+      };
+    } catch (err) {
+      console.error('Unexpected error in getDepositStats:', err);
+      return {
+        totalDeposits24h: 0,
+        pendingDeposits: 0,
+        averageTime: "~15 minutes"
+      };
+    }
+  }
+
+  // Get recent deposits
+  static async getRecentDeposits(userId?: string) {
+    try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        console.error('User not authenticated for getRecentDeposits');
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId || user.id)
+        .eq('type', 'deposit')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching recent deposits:', error);
+        return [];
+      }
+
+      return (data || []).map(tx => ({
+        amount: tx.amount.toString(),
+        symbol: tx.currency,
+        time: new Date(tx.created_at).toLocaleString(),
+        status: tx.status
+      }));
+    } catch (err) {
+      console.error('Unexpected error in getRecentDeposits:', err);
+      return [];
+    }
+  }
+
+  // Subscribe to transactions (placeholder for real-time updates)
+  static subscribeToTransactions(callback: (data: any) => void) {
+    // This is a placeholder - implement real-time subscription if needed
+    console.log('Transaction subscription not implemented yet');
+    return () => console.log('Unsubscribed from transactions');
+  }
+
+  // Subscribe to withdrawal requests (placeholder for real-time updates)
+  static subscribeToWithdrawalRequests(callback: (data: any) => void) {
+    // This is a placeholder - implement real-time subscription if needed
+    console.log('Withdrawal request subscription not implemented yet');
+    return () => console.log('Unsubscribed from withdrawal requests');
+  }
+
+  // Get withdrawal requests
+  static async getWithdrawalRequests() {
+    try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        console.error('User not authenticated for getWithdrawalRequests');
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching withdrawal requests:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Unexpected error in getWithdrawalRequests:', err);
+      return [];
+    }
+  }
+
+  // Create withdrawal request
+  static async createWithdrawalRequest(withdrawalData: {
+    amount: number;
+    currency: string;
+    walletAddress: string;
+    blockchain: string;
+    notes?: string;
+  }) {
+    try {
+      const user = await this.getCurrentUser();
+      if (!user) {
+        console.error('User not authenticated for createWithdrawalRequest');
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .insert({
+          ...withdrawalData,
+          user_id: user.id,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating withdrawal request:', error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Unexpected error in createWithdrawalRequest:', err);
+      return null;
+    }
+  }
+
+  // Approve withdrawal (admin function)
+  static async approveWithdrawal(withdrawalId: string, adminEmail: string, txHash?: string) {
+    try {
+      const { error } = await supabase
+        .from('withdrawals')
+        .update({
+          status: 'completed',
+          processed_by: adminEmail,
+          tx_hash: txHash,
+          processed_date: new Date().toISOString()
+        })
+        .eq('id', withdrawalId);
+
+      if (error) {
+        console.error('Error approving withdrawal:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Unexpected error in approveWithdrawal:', err);
+      return false;
+    }
+  }
+
+  // Reject withdrawal (admin function)
+  static async rejectWithdrawal(withdrawalId: string, adminEmail: string, reason?: string) {
+    try {
+      const { error } = await supabase
+        .from('withdrawals')
+        .update({
+          status: 'failed',
+          processed_by: adminEmail,
+          admin_notes: reason,
+          processed_date: new Date().toISOString()
+        })
+        .eq('id', withdrawalId);
+
+      if (error) {
+        console.error('Error rejecting withdrawal:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Unexpected error in rejectWithdrawal:', err);
+      return false;
+    }
+  }
+
+  // Fund user wallet (admin function)
+  static async fundUserWallet(
+    userId: string,
+    username: string,
+    walletType: 'funding' | 'trading',
+    amount: number,
+    asset: string,
+    adminEmail: string,
+    remarks: string
+  ) {
+    try {
+      // First, get the current profile to update the wallet
+      const { data: profile, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select(`${walletType}_wallet`)
+        .eq('user_id', userId)
+        .single();
+
+      if (profileFetchError) {
+        console.error('Error fetching user profile for funding:', profileFetchError);
+        return false;
+      }
+
+      // Update the wallet balance
+      const currentWallet = profile?.[`${walletType}_wallet`] || {};
+      const currentBalance = currentWallet[asset] || 0;
+      const newBalance = currentBalance + amount;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          [`${walletType}_wallet`]: {
+            ...currentWallet,
+            [asset]: newBalance
+          }
+        })
+        .eq('user_id', userId);
+
+      if (profileError) {
+        console.error('Error funding user wallet:', profileError);
+        return false;
+      }
+
+      // Then, create a transaction record
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          type: 'deposit',
+          amount: amount,
+          currency: asset,
+          status: 'completed',
+          description: `Admin funding: ${remarks}`,
+          metadata: {
+            admin_email: adminEmail,
+            wallet_type: walletType,
+            username: username
+          },
+          created_at: new Date().toISOString()
+        });
+
+      if (transactionError) {
+        console.error('Error creating transaction record:', transactionError);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Unexpected error in fundUserWallet:', err);
+      return false;
+    }
+  }
+
+  // Deduct from user wallet (admin function)
+  static async deductFromWallet(
+    userId: string,
+    username: string,
+    walletType: 'funding' | 'trading',
+    amount: number,
+    asset: string,
+    adminEmail: string,
+    remarks: string
+  ) {
+    try {
+      // First, get the current profile to update the wallet
+      const { data: profile, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select(`${walletType}_wallet`)
+        .eq('user_id', userId)
+        .single();
+
+      if (profileFetchError) {
+        console.error('Error fetching user profile for deduction:', profileFetchError);
+        return false;
+      }
+
+      // Update the wallet balance
+      const currentWallet = profile?.[`${walletType}_wallet`] || {};
+      const currentBalance = currentWallet[asset] || 0;
+      const newBalance = Math.max(currentBalance - amount, 0); // Prevent negative balance
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          [`${walletType}_wallet`]: {
+            ...currentWallet,
+            [asset]: newBalance
+          }
+        })
+        .eq('user_id', userId);
+
+      if (profileError) {
+        console.error('Error deducting from user wallet:', profileError);
+        return false;
+      }
+
+      // Then, create a transaction record
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          type: 'withdrawal',
+          amount: amount,
+          currency: asset,
+          status: 'completed',
+          description: `Admin deduction: ${remarks}`,
+          metadata: {
+            admin_email: adminEmail,
+            wallet_type: walletType,
+            username: username
+          },
+          created_at: new Date().toISOString()
+        });
+
+      if (transactionError) {
+        console.error('Error creating transaction record:', transactionError);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Unexpected error in deductFromWallet:', err);
+      return false;
+    }
+  }
 }
 
 // Admin-only function (requires additional backend role check)
@@ -358,7 +722,17 @@ export const {
   getUserRole,
   getTradingPairs,
   getWithdrawalStats,
-  getWalletBalanceSummary
+  getWalletBalanceSummary,
+  getDepositStats,
+  getRecentDeposits,
+  subscribeToTransactions,
+  subscribeToWithdrawalRequests,
+  getWithdrawalRequests,
+  createWithdrawalRequest,
+  approveWithdrawal,
+  rejectWithdrawal,
+  fundUserWallet,
+  deductFromWallet
 } = WalletService;
 
 export const {

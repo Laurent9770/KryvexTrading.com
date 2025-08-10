@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import supabaseWalletService from '@/services/supabaseWalletService';
+import { getWalletTransactions, fundUserWallet, deductFromWallet } from '@/services/walletService';
 import supabaseAdminDataService, { AdminWalletData } from '@/services/supabaseAdminDataService';
 import { 
   Plus, 
@@ -105,7 +105,7 @@ const AdminWalletManager: React.FC = () => {
     console.log('User wallets loaded:', wallets.length);
     console.log('User wallets data:', wallets);
     
-          const transactions = await supabaseWalletService.getWalletTransactions();
+          const transactions = await getWalletTransactions();
     console.log('Wallet transactions loaded:', transactions.length);
     console.log('Wallet transactions data:', transactions);
     
@@ -130,7 +130,7 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const success = await supabaseWalletService.fundUserWallet(
+              const success = await fundUserWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,
@@ -187,7 +187,7 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const success = await supabaseWalletService.deductFromWallet(
+              const success = await deductFromWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,

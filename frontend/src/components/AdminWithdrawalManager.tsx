@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import supabaseWalletService from '@/services/supabaseWalletService';
+import { approveWithdrawal, rejectWithdrawal, getWithdrawalStats } from '@/services/walletService';
 import supabaseAdminDataService, { AdminWithdrawalRequest } from '@/services/supabaseAdminDataService';
 import { 
   Clock, 
@@ -95,7 +95,7 @@ const AdminWithdrawalManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const updatedRequest = await supabaseWalletService.approveWithdrawal(request.id, user.email, txHash);
+              const updatedRequest = await approveWithdrawal(request.id, user.email, txHash);
       
       if (updatedRequest) {
         toast({
@@ -129,7 +129,7 @@ const AdminWithdrawalManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const updatedRequest = await supabaseWalletService.rejectWithdrawal(request.id, user.email, rejectReason);
+              const updatedRequest = await rejectWithdrawal(request.id, user.email, rejectReason);
       
       if (updatedRequest) {
         toast({
@@ -202,7 +202,7 @@ const AdminWithdrawalManager: React.FC = () => {
 
   useEffect(() => {
     const loadStats = async () => {
-      const statsData = await supabaseWalletService.getWithdrawalStats();
+              const statsData = await getWithdrawalStats();
       setStats(statsData);
     };
     loadStats();

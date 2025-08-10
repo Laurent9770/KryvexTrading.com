@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import supabaseQueryHelper from '../services/supabaseQueryHelper';
-import supabaseWalletServiceUpdated from '../services/supabaseWalletServiceUpdated';
+import { getWalletTransactions, getUserProfile } from '../services/walletService';
 
 // Example component showing proper Supabase query patterns
 const ExampleUsage: React.FC = () => {
@@ -75,7 +75,7 @@ const ExampleUsage: React.FC = () => {
   const handleWalletOperations = async () => {
     try {
       // Fetch wallet transactions
-      const walletTransactions = await supabaseWalletServiceUpdated.getWalletTransactions();
+      const walletTransactions = await getWalletTransactions();
       
       // Handle potential undefined results
       const transactions = walletTransactions || [];
@@ -85,7 +85,7 @@ const ExampleUsage: React.FC = () => {
       // Example of getting user wallet
       const { user } = await supabaseQueryHelper.checkAuth();
       if (user) {
-        const userWallet = await supabaseWalletServiceUpdated.getUserWallet(user.id);
+        const userWallet = await getUserProfile();
         if (userWallet) {
           console.log('User wallet:', userWallet);
         }

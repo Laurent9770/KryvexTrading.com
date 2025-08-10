@@ -3,7 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import supabaseWalletService, { WithdrawalRequest } from '@/services/supabaseWalletService';
+import { getWithdrawalRequests } from '@/services/walletService';
+
+interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  walletAddress: string;
+  blockchain: string;
+  status: 'pending' | 'completed' | 'failed';
+  notes?: string;
+  createdAt: string;
+}
 import WithdrawalRequestForm from '@/components/WithdrawalRequestForm';
 import { 
   Clock, 
@@ -31,7 +43,7 @@ const WithdrawalRequestPage: React.FC = () => {
   const loadUserRequests = async () => {
     if (!user) return;
     
-    const allRequests = await supabaseWalletService.getWithdrawalRequests();
+          const allRequests = await getWithdrawalRequests();
     const userRequests = allRequests.filter(request => request.userId === user.id);
     setUserRequests(userRequests);
   };
