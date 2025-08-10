@@ -89,12 +89,10 @@ BEGIN
         INSERT INTO public.user_roles (
             user_id,
             role,
-            created_at,
-            updated_at
+            created_at
         ) VALUES (
             admin_user_id,
             'admin',
-            NOW(),
             NOW()
         ) ON CONFLICT (user_id, role) DO NOTHING;
         
