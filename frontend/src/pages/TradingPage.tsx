@@ -3027,15 +3027,9 @@ const TradingPage = () => {
 
   // Helper functions for staking
   const getTokenPrice = (token: string) => {
-    const prices = {
-      'ETH': 3890.25,
-      'SOL': 185.75,
-      'ADA': 0.45,
-      'DOT': 125.00,
-      'AVAX': 128.00,
-      'MATIC': 0.85
-    };
-    return prices[token] || 0;
+    // Use real-time prices from the crypto price service
+    const realPrice = getPrice(token);
+    return realPrice || 0;
   };
 
   const getStatusColor = (status: string) => {
