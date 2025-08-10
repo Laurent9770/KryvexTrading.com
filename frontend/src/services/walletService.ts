@@ -757,3 +757,57 @@ export async function deductFromWallet(userId: string, amount: number, currency:
     };
   }
 }
+
+// Subscribe to Withdrawal Requests (real-time updates)
+export function subscribeToWithdrawalRequests(callback: (payload: any) => void) {
+  try {
+    const subscription = supabase
+      .channel('withdrawal_requests')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'withdrawals'
+        },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  } catch (error) {
+    console.error('Error subscribing to withdrawal requests:', error);
+    return () => {};
+  }
+}
+
+// Subscribe to User Profiles (real-time updates)
+export function subscribeToUserProfiles(callback: (payload: any) => void) {
+  try {
+    const subscription = supabase
+      .channel('user_profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  } catch (error) {
+    console.error('Error subscribing to user profiles:', error);
+    return () => {};
+  }
+}
