@@ -217,7 +217,7 @@ SELECT
     (SELECT COUNT(*) FROM public.profiles WHERE kyc_status = 'verified') as verified_users,
     (SELECT COUNT(*) FROM public.profiles WHERE kyc_status = 'pending') as pending_kyc,
     (SELECT COUNT(*) FROM public.trades WHERE status = 'pending') as pending_trades,
-    (SELECT COALESCE(SUM(total_balance), 0) FROM public.wallet_balances WHERE currency = 'USDT') as total_usdt_balance,
+    (SELECT COALESCE(SUM(balance), 0) FROM public.wallet_balances WHERE currency = 'USDT') as total_usdt_balance,
     (SELECT COUNT(*) FROM public.admin_actions WHERE created_at >= NOW() - INTERVAL '24 hours') as admin_actions_24h;
 
 -- 18. Grant necessary permissions
