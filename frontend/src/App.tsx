@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -132,94 +133,96 @@ function App() {
   return (
     <SafeComponent componentName="App">
       <ErrorBoundary>
-        <LanguageProvider>
-          <AuthProvider>
-            <Router>
-              <div className="min-h-screen bg-background">
-                <Routes>
-                  {/* Public routes without navbar */}
-                  <Route path="/" element={
-                    <SafeRoute>
-                      <LandingPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/auth" element={
-                    <SafeRoute>
-                      <Auth />
-                    </SafeRoute>
-                  } />
-                  <Route path="/auth/callback" element={
-                    <SafeRoute>
-                      <AuthCallback />
-                    </SafeRoute>
-                  } />
-                  
-                  {/* Authenticated routes with navbar */}
-                  <Route path="/" element={<NavbarLayout />}>
-                    <Route path="/dashboard" element={
+        <TooltipProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <Router>
+                <div className="min-h-screen bg-background">
+                  <Routes>
+                    {/* Public routes without navbar */}
+                    <Route path="/" element={
                       <SafeRoute>
-                        <Dashboard />
+                        <LandingPage />
                       </SafeRoute>
                     } />
-                    <Route path="/admin" element={
+                    <Route path="/auth" element={
                       <SafeRoute>
-                        <AdminDashboard />
+                        <Auth />
                       </SafeRoute>
                     } />
-                    <Route path="/view-only" element={
+                    <Route path="/auth/callback" element={
                       <SafeRoute>
-                        <ViewOnlyDashboard />
+                        <AuthCallback />
                       </SafeRoute>
                     } />
-                    <Route path="/trading" element={
-                      <SafeRoute>
-                        <TradingPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/deposit" element={
-                      <SafeRoute>
-                        <DepositPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/withdrawal" element={
-                      <SafeRoute>
-                        <WithdrawalRequestPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/settings" element={
-                      <SafeRoute>
-                        <SettingsPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/kyc" element={
-                      <SafeRoute>
-                        <KYCPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/support" element={
-                      <SafeRoute>
-                        <SupportPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/history" element={
-                      <SafeRoute>
-                        <TradingHistoryPage />
-                      </SafeRoute>
-                    } />
-                    <Route path="/wallet" element={
-                      <SafeRoute>
-                        <WalletPage />
-                      </SafeRoute>
-                    } />
-                  </Route>
-                  
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-                <Toaster />
-              </div>
-            </Router>
-          </AuthProvider>
-        </LanguageProvider>
+                    
+                    {/* Authenticated routes with navbar */}
+                    <Route path="/" element={<NavbarLayout />}>
+                      <Route path="/dashboard" element={
+                        <SafeRoute>
+                          <Dashboard />
+                        </SafeRoute>
+                      } />
+                      <Route path="/admin" element={
+                        <SafeRoute>
+                          <AdminDashboard />
+                        </SafeRoute>
+                      } />
+                      <Route path="/view-only" element={
+                        <SafeRoute>
+                          <ViewOnlyDashboard />
+                        </SafeRoute>
+                      } />
+                      <Route path="/trading" element={
+                        <SafeRoute>
+                          <TradingPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/deposit" element={
+                        <SafeRoute>
+                          <DepositPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/withdrawal" element={
+                        <SafeRoute>
+                          <WithdrawalRequestPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/settings" element={
+                        <SafeRoute>
+                          <SettingsPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/kyc" element={
+                        <SafeRoute>
+                          <KYCPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/support" element={
+                        <SafeRoute>
+                          <SupportPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/history" element={
+                        <SafeRoute>
+                          <TradingHistoryPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/wallet" element={
+                        <SafeRoute>
+                          <WalletPage />
+                        </SafeRoute>
+                      } />
+                    </Route>
+                    
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                  <Toaster />
+                </div>
+              </Router>
+            </AuthProvider>
+          </LanguageProvider>
+        </TooltipProvider>
       </ErrorBoundary>
     </SafeComponent>
   );
