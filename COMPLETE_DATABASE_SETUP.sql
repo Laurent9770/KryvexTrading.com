@@ -357,15 +357,41 @@ DROP TRIGGER IF EXISTS update_deposits_updated_at ON public.deposits;
 DROP TRIGGER IF EXISTS update_withdrawals_updated_at ON public.withdrawals;
 DROP TRIGGER IF EXISTS update_support_tickets_updated_at ON public.support_tickets;
 
--- Add updated_at triggers to all tables
-CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_kyc_documents_updated_at BEFORE UPDATE ON public.kyc_documents FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_trading_pairs_updated_at BEFORE UPDATE ON public.trading_pairs FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_trades_updated_at BEFORE UPDATE ON public.trades FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_deposits_updated_at BEFORE UPDATE ON public.deposits FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_withdrawals_updated_at BEFORE UPDATE ON public.withdrawals FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
-CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON public.support_tickets FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+-- Add updated_at triggers to all tables (conditional)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles') THEN
+        CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'kyc_documents') THEN
+        CREATE TRIGGER update_kyc_documents_updated_at BEFORE UPDATE ON public.kyc_documents FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'trading_pairs') THEN
+        CREATE TRIGGER update_trading_pairs_updated_at BEFORE UPDATE ON public.trading_pairs FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'trades') THEN
+        CREATE TRIGGER update_trades_updated_at BEFORE UPDATE ON public.trades FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transactions') THEN
+        CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'deposits') THEN
+        CREATE TRIGGER update_deposits_updated_at BEFORE UPDATE ON public.deposits FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'withdrawals') THEN
+        CREATE TRIGGER update_withdrawals_updated_at BEFORE UPDATE ON public.withdrawals FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'support_tickets') THEN
+        CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON public.support_tickets FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+    END IF;
+END $$;
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -739,28 +765,113 @@ END $$;
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
 
--- Profiles indexes
-CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
-CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
-CREATE INDEX IF NOT EXISTS idx_profiles_kyc_status ON public.profiles(kyc_status);
-CREATE INDEX IF NOT EXISTS idx_profiles_account_status ON public.profiles(account_status);
-
--- User roles indexes
-CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_roles_role ON public.user_roles(role);
-
--- Trades indexes
-CREATE INDEX IF NOT EXISTS idx_trades_user_id ON public.trades(user_id);
-CREATE INDEX IF NOT EXISTS idx_trades_status ON public.trades(status);
-CREATE INDEX IF NOT EXISTS idx_trades_created_at ON public.trades(created_at);
-
--- Transactions indexes
-CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
-
--- Conditional index creation for transactions type (only if column exists)
+-- Conditional index creation for all tables
 DO $$
 BEGIN
+    -- Profiles indexes (conditional)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'email'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'kyc_status'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_profiles_kyc_status ON public.profiles(kyc_status);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'account_status'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_profiles_account_status ON public.profiles(account_status);
+    END IF;
+    
+    -- User roles indexes (conditional)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_roles' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_roles' 
+        AND column_name = 'role'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_user_roles_role ON public.user_roles(role);
+    END IF;
+    
+    -- Trades indexes (conditional)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trades' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_trades_user_id ON public.trades(user_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trades' 
+        AND column_name = 'status'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_trades_status ON public.trades(status);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trades' 
+        AND column_name = 'created_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_trades_created_at ON public.trades(created_at);
+    END IF;
+    
+    -- Transactions indexes (conditional)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transactions' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transactions' 
+        AND column_name = 'status'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+    END IF;
+    
+    -- Conditional index creation for transactions type (only if column exists)
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_schema = 'public' 
@@ -769,27 +880,80 @@ BEGIN
     ) THEN
         CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
     END IF;
+    
+    -- Support tickets indexes (conditional)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'support_tickets' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'support_tickets' 
+        AND column_name = 'status'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
+    END IF;
+    
+    -- Admin actions indexes (conditional)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'admin_actions' 
+        AND column_name = 'admin_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_admin_actions_admin_id ON public.admin_actions(admin_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'admin_actions' 
+        AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_admin_actions_user_id ON public.admin_actions(user_id);
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'admin_actions' 
+        AND column_name = 'created_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON public.admin_actions(created_at);
+    END IF;
 END $$;
-
--- Support tickets indexes
-CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
-CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
-
--- Admin actions indexes
-CREATE INDEX IF NOT EXISTS idx_admin_actions_admin_id ON public.admin_actions(admin_id);
-CREATE INDEX IF NOT EXISTS idx_admin_actions_user_id ON public.admin_actions(user_id);
-CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON public.admin_actions(created_at);
 
 -- =====================================================
 -- SAMPLE DATA
 -- =====================================================
 
--- Insert sample trading pairs
-INSERT INTO public.trading_pairs (symbol, base_asset, quote_asset, current_price, price_change_24h, volume_24h) VALUES
-('BTC/USDT', 'BTC', 'USDT', 45000.00, 2.5, 1000000.00),
-('ETH/USDT', 'ETH', 'USDT', 3000.00, -1.2, 500000.00),
-('ADA/USDT', 'ADA', 'USDT', 0.50, 5.0, 100000.00)
-ON CONFLICT (symbol) DO NOTHING;
+-- Insert sample trading pairs (conditional - only if columns exist)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trading_pairs' 
+        AND column_name = 'base_asset'
+    ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'trading_pairs' 
+        AND column_name = 'quote_asset'
+    ) THEN
+        INSERT INTO public.trading_pairs (symbol, base_asset, quote_asset, current_price, price_change_24h, volume_24h) VALUES
+        ('BTC/USDT', 'BTC', 'USDT', 45000.00, 2.5, 1000000.00),
+        ('ETH/USDT', 'ETH', 'USDT', 3000.00, -1.2, 500000.00),
+        ('ADA/USDT', 'ADA', 'USDT', 0.50, 5.0, 100000.00)
+        ON CONFLICT (symbol) DO NOTHING;
+    END IF;
+END $$;
 
 -- =====================================================
 -- GRANT PERMISSIONS
