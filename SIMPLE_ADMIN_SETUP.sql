@@ -120,7 +120,7 @@ SELECT
     u.email,
     CASE WHEN u.email_confirmed_at IS NOT NULL THEN '✅ Confirmed' ELSE '❌ Not Confirmed' END as email_status,
     COALESCE(p.kyc_status, 'Not Set') as kyc_status,
-    COALESCE(ur.role, 'No Role') as user_role,
+    COALESCE(ur.role, 'user') as user_role,
     COALESCE(wb.balance, 0) as usdt_balance
 FROM auth.users u
 LEFT JOIN public.profiles p ON u.id = p.user_id
