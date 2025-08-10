@@ -1,21 +1,86 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Get environment variables with fallbacks
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 
-                   "https://ftkeczodadvtnxofrwps.supabase.co";
+// Safe environment variable retrieval with explicit logging
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 
-                       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg";
+// Comprehensive logging and validation
+console.log('SUPABASE CONFIGURATION DIAGNOSTICS:');
+console.log(`URL Length: ${supabaseUrl.length}`);
+console.log(`Anon Key Length: ${supabaseAnonKey.length}`);
 
-// Log configuration status
-console.log('SUPABASE CONFIGURATION:');
-console.log(`URL: ${supabaseUrl ? 'Defined ✓' : 'Missing ✗'}`);
-console.log(`ANON KEY: ${supabaseAnonKey ? 'Defined ✓' : 'Missing ✗'}`);
+// Create a safe headers object
+const safeHeaders = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
+};
 
-// Create client - IMPORTANT: No additional options for compatibility with all versions
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Enhanced client creation with explicit global configuration
+let supabase: SupabaseClient;
 
-// Log successful initialization
-console.log('✅ Supabase client initialized with minimal configuration');
+try {
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: safeHeaders
+    },
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+
+  console.log('✅ Supabase client initialized with robust headers');
+} catch (error) {
+  console.error('❌ Supabase client initialization failed:', error);
+  
+  // Fallback to minimal configuration
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('⚠️ Fallback: Supabase client created with minimal config');
+  } catch (fallbackError) {
+    console.error('🚨 Critical: Cannot create Supabase client', fallbackError);
+    
+    // Create a mock client to prevent total application failure
+    supabase = {
+      from: () => ({
+        select: () => Promise.resolve({ data: null, error: new Error('Offline mock client') }),
+        insert: () => Promise.resolve({ data: null, error: new Error('Offline mock client') }),
+      }),
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      }
+    } as any;
+  }
+}
+
+// Diagnostic logging of client capabilities
+console.log('Client Diagnostic:');
+console.log(`Can create 'from' queries: ${!!supabase.from}`);
+console.log(`Has auth methods: ${!!supabase.auth}`);
+
+// Diagnostic function to test Supabase connection
+export async function testSupabaseConnection() {
+  try {
+    console.log('🔍 Testing Supabase connection...');
+    const { data, error } = await supabase.auth.getSession();
+    console.log('Session Data:', data);
+    console.log('Session Error:', error);
+    
+    if (error) {
+      console.error('❌ Supabase connection test failed:', error);
+      return false;
+    } else {
+      console.log('✅ Supabase connection test successful');
+      return true;
+    }
+  } catch (catchError) {
+    console.error('❌ Unexpected Supabase connection error:', catchError);
+    return false;
+  }
+}
+
+// Run the diagnostic on initialization
+testSupabaseConnection();
 
 export default supabase;

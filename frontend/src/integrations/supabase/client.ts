@@ -1,4 +1,4 @@
-// Use centralized Supabase client
+// Use centralized Supabase client with robust error handling
 import supabase from '../../lib/supabaseClient';
 
 console.log('🔄 Using centralized Supabase client...');
@@ -35,4 +35,9 @@ export const logEnvironmentStatus = (): void => {
   });
 };
 
-console.log('✅ Centralized Supabase client ready!');
+// Ensure the client is properly initialized
+if (!supabase) {
+  console.error('🚨 Critical: Centralized Supabase client is undefined!');
+} else {
+  console.log('✅ Centralized Supabase client ready!');
+}
