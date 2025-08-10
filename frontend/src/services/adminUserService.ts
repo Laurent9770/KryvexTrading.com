@@ -42,93 +42,58 @@ class AdminUserService {
     try {
       console.log('🔍 Fetching all users from database...');
       
-      // First try to get users from auth.users table
-      const { data: authUsers, error: authError } = await httpDb.select('auth.users', `
-        id,
+      // Get users from profiles table (which should have all users due to trigger)
+      const { data: profiles, error: profileError } = await httpDb.select('profiles', `
+        user_id,
         email,
+        full_name,
+        phone,
+        country,
+        account_balance,
+        is_verified,
+        kyc_status,
+        account_status,
         created_at,
-        last_sign_in_at,
-        email_confirmed_at,
-        phone_confirmed_at
+        updated_at
       `);
 
-      if (authError) {
-        console.error('❌ Error fetching auth users:', authError);
-        return { success: false, error: authError.message };
+      if (profileError) {
+        console.error('❌ Error fetching profiles:', profileError);
+        return { success: false, error: profileError.message };
       }
 
-      if (!authUsers || authUsers.length === 0) {
-        console.log('ℹ️ No users found in auth.users table');
+      if (!profiles || profiles.length === 0) {
+        console.log('ℹ️ No users found in profiles table');
         return { success: true, users: [] };
       }
 
-      console.log('✅ Found', authUsers.length, 'users in auth.users table');
+      console.log('✅ Found', profiles.length, 'users in profiles table');
 
-      // Transform auth users to AdminUser format
-      const users: AdminUser[] = authUsers.map((authUser: any) => ({
-        id: authUser.id,
-        email: authUser.email || '',
-        firstName: authUser.email ? authUser.email.split('@')[0] : '',
-        lastName: '',
-        phone: '',
-        username: authUser.email ? authUser.email.split('@')[0] : '',
-        kycLevel: 0,
-        kycStatus: 'pending' as const,
-        accountStatus: 'active' as const,
-        walletBalance: 0,
-        tradingBalance: 0,
-        totalTrades: 0,
-        winRate: 0,
-        totalProfit: 0,
-        lastLogin: authUser.last_sign_in_at || authUser.created_at,
-        createdAt: authUser.created_at,
-        isVerified: !!authUser.email_confirmed_at,
-        country: '',
-        emailVerified: !!authUser.email_confirmed_at,
-        phoneVerified: !!authUser.phone_confirmed_at
+      // Transform profiles to AdminUser format
+      const users: AdminUser[] = profiles.map((profile: any) => ({
+        id: profile.user_id,
+        email: profile.email || '',
+        firstName: profile.full_name ? profile.full_name.split(' ')[0] : '',
+        lastName: profile.full_name ? profile.full_name.split(' ').slice(1).join(' ') : '',
+        phone: profile.phone || '',
+        username: profile.full_name || profile.email?.split('@')[0] || '',
+        kycLevel: profile.kyc_status === 'approved' ? 2 : profile.kyc_status === 'pending' ? 1 : 0,
+        kycStatus: profile.kyc_status || 'pending',
+        accountStatus: profile.account_status || 'active',
+        walletBalance: parseFloat(profile.account_balance?.toString() || '0'),
+        tradingBalance: parseFloat(profile.account_balance?.toString() || '0') * 0.8,
+        totalTrades: 0, // Will be calculated from trades table
+        winRate: 0, // Will be calculated from trades table
+        totalProfit: 0, // Will be calculated from trades table
+        lastLogin: profile.updated_at || profile.created_at,
+        createdAt: profile.created_at,
+        isVerified: profile.is_verified || false,
+        country: profile.country || '',
+        emailVerified: profile.is_verified || false,
+        phoneVerified: false
       }));
 
-      // Try to get additional profile data if profiles table exists
-      try {
-        const { data: profiles, error: profileError } = await httpDb.select('profiles', `
-          user_id,
-          full_name,
-          phone,
-          country,
-          account_balance,
-          is_verified,
-          kyc_status,
-          account_status
-        `);
-
-        if (!profileError && profiles) {
-          console.log('✅ Found', profiles.length, 'profiles');
-          
-          // Merge profile data with auth users
-          profiles.forEach((profile: any) => {
-            const userIndex = users.findIndex(u => u.id === profile.user_id);
-            if (userIndex !== -1) {
-              const user = users[userIndex];
-              users[userIndex] = {
-                ...user,
-                firstName: profile.full_name ? profile.full_name.split(' ')[0] : user.firstName,
-                lastName: profile.full_name ? profile.full_name.split(' ').slice(1).join(' ') : user.lastName,
-                phone: profile.phone || user.phone,
-                username: profile.full_name || user.username,
-                kycLevel: profile.kyc_status === 'approved' ? 2 : profile.kyc_status === 'pending' ? 1 : 0,
-                kycStatus: profile.kyc_status || 'pending',
-                accountStatus: profile.account_status || 'active',
-                walletBalance: parseFloat(profile.account_balance?.toString() || '0'),
-                tradingBalance: parseFloat(profile.account_balance?.toString() || '0') * 0.8,
-                isVerified: profile.is_verified || user.isVerified,
-                country: profile.country || user.country
-              };
-            }
-          });
-        }
-      } catch (profileError) {
-        console.warn('⚠️ Profiles table not accessible, using auth data only:', profileError);
-      }
+      
 
       // Try to get trading data if trades table exists
       try {
