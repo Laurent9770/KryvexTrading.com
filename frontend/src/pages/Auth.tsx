@@ -9,8 +9,17 @@ const Auth: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
 
+  console.log('🔐 Auth component rendered');
+  console.log('🔐 Current pathname:', window.location.pathname);
+  console.log('🔐 isAuthenticated:', isAuthenticated);
+  console.log('🔐 isLoading:', isLoading);
+
   // Redirect if already authenticated
   useEffect(() => {
+    console.log('🔐 Auth useEffect triggered');
+    console.log('🔐 isAuthenticated:', isAuthenticated);
+    console.log('🔐 isLoading:', isLoading);
+    
     if (isAuthenticated && !isLoading) {
       console.log('🔄 Already authenticated, redirecting to dashboard...');
       navigate('/dashboard', { replace: true });
@@ -19,6 +28,7 @@ const Auth: React.FC = () => {
 
   // Show loading while checking auth state
   if (isLoading) {
+    console.log('🔐 Showing loading state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -31,9 +41,11 @@ const Auth: React.FC = () => {
 
   // Don't render auth form if already authenticated
   if (isAuthenticated) {
+    console.log('🔐 User is authenticated, not rendering auth form');
     return null;
   }
 
+  console.log('🔐 Rendering auth form');
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">

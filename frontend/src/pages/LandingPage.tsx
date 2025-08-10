@@ -39,6 +39,16 @@ const LandingPage: React.FC = () => {
       if (typeof navigate === 'function') {
         navigate(path);
         console.log('✅ React Router navigation successful to:', path);
+        
+        // Check if URL actually changed after a short delay
+        setTimeout(() => {
+          console.log('🔗 URL after navigation:', window.location.pathname);
+          if (window.location.pathname === path) {
+            console.log('✅ URL successfully updated to:', path);
+          } else {
+            console.warn('⚠️ URL did not update, current path:', window.location.pathname);
+          }
+        }, 100);
       } else {
         console.warn('⚠️ React Router navigate not available, using window.location');
         window.location.href = path;
