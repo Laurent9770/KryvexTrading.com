@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // Get environment variables with fallbacks
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 
@@ -12,26 +12,10 @@ console.log('SUPABASE CONFIGURATION:');
 console.log(`URL: ${supabaseUrl ? 'Defined ✓' : 'Missing ✗'}`);
 console.log(`ANON KEY: ${supabaseAnonKey ? 'Defined ✓' : 'Missing ✗'}`);
 
-// Create a safer Supabase client without any potentially problematic options
-let supabase: SupabaseClient;
+// Create client - IMPORTANT: No additional options for compatibility with all versions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-try {
-  // First try with minimal options
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
-  
-  console.log('✅ Supabase client initialized successfully');
-} catch (error) {
-  // Fallback to even more minimal initialization if the first attempt fails
-  console.error('Error creating Supabase client with options, falling back to minimal client:', error);
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-  console.log('⚠️ Supabase client initialized with fallback configuration');
-}
+// Log successful initialization
+console.log('✅ Supabase client initialized with minimal configuration');
 
-// Export the client instance
 export default supabase;

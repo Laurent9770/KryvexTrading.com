@@ -1,7 +1,13 @@
-import { supabase, getSupabaseClient, hasRealSupabaseClient } from '@/integrations/supabase/client';
+import supabase from '@/lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import phoneAuthService, { PhoneAuthResponse, VerifyOTPResponse } from './phoneAuthService';
 import emailVerificationService, { EmailVerificationResponse, VerifyCodeResponse } from './emailVerificationService';
+
+// Helper function to get the centralized client
+const getSupabaseClient = () => supabase;
+
+// Helper function to check if we have a real client
+const hasRealSupabaseClient = () => true;
 
 export interface AuthUser {
   id: string;
