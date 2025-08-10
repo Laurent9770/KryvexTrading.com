@@ -78,12 +78,12 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/trading" element={<TradingPage />} />
       </Route>
 
       {/* PROTECTED ROUTES - With Navbar */}
       <Route element={<NavbarLayout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/trading" element={<ProtectedRoute><TradingPage /></ProtectedRoute>} />
 
         <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
         <Route path="/deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
