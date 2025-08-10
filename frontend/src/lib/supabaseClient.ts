@@ -25,8 +25,34 @@ const createMockQueryBuilder = () => ({
   order: (column: string, options: any) => createMockQueryBuilder(),
   limit: (count: number) => createMockQueryBuilder(),
   range: (from: number, to: number) => createMockQueryBuilder(),
-  single: () => Promise.resolve({ data: null, error: null }),
-  maybeSingle: () => Promise.resolve({ data: null, error: null }),
+  single: () => Promise.resolve({ 
+    data: {
+      id: 'mock-user-id',
+      kyc_status: 'unverified',
+      is_verified: false,
+      email: 'mock-user@example.com',
+      full_name: 'Mock User',
+      phone: '',
+      country: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, 
+    error: null 
+  }),
+  maybeSingle: () => Promise.resolve({ 
+    data: {
+      id: 'mock-user-id',
+      kyc_status: 'unverified',
+      is_verified: false,
+      email: 'mock-user@example.com',
+      full_name: 'Mock User',
+      phone: '',
+      country: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, 
+    error: null 
+  }),
   then: (callback: any) => Promise.resolve({ data: [], error: null }).then(callback),
   catch: (callback: any) => Promise.resolve({ data: [], error: null }).catch(callback)
 });
