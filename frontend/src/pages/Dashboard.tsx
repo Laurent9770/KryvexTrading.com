@@ -12,7 +12,8 @@ import {
   RefreshCw,
   Activity,
   BarChart3,
-  Target
+  Target,
+  Shield
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +24,7 @@ import supabaseTradingService from "@/services/supabaseTradingService";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -237,14 +238,26 @@ const Dashboard = () => {
               Here's what's happening with your trading account
             </p>
           </div>
-          <Button 
-            onClick={handleRefresh} 
-            disabled={isRefreshing}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-2 bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20"
+              >
+                <Shield className="h-4 w-4" />
+                Admin Panel
+              </Button>
+            )}
+            <Button 
+              onClick={handleRefresh} 
+              disabled={isRefreshing}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
         </div>
 
         {/* Main Content */}

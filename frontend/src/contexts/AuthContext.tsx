@@ -293,22 +293,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
       console.log('🔄 Auth state changed - user is authenticated, checking current location...');
+      console.log('🔍 User is admin:', isAdmin);
       
       // Check if we're on the auth page and should redirect
       if (window.location.pathname === '/auth' || window.location.pathname === '/') {
-        console.log('📍 Currently on auth page, redirecting to dashboard...');
+        console.log('📍 Currently on auth page, redirecting...');
         
         // Use a small delay to ensure the auth state is fully processed
         setTimeout(() => {
           try {
-            window.location.href = '/dashboard';
+            // Redirect admin users to admin dashboard, regular users to regular dashboard
+            const targetPath = isAdmin ? '/admin' : '/dashboard';
+            console.log('🎯 Redirecting to:', targetPath);
+            window.location.href = targetPath;
           } catch (error) {
             console.warn('Auto-redirect failed:', error);
           }
         }, 200);
       }
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isAdmin]);
 
   // Authentication functions
   const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
