@@ -148,7 +148,13 @@ class RealTimePriceService {
         return;
       }
 
-      const channel = supabase
+      // Check if channel method exists (HTTP fallback doesn't support it)
+      if (typeof (supabase as any).channel !== 'function') {
+        console.warn('⚠️ Supabase client does not support real-time channels (HTTP fallback mode)');
+        return;
+      }
+
+      const channel = (supabase as any)
         .channel('price_updates')
         .on('postgres_changes', 
           { 

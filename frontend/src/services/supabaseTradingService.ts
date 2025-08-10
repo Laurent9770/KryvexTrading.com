@@ -587,6 +587,109 @@ class SupabaseTradingService {
     }
   }
 
+  // Alias for getTradeStatistics to match the expected method name
+  async getTradingStats(userId?: string): Promise<{ success: boolean; stats?: any; error?: string }> {
+    try {
+      console.log('📊 Fetching trading stats for user:', userId);
+      
+      if (!userId) {
+        return { success: false, error: 'User ID is required' };
+      }
+
+      const result = await this.getTradeStatistics(userId);
+      
+      if (result.success) {
+        return { success: true, stats: result.data };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Error in getTradingStats:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // Get recent trades for a user
+  async getRecentTrades(userId: string, limit: number = 10): Promise<{ success: boolean; trades?: Trade[]; error?: string }> {
+    try {
+      console.log('📊 Fetching recent trades for user:', userId);
+      
+      const result = await this.getTrades(userId);
+      
+      if (result.success && result.data) {
+        const recentTrades = result.data
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, limit);
+        
+        return { success: true, trades: recentTrades };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Error in getRecentTrades:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // Get portfolio data for a user
+  async getPortfolioData(userId: string): Promise<{ success: boolean; portfolio?: any; error?: string }> {
+    try {
+      console.log('📊 Fetching portfolio data for user:', userId);
+      
+      // Get wallet balances
+      const balanceResult = await this.getWalletBalances(userId);
+      const tradesResult = await this.getTrades(userId);
+      
+      if (!balanceResult.success) {
+        return { success: false, error: balanceResult.error };
+      }
+
+      const portfolio = {
+        balances: balanceResult.data || [],
+        totalValue: 0,
+        totalProfit: 0,
+        activeTrades: 0
+      };
+
+      // Calculate total value from balances
+      portfolio.totalValue = (balanceResult.data || []).reduce((sum, balance) => sum + balance.balance, 0);
+      
+      // Calculate profit from trades
+      if (tradesResult.success && tradesResult.data) {
+        portfolio.totalProfit = tradesResult.data.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
+        portfolio.activeTrades = tradesResult.data.filter(trade => trade.status === 'open').length;
+      }
+
+      return { success: true, portfolio };
+    } catch (error) {
+      console.error('❌ Error in getPortfolioData:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // Get trade history with pagination
+  async getTradeHistory(userId: string, page: number = 1, limit: number = 100): Promise<{ success: boolean; data?: Trade[]; error?: string }> {
+    try {
+      console.log('📊 Fetching trade history for user:', userId);
+      
+      const result = await this.getTrades(userId);
+      
+      if (result.success && result.data) {
+        const offset = (page - 1) * limit;
+        const paginatedTrades = result.data
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(offset, offset + limit);
+        
+        return { success: true, data: paginatedTrades };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Error in getTradeHistory:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
   // =============================================
   // CLEANUP
   // =============================================

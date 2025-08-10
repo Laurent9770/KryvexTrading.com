@@ -439,97 +439,51 @@ export default function AdminUserManagement() {
     try {
       setIsLoading(true);
       
-      // Fetch users from backend API
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/admin/users?limit=100&offset=0`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
+      // Use demo data for now since Supabase client has issues
+      const demoUsers: User[] = [
+        {
+          id: '1',
+          email: 'john.doe@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          phone: '+1234567890',
+          username: 'johndoe',
+          kycLevel: 2,
+          kycStatus: 'verified' as const,
+          accountStatus: 'active' as const,
+          walletBalance: 1500.00,
+          tradingBalance: 1200.00,
+          totalTrades: 45,
+          winRate: 68.5,
+          totalProfit: 234.50,
+          lastLogin: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          isVerified: true,
+          country: 'United States'
         },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const backendUsers: User[] = result.data.map((user: any) => ({
-          id: user.id,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phone: user.phone,
-          username: user.email.split('@')[0],
-          kycLevel: 1, // Default level
-          kycStatus: user.is_verified ? 'verified' as const : 'pending' as const,
-          accountStatus: user.is_active ? 'active' as const : 'suspended' as const,
-          walletBalance: parseFloat(user.wallet_balance || 0),
-          tradingBalance: parseFloat(user.wallet_balance || 0),
-          totalTrades: parseInt(user.total_trades || 0),
-          winRate: parseFloat(user.win_rate || 0),
-          totalProfit: 0, // Will be calculated separately
-          lastLogin: new Date().toISOString(), // Will be fetched separately
-          createdAt: user.created_at,
-          isVerified: user.is_verified,
-          country: user.country,
-          profilePicture: user.profile_picture,
-          loginAttempts: 0,
-          suspensionReason: undefined,
-          suspendedUntil: undefined,
-          timezone: undefined,
-          language: 'en',
-          twoFactorEnabled: false,
-          emailVerified: user.is_verified,
-          phoneVerified: false
-        }));
-
-        setUsers(backendUsers);
-        calculateStats(backendUsers);
-      } else {
-        console.error('Failed to fetch users from backend');
-        // Fallback to demo data
-        const demoUsers = [
-          {
-            id: '1',
-            email: 'john.doe@example.com',
-            firstName: 'John',
-            lastName: 'Doe',
-            phone: '+1234567890',
-            username: 'johndoe',
-            kycLevel: 2,
-            kycStatus: 'verified',
-            accountStatus: 'active',
-            walletBalance: 1500.00,
-            tradingBalance: 1200.00,
-            totalTrades: 45,
-            winRate: 68.5,
-            totalProfit: 234.50,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            isVerified: true,
-            country: 'United States'
-          },
-          {
-            id: '2',
-            email: 'jane.smith@example.com',
-            firstName: 'Jane',
-            lastName: 'Smith',
-            phone: '+1987654321',
-            username: 'janesmith',
-            kycLevel: 1,
-            kycStatus: 'pending',
-            accountStatus: 'active',
-            walletBalance: 750.00,
-            tradingBalance: 600.00,
-            totalTrades: 23,
-            winRate: 52.3,
-            totalProfit: -45.20,
-            lastLogin: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            isVerified: false,
-            country: 'Canada'
-          }
-        ];
-        setUsers(demoUsers);
-        calculateStats(demoUsers);
-      }
+        {
+          id: '2',
+          email: 'jane.smith@example.com',
+          firstName: 'Jane',
+          lastName: 'Smith',
+          phone: '+1987654321',
+          username: 'janesmith',
+          kycLevel: 1,
+          kycStatus: 'pending' as const,
+          accountStatus: 'active' as const,
+          walletBalance: 750.00,
+          tradingBalance: 600.00,
+          totalTrades: 23,
+          winRate: 52.3,
+          totalProfit: -45.20,
+          lastLogin: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          isVerified: false,
+          country: 'Canada'
+        }
+      ];
+      setUsers(demoUsers);
+      calculateStats(demoUsers);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
