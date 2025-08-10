@@ -58,7 +58,6 @@ export const translations = {
     logout: 'Logout',
     
     // Dashboard
-    portfolioDashboard: 'Portfolio Dashboard',
     welcomeBack: 'Welcome back',
     totalBalance: 'Total Balance',
     totalPnl: 'Total P&L',
@@ -193,7 +192,6 @@ export const translations = {
     logout: 'Cerrar Sesión',
     
     // Dashboard
-    portfolioDashboard: 'Panel de Cartera',
     welcomeBack: 'Bienvenido de vuelta',
     totalBalance: 'Balance Total',
     totalPnl: 'P&L Total',
@@ -328,7 +326,6 @@ export const translations = {
     logout: 'Déconnexion',
     
     // Dashboard
-    portfolioDashboard: 'Tableau de Bord du Portefeuille',
     welcomeBack: 'Bon retour',
     totalBalance: 'Solde Total',
     totalPnl: 'P&L Total',
