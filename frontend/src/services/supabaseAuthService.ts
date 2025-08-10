@@ -61,9 +61,18 @@ class SupabaseAuthService {
   };
 
   private listeners: Set<(state: AuthState) => void> = new Set();
+  private initialized = false;
 
   constructor() {
-    this.initializeAuth();
+    // Don't initialize immediately - wait for first use
+    console.log('🔐 SupabaseAuthService created (lazy initialization)');
+  }
+
+  private async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initializeAuth();
+      this.initialized = true;
+    }
   }
 
   private async initializeAuth() {
@@ -202,6 +211,7 @@ class SupabaseAuthService {
 
   async signIn(credentials: LoginCredentials): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Attempting sign in for:', credentials.email);
       
       const client = getSupabaseClient();
@@ -230,6 +240,7 @@ class SupabaseAuthService {
   // Sign in with Google OAuth
   async signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Attempting Google sign in...');
       
       // Check if we have a real Supabase client
@@ -387,6 +398,7 @@ class SupabaseAuthService {
 
   async signUp(data: RegisterData): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Attempting sign up for:', data.email);
       
       // Try to use the real Supabase client first, fall back to HTTP if needed
@@ -498,6 +510,7 @@ class SupabaseAuthService {
 
   async signOut(): Promise<void> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Signing out...');
       
       const client = getSupabaseClient();
@@ -515,6 +528,7 @@ class SupabaseAuthService {
 
   async updateProfile(updates: ProfileUpdateData): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       const client = getSupabaseClient();
       const { data: { user } } = await client.auth.getUser();
       
@@ -549,6 +563,7 @@ class SupabaseAuthService {
 
   async resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Resetting password for:', email);
       
       const client = getSupabaseClient();
@@ -571,6 +586,7 @@ class SupabaseAuthService {
 
   async updatePassword(newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Updating password...');
       
       const client = getSupabaseClient();
@@ -593,6 +609,7 @@ class SupabaseAuthService {
 
   async promoteToAdmin(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Promoting user to admin:', userId);
 
       const { error } = await supabase
@@ -617,6 +634,7 @@ class SupabaseAuthService {
 
   async demoteFromAdmin(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.ensureInitialized();
       console.log('🔐 Demoting user from admin:', userId);
 
       const { error } = await supabase
@@ -644,8 +662,14 @@ class SupabaseAuthService {
   subscribe(listener: (state: AuthState) => void): () => void {
     this.listeners.add(listener);
     
-    // Immediately call listener with current state
-    listener(this.authState);
+    // Ensure initialization when someone subscribes
+    this.ensureInitialized().then(() => {
+      // Immediately call listener with current state
+      listener(this.authState);
+    }).catch(error => {
+      console.error('❌ Error during auth initialization:', error);
+      listener(this.authState);
+    });
     
     return () => {
       this.listeners.delete(listener);
