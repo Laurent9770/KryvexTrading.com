@@ -58,7 +58,7 @@ export function Sidebar() {
   // Debug authentication state
   console.log('🔍 Sidebar - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'user:', user?.email);
   
-  // Different navigation items for admin vs regular users
+  // Navigation items - only authenticated users and admins
   const mainNavItems: NavItem[] = isAdmin ? [
     // Admin navigation - simplified and focused on admin tasks
     {
@@ -69,8 +69,8 @@ export function Sidebar() {
       shortcut: "D",
       description: "Admin dashboard and user management"
     }
-  ] : isAuthenticated ? [
-    // Authenticated user navigation
+  ] : [
+    // Authenticated user navigation (default for all users)
     {
       title: "Dashboard",
       href: "/dashboard",
@@ -104,29 +104,6 @@ export function Sidebar() {
       description: "View your trading history",
       requiresAuth: true
     }
-  ] : [
-    // Non-authenticated user navigation (view-only)
-    {
-      title: "Home",
-      href: "/",
-      icon: LayoutDashboard,
-      shortcut: "H",
-      description: "Welcome to Kryvex Trading Platform"
-    },
-    {
-      title: "Trading",
-      href: "/trading",
-      icon: TrendingUp,
-      shortcut: "T",
-      description: "View trading interface (sign in to trade)"
-    },
-    {
-      title: "Markets",
-      href: "/market",
-      icon: BarChart3,
-      shortcut: "M",
-      description: "Real-time market data and analysis"
-    }
   ];
 
   const bottomNavItems: NavItem[] = isAdmin ? [
@@ -137,7 +114,7 @@ export function Sidebar() {
       shortcut: "S",
       description: "Admin settings and preferences"
     }
-  ] : isAuthenticated ? [
+  ] : [
     {
       title: "Deposit",
       href: "/deposit",
@@ -171,14 +148,6 @@ export function Sidebar() {
       description: "Account settings and preferences",
       requiresAuth: true
     }
-  ] : [
-    {
-      title: "Sign In",
-      href: "/auth",
-      icon: User,
-      shortcut: "I",
-      description: "Sign in to your account"
-    }
   ];
 
   const isActive = (href: string) => location.pathname === href;
@@ -188,12 +157,6 @@ export function Sidebar() {
     const active = isActive(item.href);
     
     const handleClick = () => {
-      // Check if user is authenticated for protected routes
-      if (item.requiresAuth && !isAuthenticated) {
-        navigate('/auth');
-        return;
-      }
-      
       // Check if KYC is required for certain routes
       if (item.requiresKYC && user?.kycStatus !== 'verified') {
         navigate('/kyc');
@@ -284,7 +247,7 @@ export function Sidebar() {
           <div className="mb-4">
             {!isCollapsed && (
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                {isAdmin ? "ADMIN" : isAuthenticated ? "TRADING" : "EXPLORE"}
+                {isAdmin ? "ADMIN" : "TRADING"}
               </h3>
             )}
             <div className="space-y-1">
@@ -298,7 +261,7 @@ export function Sidebar() {
           <div className="mt-6">
             {!isCollapsed && (
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                {isAdmin ? "ADMIN" : isAuthenticated ? "ACCOUNT" : "AUTH"}
+                {isAdmin ? "ADMIN" : "ACCOUNT"}
               </h3>
             )}
             <div className="space-y-1">
@@ -311,7 +274,7 @@ export function Sidebar() {
       </div>
 
       {/* User Profile */}
-      {isAuthenticated && user && (
+      {user && (
         <div className="border-t p-3">
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">

@@ -210,7 +210,7 @@ function App() {
                       } />
                     </Route>
                     
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<Navigate to="/auth" replace />} />
                   </Routes>
                   <Toaster />
                 </div>
