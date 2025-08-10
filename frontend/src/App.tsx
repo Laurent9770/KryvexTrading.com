@@ -5,6 +5,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import SafeComponent from '@/components/SafeComponent';
+import NavbarLayout from '@/layouts/NavbarLayout';
+import NoNavbarLayout from '@/layouts/NoNavbarLayout';
 
 // Safe lazy loading wrapper with error handling
 const safeLazyLoad = (importFunc: () => Promise<any>) => {
@@ -135,6 +137,7 @@ function App() {
             <Router>
               <div className="min-h-screen bg-background">
                 <Routes>
+                  {/* Public routes without navbar */}
                   <Route path="/" element={
                     <SafeRoute>
                       <LandingPage />
@@ -145,66 +148,71 @@ function App() {
                       <Auth />
                     </SafeRoute>
                   } />
-                  <Route path="/dashboard" element={
-                    <SafeRoute>
-                      <Dashboard />
-                    </SafeRoute>
-                  } />
-                  <Route path="/admin" element={
-                    <SafeRoute>
-                      <AdminDashboard />
-                    </SafeRoute>
-                  } />
-                  <Route path="/view-only" element={
-                    <SafeRoute>
-                      <ViewOnlyDashboard />
-                    </SafeRoute>
-                  } />
-                  <Route path="/trading" element={
-                    <SafeRoute>
-                      <TradingPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/deposit" element={
-                    <SafeRoute>
-                      <DepositPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/withdrawal" element={
-                    <SafeRoute>
-                      <WithdrawalRequestPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/settings" element={
-                    <SafeRoute>
-                      <SettingsPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/kyc" element={
-                    <SafeRoute>
-                      <KYCPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/support" element={
-                    <SafeRoute>
-                      <SupportPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/history" element={
-                    <SafeRoute>
-                      <TradingHistoryPage />
-                    </SafeRoute>
-                  } />
-                  <Route path="/wallet" element={
-                    <SafeRoute>
-                      <WalletPage />
-                    </SafeRoute>
-                  } />
                   <Route path="/auth/callback" element={
                     <SafeRoute>
                       <AuthCallback />
                     </SafeRoute>
                   } />
+                  
+                  {/* Authenticated routes with navbar */}
+                  <Route path="/" element={<NavbarLayout />}>
+                    <Route path="/dashboard" element={
+                      <SafeRoute>
+                        <Dashboard />
+                      </SafeRoute>
+                    } />
+                    <Route path="/admin" element={
+                      <SafeRoute>
+                        <AdminDashboard />
+                      </SafeRoute>
+                    } />
+                    <Route path="/view-only" element={
+                      <SafeRoute>
+                        <ViewOnlyDashboard />
+                      </SafeRoute>
+                    } />
+                    <Route path="/trading" element={
+                      <SafeRoute>
+                        <TradingPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/deposit" element={
+                      <SafeRoute>
+                        <DepositPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/withdrawal" element={
+                      <SafeRoute>
+                        <WithdrawalRequestPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/settings" element={
+                      <SafeRoute>
+                        <SettingsPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/kyc" element={
+                      <SafeRoute>
+                        <KYCPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/support" element={
+                      <SafeRoute>
+                        <SupportPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/history" element={
+                      <SafeRoute>
+                        <TradingHistoryPage />
+                      </SafeRoute>
+                    } />
+                    <Route path="/wallet" element={
+                      <SafeRoute>
+                        <WalletPage />
+                      </SafeRoute>
+                    } />
+                  </Route>
+                  
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 <Toaster />

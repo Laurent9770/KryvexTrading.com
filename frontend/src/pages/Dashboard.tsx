@@ -238,26 +238,14 @@ const Dashboard = () => {
               Here's what's happening with your trading account
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <Button 
-                variant="outline"
-                onClick={() => navigate('/admin')}
-                className="flex items-center gap-2 bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20"
-              >
-                <Shield className="h-4 w-4" />
-                Admin Panel
-              </Button>
-            )}
-            <Button 
-              onClick={handleRefresh} 
-              disabled={isRefreshing}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
-          </div>
+          <Button 
+            onClick={handleRefresh} 
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
 
         {/* Main Content */}
