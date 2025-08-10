@@ -115,6 +115,11 @@ const KYCPage = () => {
     console.log('🎯 Current active tab:', activeTab);
   }, [activeTab]);
 
+  // Debug: Log KYC status changes
+  useEffect(() => {
+    console.log('🆔 Current KYC status:', kycStatus);
+  }, [kycStatus]);
+
   // Email verification countdown timer
   useEffect(() => {
     if (emailCountdown > 0) {
@@ -127,12 +132,19 @@ const KYCPage = () => {
     if (!user?.id) return;
     
     try {
+      console.log('🆔 Loading KYC status for user:', user.id);
       const { success, data } = await supabaseKYCService.getUserKYCStatus(user.id);
+      console.log('🆔 KYC status result:', { success, data });
+      
       if (success && data) {
-        setKycStatus({
+        const newStatus: KYCStatus = {
           level1: { status: data.isVerified ? 'verified' : 'unverified' },
-          level2: { status: data.status as any }
-        });
+          level2: { status: data.status as 'not_started' | 'pending' | 'approved' | 'rejected' }
+        };
+        console.log('🆔 Setting KYC status:', newStatus);
+        setKycStatus(newStatus);
+      } else {
+        console.log('🆔 KYC status load failed or no data');
       }
     } catch (error) {
       console.error('Error loading KYC status:', error);
