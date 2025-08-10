@@ -68,7 +68,7 @@ const KYCPage = () => {
   const withdrawalAmount = searchParams.get('amount');
   const withdrawalAddress = searchParams.get('address');
 
-  const [activeTab, setActiveTab] = useState('level1');
+  const [activeTab, setActiveTab] = useState('level2'); // Default to Identity Verification
   const [isLoading, setIsLoading] = useState(false);
   const [kycStatus, setKycStatus] = useState<KYCStatus>({
     level1: { status: 'unverified' },
@@ -109,6 +109,11 @@ const KYCPage = () => {
       loadKYCStatus();
     }
   }, [user?.id]);
+
+  // Debug: Log active tab changes
+  useEffect(() => {
+    console.log('🎯 Current active tab:', activeTab);
+  }, [activeTab]);
 
   // Email verification countdown timer
   useEffect(() => {
@@ -405,7 +410,10 @@ const KYCPage = () => {
 
         {/* KYC Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="border-0 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setActiveTab('level1')}>
+          <Card className={`border-0 cursor-pointer hover:bg-accent/50 transition-colors ${activeTab === 'level1' ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}`} onClick={() => {
+            console.log('🔄 Switching to Level 1 (Email Verification)');
+            setActiveTab('level1');
+          }}>
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 {getLevel1StatusIcon()}
@@ -424,7 +432,10 @@ const KYCPage = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-0 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setActiveTab('level2')}>
+          <Card className={`border-0 cursor-pointer hover:bg-accent/50 transition-colors ${activeTab === 'level2' ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}`} onClick={() => {
+            console.log('🔄 Switching to Level 2 (Identity Verification)');
+            setActiveTab('level2');
+          }}>
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 {getLevel2StatusIcon()}
