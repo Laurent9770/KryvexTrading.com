@@ -395,9 +395,17 @@ const KYCPage = () => {
           </p>
         </div>
 
+        {/* Helpful Instructions */}
+        <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-200 mb-6">
+          <p className="text-sm text-blue-600">
+            <strong>How to use:</strong> Click on either the status cards above or the tabs below to access the verification forms. 
+            You can complete Level 2 (Identity Verification) without completing Level 1 (Email Verification).
+          </p>
+        </div>
+
         {/* KYC Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="border-0">
+          <Card className="border-0 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setActiveTab('level1')}>
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 {getLevel1StatusIcon()}
@@ -412,10 +420,11 @@ const KYCPage = () => {
                   Required to access trading features
                 </p>
               )}
+              <p className="text-xs text-blue-500 mt-2">Click to access email verification</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0">
+          <Card className="border-0 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setActiveTab('level2')}>
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 {getLevel2StatusIcon()}
@@ -430,6 +439,7 @@ const KYCPage = () => {
                   Required for withdrawals
                 </p>
               )}
+              <p className="text-xs text-blue-500 mt-2">Click to access identity verification</p>
             </CardContent>
           </Card>
         </div>
@@ -437,8 +447,8 @@ const KYCPage = () => {
         {/* KYC Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="level1">Email Verification</TabsTrigger>
-            <TabsTrigger value="level2" disabled={kycStatus.level1.status !== 'verified'}>
+            <TabsTrigger value="level1" className="cursor-pointer">Email Verification</TabsTrigger>
+            <TabsTrigger value="level2" className="cursor-pointer">
               Identity Verification
             </TabsTrigger>
           </TabsList>
