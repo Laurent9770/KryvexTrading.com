@@ -370,49 +370,11 @@ const Dashboard = () => {
   const safePortfolioStats = portfolioStats || {};
   const safeRealTimePrices = realTimePrices || {};
 
-  // Show loading state
-  if (isLoading || isLoadingData) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
-  // Show error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h1 className="text-xl font-bold text-foreground mb-2">Dashboard Error</h1>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={loadUserData} className="w-full">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
-  // Show authentication required
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="text-blue-500 text-4xl mb-4">🔐</div>
-          <h1 className="text-xl font-bold text-foreground mb-2">Authentication Required</h1>
-          <p className="text-muted-foreground mb-4">Please sign in to access your dashboard.</p>
-          <Button onClick={() => navigate('/')} className="w-full">
-            Go to Home
-          </Button>
-        </div>
-      </div>
-    );
-  }
+
+
+
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
