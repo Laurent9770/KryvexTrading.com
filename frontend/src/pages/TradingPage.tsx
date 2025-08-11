@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, Target, BookOpen, Activity, Settings, Star, Wallet, Clock, TrendingDown as Down, TrendingUp as Up, Brain, Bot, Lock, CircleDollarSign, RefreshCw, Zap, Shield, AlertTriangle, Calculator, Info, Timer, Search, Filter, Eye, Play, Pause, Plus, Code, Rocket, X, Loader2, Percent, Coins, Award, Unlock } from "lucide-react";
 import TradeHistory from "@/components/TradeHistory";
 import { useCryptoPrices } from "@/hooks/useCryptoPrices";
+import { useForexPrices } from "@/hooks/useForexPrices";
 import TradingViewChart from "@/components/TradingViewChart";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -25,6 +26,7 @@ import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const TradingPage = () => {
   const { prices, getPrice } = useCryptoPrices();
+  const { prices: forexPrices, getPrice: getForexPrice } = useForexPrices();
   const { toast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -1740,20 +1742,90 @@ const TradingPage = () => {
       payout: "83%", 
       category: "Crypto" 
     },
-    // Forex - Keep static for now as we don't have forex price service
-    { symbol: "EURUSD", name: "EUR/USD", price: 1.0864, change: 0.12, payout: "78%", category: "Forex" },
-    { symbol: "GBPUSD", name: "GBP/USD", price: 1.2734, change: -0.08, payout: "80%", category: "Forex" },
-    { symbol: "USDJPY", name: "USD/JPY", price: 148.32, change: 0.24, payout: "79%", category: "Forex" },
-    // Stocks - Keep static for now as we don't have stock price service
-    { symbol: "AAPL", name: "Apple", price: 185.67, change: 1.45, payout: "82%", category: "Stocks" },
-    { symbol: "TSLA", name: "Tesla", price: 248.85, change: 2.67, payout: "84%", category: "Stocks" },
-    { symbol: "GOOGL", name: "Google", price: 2845.32, change: -0.45, payout: "81%", category: "Stocks" },
-    // Commodities - Keep static for now
-    { symbol: "XAUUSD", name: "Gold", price: 2015.67, change: 0.78, payout: "83%", category: "Commodities" },
-    { symbol: "XAGUSD", name: "Silver", price: 24.85, change: 1.23, payout: "80%", category: "Commodities" },
-    // Indices - Keep static for now
-    { symbol: "SPX500", name: "S&P 500", price: 4785.23, change: 0.45, payout: "79%", category: "Indices" },
-    { symbol: "NAS100", name: "NASDAQ", price: 15234.56, change: 0.89, payout: "81%", category: "Indices" },
+    // Forex - Using real-time forex price service
+    { 
+      symbol: "EURUSD", 
+      name: "EUR/USD", 
+      price: getForexPrice("EURUSD")?.rawPrice || 1.0864, 
+      change: getForexPrice("EURUSD")?.rawChangePercent || 0.12, 
+      payout: "78%", 
+      category: "Forex" 
+    },
+    { 
+      symbol: "GBPUSD", 
+      name: "GBP/USD", 
+      price: getForexPrice("GBPUSD")?.rawPrice || 1.2734, 
+      change: getForexPrice("GBPUSD")?.rawChangePercent || -0.08, 
+      payout: "80%", 
+      category: "Forex" 
+    },
+    { 
+      symbol: "USDJPY", 
+      name: "USD/JPY", 
+      price: getForexPrice("USDJPY")?.rawPrice || 148.32, 
+      change: getForexPrice("USDJPY")?.rawChangePercent || 0.24, 
+      payout: "79%", 
+      category: "Forex" 
+    },
+    // Stocks - Using real-time stock price service
+    { 
+      symbol: "AAPL", 
+      name: "Apple", 
+      price: getForexPrice("AAPL")?.rawPrice || 185.67, 
+      change: getForexPrice("AAPL")?.rawChangePercent || 1.45, 
+      payout: "82%", 
+      category: "Stocks" 
+    },
+    { 
+      symbol: "TSLA", 
+      name: "Tesla", 
+      price: getForexPrice("TSLA")?.rawPrice || 248.85, 
+      change: getForexPrice("TSLA")?.rawChangePercent || 2.67, 
+      payout: "84%", 
+      category: "Stocks" 
+    },
+    { 
+      symbol: "GOOGL", 
+      name: "Google", 
+      price: getForexPrice("GOOGL")?.rawPrice || 2845.32, 
+      change: getForexPrice("GOOGL")?.rawChangePercent || -0.45, 
+      payout: "81%", 
+      category: "Stocks" 
+    },
+    // Commodities - Using real-time commodity price service
+    { 
+      symbol: "XAUUSD", 
+      name: "Gold", 
+      price: getForexPrice("XAUUSD")?.rawPrice || 2015.67, 
+      change: getForexPrice("XAUUSD")?.rawChangePercent || 0.78, 
+      payout: "83%", 
+      category: "Commodities" 
+    },
+    { 
+      symbol: "XAGUSD", 
+      name: "Silver", 
+      price: getForexPrice("XAGUSD")?.rawPrice || 24.85, 
+      change: getForexPrice("XAGUSD")?.rawChangePercent || 1.23, 
+      payout: "80%", 
+      category: "Commodities" 
+    },
+    // Indices - Using real-time index price service
+    { 
+      symbol: "SPX500", 
+      name: "S&P 500", 
+      price: getForexPrice("SPX")?.rawPrice || 4785.23, 
+      change: getForexPrice("SPX")?.rawChangePercent || 0.45, 
+      payout: "79%", 
+      category: "Indices" 
+    },
+    { 
+      symbol: "NAS100", 
+      name: "NASDAQ", 
+      price: getForexPrice("IXIC")?.rawPrice || 15234.56, 
+      change: getForexPrice("IXIC")?.rawChangePercent || 0.89, 
+      payout: "81%", 
+      category: "Indices" 
+    },
   ];
 
   const binaryExpirationTimes = [
