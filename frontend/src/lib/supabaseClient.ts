@@ -1,5 +1,44 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Polyfill for headers issue in some Supabase versions
+if (typeof globalThis !== 'undefined' && !globalThis.Headers) {
+  (globalThis as any).Headers = class Headers {
+    private headers: Map<string, string> = new Map();
+    
+    constructor(init?: any) {
+      if (init) {
+        Object.entries(init).forEach(([key, value]) => {
+          this.headers.set(key.toLowerCase(), String(value));
+        });
+      }
+    }
+    
+    append(name: string, value: string) {
+      this.headers.set(name.toLowerCase(), value);
+    }
+    
+    delete(name: string) {
+      this.headers.delete(name.toLowerCase());
+    }
+    
+    get(name: string) {
+      return this.headers.get(name.toLowerCase()) || null;
+    }
+    
+    has(name: string) {
+      return this.headers.has(name.toLowerCase());
+    }
+    
+    set(name: string, value: string) {
+      this.headers.set(name.toLowerCase(), value);
+    }
+    
+    forEach(callback: (value: string, key: string) => void) {
+      this.headers.forEach((value, key) => callback(value, key));
+    }
+  };
+}
+
 // Get environment variables with fallbacks
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key-here';
