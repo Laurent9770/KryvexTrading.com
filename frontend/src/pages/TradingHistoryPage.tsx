@@ -27,6 +27,13 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import supabaseTradingService from "@/services/supabaseTradingService";
 
+// Helper function to safely convert to number
+const safeNumber = (value: any): number => {
+  if (value === null || value === undefined || value === '') return 0;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
+
 const TradingHistoryPage = () => {
   const { user, tradingHistory, activityFeed } = useAuth();
   const [tradeHistory, setTradeHistory] = useState<any[]>([]);
@@ -101,7 +108,7 @@ const TradingHistoryPage = () => {
         const totalTrades = uniqueTrades.length;
         const wins = uniqueTrades.filter(t => t.status === 'won' || t.outcome === 'win').length;
         const losses = uniqueTrades.filter(t => t.status === 'lost' || t.outcome === 'lose').length;
-        const netProfit = uniqueTrades.reduce((sum, t) => sum + (t.profit || 0) - (t.loss || 0), 0);
+        const netProfit = uniqueTrades.reduce((sum, t) => sum + safeNumber(t.profit) - safeNumber(t.loss), 0);
         const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
         
         setStatistics({
@@ -148,7 +155,7 @@ const TradingHistoryPage = () => {
         const totalTrades = uniqueTrades.length;
         const wins = uniqueTrades.filter(t => t.status === 'won' || t.outcome === 'win').length;
         const losses = uniqueTrades.filter(t => t.status === 'lost' || t.outcome === 'lose').length;
-        const netProfit = uniqueTrades.reduce((sum, t) => sum + (t.profit || 0) - (t.loss || 0), 0);
+        const netProfit = uniqueTrades.reduce((sum, t) => sum + safeNumber(t.profit) - safeNumber(t.loss), 0);
         const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
         
         setStatistics({
@@ -349,7 +356,7 @@ const TradingHistoryPage = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Win Rate</p>
-                <p className="text-xl font-bold text-yellow-500">{statistics.winRate.toFixed(1)}%</p>
+                <p className="text-xl font-bold text-yellow-500">{safeNumber(statistics.winRate).toFixed(1)}%</p>
               </div>
             </div>
           </Card>
@@ -361,8 +368,8 @@ const TradingHistoryPage = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Net Profit</p>
-                <p className={`text-xl font-bold ${statistics.netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {statistics.netProfit >= 0 ? '+' : ''}${statistics.netProfit.toFixed(2)}
+                <p className={`text-xl font-bold ${safeNumber(statistics.netProfit) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {safeNumber(statistics.netProfit) >= 0 ? '+' : ''}${safeNumber(statistics.netProfit).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -470,13 +477,13 @@ const TradingHistoryPage = () => {
                         </Badge>
                       </td>
                       <td className="py-4 px-2 font-medium">{trade.symbol}</td>
-                      <td className="py-4 px-2 text-right font-mono">{trade.amount}</td>
-                      <td className="py-4 px-2 text-right font-mono">${trade.price?.toFixed(2)}</td>
+                      <td className="py-4 px-2 text-right font-mono">{safeNumber(trade.amount).toFixed(2)}</td>
+                      <td className="py-4 px-2 text-right font-mono">${safeNumber(trade.price).toFixed(2)}</td>
                       <td className="py-4 px-2 text-right">
                         {trade.profit ? (
-                          <span className="text-green-500 font-medium">+${trade.profit.toFixed(2)}</span>
+                          <span className="text-green-500 font-medium">+${safeNumber(trade.profit).toFixed(2)}</span>
                         ) : trade.loss ? (
-                          <span className="text-red-500 font-medium">-${trade.loss.toFixed(2)}</span>
+                          <span className="text-red-500 font-medium">-${safeNumber(trade.loss).toFixed(2)}</span>
                         ) : (
                           <span className="text-muted-foreground">--</span>
                         )}
