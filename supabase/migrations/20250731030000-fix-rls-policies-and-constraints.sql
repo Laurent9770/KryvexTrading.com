@@ -7,17 +7,37 @@
 -- 1. FIX UNIQUE CONSTRAINTS FOR ON CONFLICT
 -- =============================================
 
--- Ensure unique constraints exist for trading_features table
-ALTER TABLE public.trading_features 
-ADD CONSTRAINT IF NOT EXISTS trading_features_name_unique UNIQUE (name);
-
--- Ensure unique constraints exist for profiles table
-ALTER TABLE public.profiles 
-ADD CONSTRAINT IF NOT EXISTS profiles_username_unique UNIQUE (username);
-
--- Ensure unique constraints exist for user_roles table
-ALTER TABLE public.user_roles 
-ADD CONSTRAINT IF NOT EXISTS user_roles_user_role_unique UNIQUE (user_id, role);
+-- Safely add unique constraints (PostgreSQL doesn't support IF NOT EXISTS for ADD CONSTRAINT)
+DO $$
+BEGIN
+  -- Add unique constraint for trading_features table
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'trading_features_name_unique' 
+    AND conrelid = 'public.trading_features'::regclass
+  ) THEN
+    ALTER TABLE public.trading_features ADD CONSTRAINT trading_features_name_unique UNIQUE (name);
+  END IF;
+  
+  -- Add unique constraint for profiles table
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'profiles_username_unique' 
+    AND conrelid = 'public.profiles'::regclass
+  ) THEN
+    ALTER TABLE public.profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
+  END IF;
+  
+  -- Add unique constraint for user_roles table
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'user_roles_user_role_unique' 
+    AND conrelid = 'public.user_roles'::regclass
+  ) THEN
+    ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_role_unique UNIQUE (user_id, role);
+  END IF;
+END;
+$$;
 
 -- =============================================
 -- 2. DROP EXISTING POLICIES TO AVOID CONFLICTS
