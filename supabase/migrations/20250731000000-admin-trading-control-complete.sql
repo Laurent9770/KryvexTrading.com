@@ -577,7 +577,142 @@ COMMENT ON COLUMN public.trades.admin_override_by IS 'Admin user who forced the 
 COMMENT ON COLUMN public.trades.admin_override_reason IS 'Reason for admin override of trade outcome';
 
 -- =============================================
--- 20. FINAL SETUP COMPLETE
+-- 20. CREATE ADMIN ACCOUNT
+-- =============================================
+
+-- Create admin user account
+DO $$
+DECLARE
+  admin_user_id UUID;
+BEGIN
+  -- Insert admin user into auth.users
+  INSERT INTO auth.users (
+    instance_id,
+    id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    recovery_sent_at,
+    last_sign_in_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at,
+    confirmation_token,
+    email_change,
+    email_change_token_new,
+    recovery_token
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000000',
+    gen_random_uuid(),
+    'authenticated',
+    'authenticated',
+    'admin@kryvex.com',
+    crypt('Kryvex.@123', gen_salt('bf')),
+    now(),
+    now(),
+    now(),
+    '{"provider": "email", "providers": ["email"]}',
+    '{"full_name": "Kryvex Admin"}',
+    now(),
+    now(),
+    '',
+    '',
+    '',
+    ''
+  ) RETURNING id INTO admin_user_id;
+
+  -- Create admin profile
+  INSERT INTO public.profiles (
+    user_id,
+    email,
+    full_name,
+    account_status,
+    username,
+    funding_wallet,
+    trading_wallet,
+    kyc_level1_status,
+    kyc_level2_status
+  ) VALUES (
+    admin_user_id,
+    'admin@kryvex.com',
+    'Kryvex Admin',
+    'active',
+    'admin',
+    '{"USDT": {"balance": "1000000.00", "usdValue": "$1000000.00", "available": "1000000.00"}}',
+    '{"USDT": {"balance": "1000000.00", "usdValue": "$1000000.00", "available": "1000000.00"}, "BTC": {"balance": "100.00000000", "usdValue": "$6754321.00", "available": "100.00000000"}, "ETH": {"balance": "1000.00000000", "usdValue": "$2580750.00", "available": "1000.00000000"}}',
+    'verified',
+    'approved'
+  );
+
+  -- Assign admin role
+  INSERT INTO public.user_roles (
+    user_id,
+    role
+  ) VALUES (
+    admin_user_id,
+    'admin'
+  );
+
+  RAISE NOTICE 'Admin account created successfully with ID: %', admin_user_id;
+END $$;
+
+-- =============================================
+-- 21. ADMIN ACCOUNT POLICIES
+-- =============================================
+
+-- Ensure admin can access all data
+CREATE POLICY "Admin full access to all data" 
+ON public.profiles 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all user roles
+CREATE POLICY "Admin can manage user roles" 
+ON public.user_roles 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all KYC documents
+CREATE POLICY "Admin can manage all KYC documents" 
+ON public.kyc_documents 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all deposits
+CREATE POLICY "Admin can manage all deposits" 
+ON public.deposits 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all transactions
+CREATE POLICY "Admin can manage all transactions" 
+ON public.transactions 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all support tickets
+CREATE POLICY "Admin can manage all support tickets" 
+ON public.support_tickets 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all support messages
+CREATE POLICY "Admin can manage all support messages" 
+ON public.support_messages 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Admin can manage all notifications
+CREATE POLICY "Admin can manage all notifications" 
+ON public.notifications 
+FOR ALL 
+USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- =============================================
+-- 22. FINAL SETUP COMPLETE
 -- =============================================
 
 -- Grant necessary permissions
