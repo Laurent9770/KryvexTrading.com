@@ -956,7 +956,12 @@ const TradingPage = () => {
 
       const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
-      if (result) {
+      if (result && result.success) {
+        // Update the trade with the real database ID if available
+        if (result.trade && result.trade.id) {
+          futuresTrade.id = result.trade.id;
+        }
+        
         // Handle different order types
         if (futuresOrderType === 'market') {
           // Market order - execute immediately
@@ -1210,8 +1215,15 @@ const TradingPage = () => {
       updateTradingBalance('USDT', payout, 'add');
     }
 
-    // Complete the futures trade in the trading engine
-    await supabaseTradingPageService.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, trade.profit_percentage);
+    // Complete the futures trade in the trading engine (only if it has a real database ID)
+    if (trade.id && trade.id.length > 10) { // Check if it's a real UUID, not a timestamp
+      try {
+        await supabaseTradingPageService.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, trade.profit_percentage);
+      } catch (error) {
+        console.warn('Could not update futures trade in database (local trade):', error);
+        // Continue with local processing even if database update fails
+      }
+    }
 
     const tradeActivity = {
       type: "futures_trade",

@@ -205,7 +205,7 @@ function App() {
                           <SupportPage />
                         </SafeRoute>
                       } />
-                      <Route path="/history" element={
+                      <Route path="/trading-history" element={
                         <SafeRoute>
                           <TradingHistoryPage />
                         </SafeRoute>
