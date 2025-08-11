@@ -1276,7 +1276,7 @@ const TradingPage = () => {
 
   // Options Data - Using real-time prices
   const getOptionsChain = () => {
-    const currentPrice = getPrice("BTC") || 67543.21;
+    const currentPrice = getPrice("BTC")?.rawPrice || 67543.21;
     const baseStrike = Math.round(currentPrice / 1000) * 1000; // Round to nearest 1000
     
     return [
@@ -1711,32 +1711,32 @@ const TradingPage = () => {
     { 
       symbol: "BTCUSDT", 
       name: "Bitcoin", 
-      price: getPrice("BTC") || 67543.21, 
-      change: 2.34, // This would need to be calculated from price history
+      price: getPrice("BTC")?.rawPrice || 67543.21, 
+      change: getPrice("BTC")?.rawChange || 2.34,
       payout: "85%", 
       category: "Crypto" 
     },
     { 
       symbol: "ETHUSDT", 
       name: "Ethereum", 
-      price: getPrice("ETH") || 3234.56, 
-      change: 1.23, 
+      price: getPrice("ETH")?.rawPrice || 3234.56, 
+      change: getPrice("ETH")?.rawChange || 1.23, 
       payout: "82%", 
       category: "Crypto" 
     },
     { 
       symbol: "BNBUSDT", 
       name: "BNB", 
-      price: getPrice("BNB") || 623.45, 
-      change: -0.56, 
+      price: getPrice("BNB")?.rawPrice || 623.45, 
+      change: getPrice("BNB")?.rawChange || -0.56, 
       payout: "80%", 
       category: "Crypto" 
     },
     { 
       symbol: "SOLUSDT", 
       name: "Solana", 
-      price: getPrice("SOL") || 234.67, 
-      change: 4.12, 
+      price: getPrice("SOL")?.rawPrice || 234.67, 
+      change: getPrice("SOL")?.rawChange || 4.12, 
       payout: "83%", 
       category: "Crypto" 
     },
