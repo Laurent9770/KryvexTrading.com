@@ -29,14 +29,15 @@ try {
     console.log('🔍 URL:', supabaseUrl);
     console.log('🔍 Key length:', supabaseAnonKey.length);
     
-    // Create the Supabase client with minimal configuration to avoid headers error
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    });
+    // Try to create the client with explicit error handling
+    try {
+      // Using a more compatible approach without global headers
+      supabase = createClient(supabaseUrl, supabaseAnonKey);
+      console.log('✅ Supabase client created successfully');
+    } catch (createError) {
+      console.error('❌ Error in createClient:', createError);
+      throw createError;
+    }
 
     // Test the connection immediately
     const testConnection = async () => {
