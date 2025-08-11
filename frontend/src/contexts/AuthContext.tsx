@@ -659,19 +659,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Wallet persistence functions
   const saveWalletToStorage = useCallback((tradingAcc: any, fundingAcc: any) => {
     try {
-      localStorage.setItem('kryvex_trading_account', JSON.stringify(tradingAcc));
-      localStorage.setItem('kryvex_funding_account', JSON.stringify(fundingAcc));
-      localStorage.setItem('kryvex_wallet_last_updated', new Date().toISOString());
+      const userId = user?.id || 'anonymous';
+      localStorage.setItem(`kryvex_trading_account_${userId}`, JSON.stringify(tradingAcc));
+      localStorage.setItem(`kryvex_funding_account_${userId}`, JSON.stringify(fundingAcc));
+      localStorage.setItem(`kryvex_wallet_last_updated_${userId}`, new Date().toISOString());
     } catch (error) {
       console.error('Error saving wallet to storage:', error);
     }
-  }, []);
+  }, [user?.id]);
 
   const loadWalletFromStorage = useCallback(() => {
     try {
-      const savedTradingAccount = localStorage.getItem('kryvex_trading_account');
-      const savedFundingAccount = localStorage.getItem('kryvex_funding_account');
-      const lastUpdated = localStorage.getItem('kryvex_wallet_last_updated');
+      const userId = user?.id || 'anonymous';
+      const savedTradingAccount = localStorage.getItem(`kryvex_trading_account_${userId}`);
+      const savedFundingAccount = localStorage.getItem(`kryvex_funding_account_${userId}`);
+      const lastUpdated = localStorage.getItem(`kryvex_wallet_last_updated_${userId}`);
 
       if (savedTradingAccount && savedFundingAccount) {
         const tradingData = JSON.parse(savedTradingAccount);
@@ -684,7 +686,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setTradingAccount(tradingData);
           setFundingAccount(fundingData);
           
-          console.log('✅ Wallet loaded from storage:', { tradingData, fundingData, lastUpdated });
+          console.log('✅ Wallet loaded from storage for user:', userId, { tradingData, fundingData, lastUpdated });
           return true;
         }
       }
@@ -693,7 +695,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error loading wallet from storage:', error);
       return false;
     }
-  }, []);
+  }, [user?.id]);
+
+  const saveActivityFeedToStorage = useCallback((activities: ActivityItem[]) => {
+    try {
+      const userId = user?.id || 'anonymous';
+      localStorage.setItem(`kryvex_activity_feed_${userId}`, JSON.stringify(activities));
+    } catch (error) {
+      console.error('Error saving activity feed to storage:', error);
+    }
+  }, [user?.id]);
+
+  const loadActivityFeedFromStorage = useCallback(() => {
+    try {
+      const userId = user?.id || 'anonymous';
+      const savedActivities = localStorage.getItem(`kryvex_activity_feed_${userId}`);
+      if (savedActivities) {
+        const activities = JSON.parse(savedActivities);
+        if (Array.isArray(activities)) {
+          setActivityFeed(activities);
+          console.log('✅ Activity feed loaded from storage for user:', userId, activities.length, 'activities');
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading activity feed from storage:', error);
+      return false;
+    }
+  }, [user?.id]);
+
+  const saveTradingHistoryToStorage = useCallback((trades: any[]) => {
+    try {
+      const userId = user?.id || 'anonymous';
+      localStorage.setItem(`kryvex_trading_history_${userId}`, JSON.stringify(trades));
+    } catch (error) {
+      console.error('Error saving trading history to storage:', error);
+    }
+  }, [user?.id]);
+
+  const loadTradingHistoryFromStorage = useCallback(() => {
+    try {
+      const userId = user?.id || 'anonymous';
+      const savedTrades = localStorage.getItem(`kryvex_trading_history_${userId}`);
+      if (savedTrades) {
+        const trades = JSON.parse(savedTrades);
+        if (Array.isArray(trades)) {
+          setTradingHistory(trades);
+          console.log('✅ Trading history loaded from storage for user:', userId, trades.length, 'trades');
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading trading history from storage:', error);
+      return false;
+    }
+  }, [user?.id]);
 
   const initializeWallet = useCallback(async () => {
     setWalletLoading(true);
@@ -722,6 +780,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('✅ Wallet initialized with default values');
       }
 
+      // Load activity feed and trading history from localStorage
+      loadActivityFeedFromStorage();
+      loadTradingHistoryFromStorage();
+
       // TODO: In the future, load from backend API here
       // const walletData = await supabaseWalletService.getWallet(user?.id);
       // if (walletData.success) {
@@ -736,7 +798,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setWalletLoading(false);
     }
-  }, [loadWalletFromStorage, saveWalletToStorage]);
+  }, [loadWalletFromStorage, saveWalletToStorage, loadActivityFeedFromStorage, loadTradingHistoryFromStorage]);
 
   const updateTradingBalance = useCallback((asset: string, amount: number, operation: 'add' | 'subtract') => {
     setTradingAccount(prev => {
@@ -799,9 +861,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         new Date(act.timestamp) > thirtyDaysAgo
       );
       
-      return [newActivity, ...filteredActivities];
+      const updatedActivities = [newActivity, ...filteredActivities];
+      
+      // Save to localStorage
+      saveActivityFeedToStorage(updatedActivities);
+      
+      return updatedActivities;
     });
-  }, [user?.id]);
+  }, [user?.id, saveActivityFeedToStorage]);
 
   const addTrade = useCallback((trade: any) => {
     setTradingHistory(prev => {
@@ -813,9 +880,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         new Date(t.timestamp || t.time || Date.now()) > thirtyDaysAgo
       );
       
-      return [trade, ...filteredTrades];
+      const updatedTrades = [trade, ...filteredTrades];
+      
+      // Save to localStorage
+      saveTradingHistoryToStorage(updatedTrades);
+      
+      return updatedTrades;
     });
-  }, []);
+  }, [saveTradingHistoryToStorage]);
 
   const updatePortfolioStats = useCallback(() => {
     // Calculate portfolio stats based on current trading account
