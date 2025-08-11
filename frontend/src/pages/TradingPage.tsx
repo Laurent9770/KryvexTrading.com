@@ -600,13 +600,18 @@ const TradingPage = () => {
       // Execute the trade in the trading engine
       const result = await supabaseTradingPageService.executeTrade(tradeRequest);
       
-      if (!result) {
+      if (!result || !result.success) {
         toast({
           variant: "destructive",
           title: "Trade Failed",
           description: "Failed to execute trade"
         });
         return;
+      }
+
+      // Update the trade with the real database ID if available
+      if (result.trade && result.trade.id) {
+        spotTrade.id = result.trade.id;
       }
 
       // Add activity for immediate display
@@ -684,8 +689,15 @@ const TradingPage = () => {
       updateTradingBalance('USDT', payout, 'add');
     }
 
-    // Complete the spot trade in the trading engine
-    await supabaseTradingPageService.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, parseFloat(trade.profit_percentage) || 5);
+    // Complete the spot trade in the trading engine (only if it has a real database ID)
+    if (trade.id && trade.id.length > 10) { // Check if it's a real UUID, not a timestamp
+      try {
+        await supabaseTradingPageService.completeSpotTrade(trade.id, outcome as 'win' | 'lose', currentMarketPrice, parseFloat(trade.profit_percentage) || 5);
+      } catch (error) {
+        console.warn('Could not update trade in database (local trade):', error);
+        // Continue with local processing even if database update fails
+      }
+    }
 
     const tradeActivity = {
       type: "spot" as const,
