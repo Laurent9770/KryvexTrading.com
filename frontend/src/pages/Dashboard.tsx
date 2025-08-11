@@ -343,48 +343,77 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* Recent Activity */}
+            {/* Recent Activity & Trading History */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-                <Button variant="outline" size="sm" onClick={() => setActiveTab("activity")}>
-                  View All
-                </Button>
+                <h3 className="text-lg font-semibold text-foreground">Recent Activity & Trading History</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => navigate('/trading-history')}>
+                    View Trading History
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab("activity")}>
+                    View All Activity
+                  </Button>
+                </div>
               </div>
               <div className="space-y-3">
-                {safeActivityFeed.slice(0, 8).map((activity, index) => (
-                  <div 
-                    key={activity?.id || index} 
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer"
-                    onClick={() => handleViewDetails(activity)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 ${getActivityColor(activity?.type || 'default')} rounded-full`}></div>
+                {/* Combine activity feed and trading history */}
+                {(() => {
+                  const allActivities = [
+                    ...safeActivityFeed.map(activity => ({ ...activity, source: 'activity' })),
+                    ...safeArray(recentTrades).map(trade => ({ 
+                      ...trade, 
+                      source: 'trade',
+                      type: 'trade',
+                      description: `${trade?.type || 'Trade'} ${trade?.symbol || trade?.pair || 'Unknown'} - ${trade?.outcome === 'win' ? 'Won' : trade?.outcome === 'lose' ? 'Lost' : 'Pending'}`,
+                      amount: trade?.profit || trade?.amount || 0
+                    }))
+                  ].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+                  .slice(0, 12);
+
+                  return allActivities.map((item, index) => (
+                    <div 
+                      key={item?.id || index} 
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer"
+                      onClick={() => item.source === 'trade' ? navigate('/trading-history') : handleViewDetails(item)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 ${getActivityColor(item?.type || 'default')} rounded-full`}></div>
+                        <div className="flex items-center gap-2">
+                          {item.source === 'trade' ? (
+                            <Activity className="w-4 h-4" />
+                          ) : (
+                            getActivityIcon(item?.type || 'default')
+                          )}
+                          <span className="text-sm text-foreground">
+                            {item.source === 'trade' ? item.description : formatActivityDescription(item)}
+                          </span>
+                          {item.source === 'trade' && (
+                            <Badge variant="outline" className="text-xs">
+                              {safeString(item?.type || 'trade')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2">
-                        {getActivityIcon(activity?.type || 'default')}
-                        <span className="text-sm text-foreground">
-                          {formatActivityDescription(activity)}
+                        {item?.amount && (
+                          <span className={`text-sm font-medium ${
+                            item.type === 'deposit' || (item.source === 'trade' && item.outcome === 'win') ? 'text-green-600' : 
+                            item.type === 'withdrawal' || (item.source === 'trade' && item.outcome === 'lose') ? 'text-red-600' : 
+                            'text-foreground'
+                          }`}>
+                            {item.type === 'deposit' || (item.source === 'trade' && item.outcome === 'win') ? '+' : ''}${safeNumber(item.amount).toFixed(2)}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {item?.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'N/A'}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {activity?.amount && (
-                        <span className={`text-sm font-medium ${
-                          activity.type === 'deposit' ? 'text-green-600' : 
-                          activity.type === 'withdrawal' ? 'text-red-600' : 
-                          'text-foreground'
-                        }`}>
-                          {activity.type === 'deposit' ? '+' : ''}${safeNumber(activity.amount).toFixed(2)}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {activity?.timestamp ? new Date(activity.timestamp).toLocaleDateString() : 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {safeActivityFeed.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">No recent activity</p>
+                  ));
+                })()}
+                {safeActivityFeed.length === 0 && safeArray(recentTrades).length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">No recent activity or trades</p>
                 )}
               </div>
             </Card>

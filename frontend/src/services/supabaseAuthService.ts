@@ -555,15 +555,16 @@ class SupabaseAuthService {
 
       console.log('📝 Updating profile for user:', user.id);
 
+      // Update the profiles table instead of users table
       const { error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({
-          first_name: updates.fullName?.split(' ')[0],
-          last_name: updates.fullName?.split(' ').slice(1).join(' '),
+          full_name: updates.fullName,
           phone: updates.phone,
+          country: updates.country,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('❌ Profile update error:', error);

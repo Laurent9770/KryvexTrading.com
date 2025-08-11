@@ -76,6 +76,15 @@ const SettingsPage = () => {
   };
 
   const handleSaveSettings = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "Please sign in to update your settings.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
