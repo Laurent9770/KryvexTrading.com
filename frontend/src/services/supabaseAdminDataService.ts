@@ -94,19 +94,17 @@ class SupabaseAdminDataService {
       const { data, error } = await supabase
         .from('profiles')
         .select(`
-          id,
+          user_id,
           email,
-          first_name,
-          last_name,
-          username,
+          full_name,
+          phone,
+          country,
           kyc_status,
-          kyc_level,
-          status,
+          account_status,
           created_at,
-          last_login,
-          trading_balance,
-          total_trades,
-          total_volume
+          updated_at,
+          funding_wallet,
+          trading_wallet
         `)
         .order('created_at', { ascending: false });
 
@@ -115,21 +113,28 @@ class SupabaseAdminDataService {
         return [];
       }
 
-      return data.map(user => ({
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        username: user.username || '',
-        kycStatus: user.kyc_status || 'pending',
-        kycLevel: user.kyc_level || 0,
-        status: user.status || 'active',
-        createdAt: user.created_at,
-        lastLogin: user.last_login || user.created_at,
-        tradingBalance: user.trading_balance || 0,
-        totalTrades: user.total_trades || 0,
-        totalVolume: user.total_volume || 0
-      }));
+      return data.map(user => {
+        // Split full_name into first and last name
+        const nameParts = (user.full_name || '').split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        return {
+          id: user.user_id,
+          email: user.email,
+          firstName,
+          lastName,
+          username: user.email?.split('@')[0] || '',
+          kycStatus: user.kyc_status || 'pending',
+          kycLevel: user.kyc_status === 'approved' ? 2 : user.kyc_status === 'pending' ? 1 : 0,
+          status: user.account_status || 'active',
+          createdAt: user.created_at,
+          lastLogin: user.updated_at || user.created_at,
+          tradingBalance: user.trading_wallet || 0,
+          totalTrades: 0, // Will be calculated separately
+          totalVolume: 0  // Will be calculated separately
+        };
+      });
     } catch (error) {
       console.error('Error getting all users:', error);
       return [];
@@ -348,13 +353,12 @@ class SupabaseAdminDataService {
       const { data, error } = await supabase
         .from('profiles')
         .select(`
-          id,
+          user_id,
           email,
-          first_name,
-          last_name,
-          kyc_level,
+          full_name,
           kyc_status,
-          documents_submitted,
+          account_status,
+          created_at,
           updated_at
         `)
         .order('updated_at', { ascending: false });
@@ -364,9 +368,9 @@ class SupabaseAdminDataService {
         return [];
       }
 
-      // Get submission counts
+      // Get submission counts from kyc_documents table
       const { data: submissions, error: submissionError } = await supabase
-        .from('kyc_submissions')
+        .from('kyc_documents')
         .select('user_id')
         .eq('status', 'pending');
 
@@ -378,17 +382,28 @@ class SupabaseAdminDataService {
         });
       }
 
-      return data.map(user => ({
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        kycLevel: user.kyc_level || 0,
-        kycStatus: user.kyc_status || 'unverified',
-        documentsSubmitted: user.documents_submitted || false,
-        lastUpdated: user.updated_at,
-        submissionCount: submissionCounts.get(user.id) || 0
-      }));
+      return data.map(user => {
+        // Split full_name into first and last name
+        const nameParts = (user.full_name || '').split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        // Determine KYC level based on status
+        const kycLevel = user.kyc_status === 'approved' ? 2 : 
+                        user.kyc_status === 'pending' ? 1 : 0;
+        
+        return {
+          id: user.user_id,
+          email: user.email,
+          firstName,
+          lastName,
+          kycLevel,
+          kycStatus: user.kyc_status || 'unverified',
+          documentsSubmitted: submissionCounts.get(user.user_id) > 0,
+          lastUpdated: user.updated_at,
+          submissionCount: submissionCounts.get(user.user_id) || 0
+        };
+      });
     } catch (error) {
       console.error('Error getting KYC users:', error);
       return [];
