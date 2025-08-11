@@ -29,6 +29,64 @@ const TradingPage = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { realTimePrices, tradingAccount, addActivity, addTrade, updateTradingBalance, user, isAuthenticated } = useAuth();
+
+  // Investment validation helper functions
+  const validateInvestmentAmount = (amount: number, minAmount: number, maxAmount: number, productName: string) => {
+    if (amount < minAmount) {
+      toast({
+        title: "Investment Too Low",
+        description: `Please enter at least the minimum investment amount of $${minAmount.toLocaleString()} for ${productName}.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (amount > maxAmount) {
+      toast({
+        title: "Investment Too High",
+        description: `Maximum investment amount for ${productName} is $${maxAmount.toLocaleString()}.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  const validateTradingBalance = (amount: number) => {
+    const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
+    
+    if (amount > tradingBalance) {
+      toast({
+        title: "Insufficient Funds",
+        description: "Insufficient Trading Account Balance. Please transfer from Funding Account.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  const processTradeOutcome = (tradeType: string, symbol: string, amount: number, outcome: 'win' | 'lose', profit?: number) => {
+    if (outcome === 'win') {
+      // Credit back initial amount plus profit
+      const totalReturn = amount + (profit || 0);
+      updateTradingBalance('USDT', totalReturn, 'add');
+      
+      toast({
+        title: `${tradeType} Trade Won!`,
+        description: `You won $${profit?.toFixed(2) || '0'} on your ${symbol} trade.`,
+      });
+    } else {
+      // Loss - amount already deducted, no need to add back
+      toast({
+        title: `${tradeType} Trade Lost`,
+        description: `You lost $${amount.toFixed(2)} on your ${symbol} trade.`,
+        variant: "destructive",
+      });
+    }
+  };
   
   // Set up user ID for trading service
   useEffect(() => {
@@ -488,14 +546,13 @@ const TradingPage = () => {
     }
 
     const amount = parseFloat(spotAmount);
-    const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
     
-    if (amount > tradingBalance) {
-      toast({
-        variant: "destructive",
-        title: "Insufficient Funds",
-        description: "Insufficient Trading Funds. Please transfer from Funding Account."
-      });
+    // Spot trading has a minimum of $10 and maximum of $50,000
+    if (!validateInvestmentAmount(amount, 10, 50000, 'Spot Trading')) {
+      return;
+    }
+    
+    if (!validateTradingBalance(amount)) {
       return;
     }
 
@@ -831,14 +888,13 @@ const TradingPage = () => {
     }
 
     const amount = parseFloat(futuresAmount);
-    const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
     
-    if (amount > tradingBalance) {
-      toast({
-        variant: "destructive",
-        title: "Insufficient Funds",
-        description: "Insufficient Trading Funds. Please transfer from Funding Account."
-      });
+    // Futures trading has a minimum of $50 and maximum of $100,000
+    if (!validateInvestmentAmount(amount, 50, 100000, 'Futures Trading')) {
+      return;
+    }
+    
+    if (!validateTradingBalance(amount)) {
       return;
     }
 
@@ -1344,14 +1400,13 @@ const TradingPage = () => {
     const strikePrice = parseFloat(strike);
     const quantityNum = parseFloat(quantity);
     const totalCost = premium * quantityNum;
-    const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
-
-    if (totalCost > tradingBalance) {
-      toast({
-        title: "Insufficient Funds",
-        description: "Insufficient Trading Account Balance. Please transfer from Funding Account.",
-        variant: "destructive",
-      });
+    
+    // Options trading has a minimum of $25 and maximum of $25,000
+    if (!validateInvestmentAmount(totalCost, 25, 25000, 'Options Trading')) {
+      return;
+    }
+    
+    if (!validateTradingBalance(totalCost)) {
       return;
     }
 
@@ -2074,19 +2129,21 @@ const TradingPage = () => {
     }
 
     const amount = parseFloat(binaryAmount);
-    const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
     
-    if (amount > tradingBalance) {
-      toast({
-        title: "Insufficient Funds",
-        description: "Insufficient Trading Account Balance. Please transfer from Funding Account.",
-        variant: "destructive",
-      });
+    // Binary trading has a minimum of $10 and maximum of $10,000
+    if (!validateInvestmentAmount(amount, 10, 10000, 'Binary Options')) {
+      return;
+    }
+    
+    if (!validateTradingBalance(amount)) {
       return;
     }
 
     setIsExecuting(true);
     try {
+      // Deduct from trading account
+      updateTradingBalance('USDT', amount, 'subtract');
+
       const selectedExpiry = binaryExpirationTimes.find(e => e.value === binaryExpiration);
       const selectedAssetData = binaryAssets.find(a => a.symbol === binarySelectedAsset);
       
@@ -2180,19 +2237,36 @@ const TradingPage = () => {
     }
 
     const amount = parseFloat(quantInvestmentAmount);
-    const tradingBalance = parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0');
     
-    if (amount > tradingBalance) {
+    // Parse investment range from product
+    const rangeMatch = product.investmentRange.match(/\$([0-9,]+)\s*–\s*\$([0-9,]+)/);
+    if (!rangeMatch) {
       toast({
-        title: "Insufficient Funds",
-        description: "Insufficient Trading Account Balance. Please transfer from Funding Account.",
+        title: "Invalid Investment Range",
+        description: "Unable to parse investment range for this product.",
         variant: "destructive",
       });
+      return;
+    }
+    
+    const minAmount = parseFloat(rangeMatch[1].replace(/,/g, ''));
+    const maxAmount = parseFloat(rangeMatch[2].replace(/,/g, ''));
+    
+    // Validate investment amount
+    if (!validateInvestmentAmount(amount, minAmount, maxAmount, product.arbitrageId)) {
+      return;
+    }
+    
+    // Validate trading balance
+    if (!validateTradingBalance(amount)) {
       return;
     }
 
     setIsExecuting(true);
     try {
+      // Deduct from trading account
+      updateTradingBalance('USDT', amount, 'subtract');
+
       const tradeRequest: TradeRequest = {
         type: 'quant',
         action: 'buy',
@@ -2205,6 +2279,10 @@ const TradingPage = () => {
       const result = await supabaseTradingPageService.executeTrade(tradeRequest);
 
       if (result) {
+        // Process trade outcome
+        const outcome = result.profit ? 'win' : 'lose';
+        processTradeOutcome('Arbitrage', product.arbitrageId, amount, outcome, result.profit);
+
         const tradeActivity = {
           type: "trade",
           action: "ARBITRAGE PURCHASE",
@@ -2225,12 +2303,9 @@ const TradingPage = () => {
           pnl: result.profit ? `+$${result.profit.toFixed(2)}` : result.loss ? `-$${result.loss.toFixed(2)}` : '0',
           status: "completed"
         });
-
-        toast({
-          title: "Arbitrage Purchase Successful",
-          description: `Invested $${quantInvestmentAmount} in ${product.arbitrageId} (${product.duration})`,
-        });
       } else {
+        // If trade failed, credit back the amount
+        updateTradingBalance('USDT', amount, 'add');
         toast({
           variant: "destructive",
           title: "Purchase Failed",
