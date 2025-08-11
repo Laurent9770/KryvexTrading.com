@@ -34,6 +34,8 @@ const WalletPage = () => {
     realTimePrices,
     activityFeed,
     tradingHistory,
+    walletLoading,
+    walletError,
     updateTradingBalance, 
     updateFundingBalance, 
     addActivity 
@@ -309,6 +311,46 @@ const WalletPage = () => {
         status: 'completed' as const
       }));
   };
+
+  // Show loading state
+  if (walletLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="kucoin-container py-4 sm:py-6 lg:py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+              <h3 className="text-lg font-semibold mb-2">Loading Wallet...</h3>
+              <p className="text-muted-foreground">Please wait while we load your wallet data</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (walletError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="kucoin-container py-4 sm:py-6 lg:py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-8 h-8 bg-destructive rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-sm font-bold">!</span>
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Wallet Error</h3>
+              <p className="text-muted-foreground mb-4">{walletError}</p>
+              <Button onClick={handleRefresh} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -94,6 +94,10 @@ interface AuthContextType {
   // Real-time price data
   realTimePrices: { [key: string]: { price: number; change: number; volume: number; timestamp: string } };
   
+  // Wallet state
+  walletLoading: boolean;
+  walletError: string | null;
+  
   // Global update functions
   updateTradingBalance: (asset: string, amount: number, operation: 'add' | 'subtract') => void;
   updateFundingBalance: (amount: number, operation: 'add' | 'subtract') => void;
@@ -134,6 +138,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [fundingAccount, setFundingAccount] = useState<{ USDT: { balance: string; usdValue: string; available: string } }>({
     USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' }
   });
+
+  // Wallet persistence and sync state
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [walletError, setWalletError] = useState<string | null>(null);
 
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [tradingHistory, setTradingHistory] = useState<any[]>([]);
@@ -226,17 +234,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsAdmin(authState.isAdmin);
             setIsLoading(false);
 
-            // Update trading account with user's balance
-            if (authState.user.accountBalance && authState.user.accountBalance > 0) {
-              setTradingAccount(prev => ({
-                ...prev,
-                USDT: {
-                  balance: (authState.user.accountBalance || 0).toFixed(8),
-                  usdValue: `$${(authState.user.accountBalance || 0).toFixed(2)}`,
-                  available: (authState.user.accountBalance || 0).toFixed(8)
-                }
-              }));
-            }
+            // Initialize wallet after user is authenticated
+            initializeWallet();
           } else {
             setUser(null);
             setIsAuthenticated(false);
@@ -657,13 +656,95 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isAuthenticated]);
 
   // Global update functions
+  // Wallet persistence functions
+  const saveWalletToStorage = useCallback((tradingAcc: any, fundingAcc: any) => {
+    try {
+      localStorage.setItem('kryvex_trading_account', JSON.stringify(tradingAcc));
+      localStorage.setItem('kryvex_funding_account', JSON.stringify(fundingAcc));
+      localStorage.setItem('kryvex_wallet_last_updated', new Date().toISOString());
+    } catch (error) {
+      console.error('Error saving wallet to storage:', error);
+    }
+  }, []);
+
+  const loadWalletFromStorage = useCallback(() => {
+    try {
+      const savedTradingAccount = localStorage.getItem('kryvex_trading_account');
+      const savedFundingAccount = localStorage.getItem('kryvex_funding_account');
+      const lastUpdated = localStorage.getItem('kryvex_wallet_last_updated');
+
+      if (savedTradingAccount && savedFundingAccount) {
+        const tradingData = JSON.parse(savedTradingAccount);
+        const fundingData = JSON.parse(savedFundingAccount);
+
+        // Validate the data structure
+        if (tradingData && typeof tradingData === 'object' && 
+            fundingData && typeof fundingData === 'object') {
+          
+          setTradingAccount(tradingData);
+          setFundingAccount(fundingData);
+          
+          console.log('✅ Wallet loaded from storage:', { tradingData, fundingData, lastUpdated });
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading wallet from storage:', error);
+      return false;
+    }
+  }, []);
+
+  const initializeWallet = useCallback(async () => {
+    setWalletLoading(true);
+    setWalletError(null);
+
+    try {
+      // Try to load from localStorage first
+      const loadedFromStorage = loadWalletFromStorage();
+      
+      if (!loadedFromStorage) {
+        // If no stored data, initialize with default values
+        const defaultTradingAccount = {
+          USDT: { balance: '1000.00000000', usdValue: '$1000.00', available: '1000.00000000' },
+          BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+          ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
+        };
+        
+        const defaultFundingAccount = {
+          USDT: { balance: '5000.00', usdValue: '$5000.00', available: '5000.00' }
+        };
+
+        setTradingAccount(defaultTradingAccount);
+        setFundingAccount(defaultFundingAccount);
+        saveWalletToStorage(defaultTradingAccount, defaultFundingAccount);
+        
+        console.log('✅ Wallet initialized with default values');
+      }
+
+      // TODO: In the future, load from backend API here
+      // const walletData = await supabaseWalletService.getWallet(user?.id);
+      // if (walletData.success) {
+      //   setTradingAccount(walletData.tradingAccount);
+      //   setFundingAccount(walletData.fundingAccount);
+      //   saveWalletToStorage(walletData.tradingAccount, walletData.fundingAccount);
+      // }
+
+    } catch (error) {
+      console.error('Error initializing wallet:', error);
+      setWalletError('Failed to load wallet data');
+    } finally {
+      setWalletLoading(false);
+    }
+  }, [loadWalletFromStorage, saveWalletToStorage]);
+
   const updateTradingBalance = useCallback((asset: string, amount: number, operation: 'add' | 'subtract') => {
     setTradingAccount(prev => {
       const currentBalance = parseFloat(prev[asset]?.balance || '0');
       const newBalance = operation === 'add' ? currentBalance + amount : currentBalance - amount;
       const newBalanceStr = (newBalance || 0).toFixed(8);
       
-      return {
+      const updatedAccount = {
         ...prev,
         [asset]: {
           balance: newBalanceStr,
@@ -671,8 +752,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           available: newBalanceStr
         }
       };
+
+      // Save to localStorage immediately
+      saveWalletToStorage(updatedAccount, fundingAccount);
+      
+      return updatedAccount;
     });
-  }, []);
+  }, [fundingAccount, saveWalletToStorage]);
 
   const updateFundingBalance = useCallback((amount: number, operation: 'add' | 'subtract') => {
     setFundingAccount(prev => {
@@ -680,15 +766,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const newBalance = operation === 'add' ? currentBalance + amount : currentBalance - amount;
       const newBalanceStr = (newBalance || 0).toFixed(2);
       
-      return {
+      const updatedAccount = {
         USDT: {
           balance: newBalanceStr,
           usdValue: `$${(newBalance || 0).toFixed(2)}`,
           available: newBalanceStr
         }
       };
+
+      // Save to localStorage immediately
+      saveWalletToStorage(tradingAccount, updatedAccount);
+      
+      return updatedAccount;
     });
-  }, []);
+  }, [tradingAccount, saveWalletToStorage]);
 
   const addActivity = useCallback((activity: Omit<ActivityItem, 'id' | 'userId' | 'timestamp' | 'time'>) => {
     const newActivity: ActivityItem = {
@@ -775,6 +866,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     tradingHistory,
     portfolioStats,
     realTimePrices,
+    walletLoading,
+    walletError,
     updateTradingBalance,
     updateFundingBalance,
     addActivity,
@@ -806,6 +899,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     tradingHistory,
     portfolioStats,
     realTimePrices,
+    walletLoading,
+    walletError,
     updateTradingBalance,
     updateFundingBalance,
     addActivity,
