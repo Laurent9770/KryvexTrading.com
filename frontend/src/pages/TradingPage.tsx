@@ -455,11 +455,11 @@ const TradingPage = () => {
 
       if (result) {
         const tradeActivity = {
-          type: "spot" as const,
+          type: "trade" as const,
           action: tradeType.toUpperCase(),
           description: `${tradeType.toUpperCase()} ${amount} ${selectedPair.split('/')[0]} at $${orderPrice.toLocaleString()}`,
           symbol: selectedPair,
-          amount: `${amount} ${selectedPair.split('/')[0]}`,
+          amount: parseFloat(amount),
           price: `$${orderPrice.toLocaleString()}`,
           pnl: '0', // Will be calculated when trade completes
           status: "completed" as const,
@@ -1247,41 +1247,7 @@ const TradingPage = () => {
     });
   };
 
-  // Admin Override Function
-  const handleAdminOverride = (tradeId: string, outcome: 'win' | 'lose') => {
-    const trade = spotTrades.find(t => t.id === tradeId);
-    if (!trade) return;
 
-    const payout = outcome === 'win' ? trade.amount * (1 + trade.profit_percentage / 100) : 0;
-    
-    const updatedTrade = {
-      ...trade,
-      status: 'completed',
-      outcome: 'admin_override',
-      payout,
-      admin_override: outcome
-    };
-
-    setSpotTrades(prev => prev.map(t => t.id === tradeId ? updatedTrade : t));
-    
-    // Add payout to trading account if admin forced win
-    if (outcome === 'win') {
-      updateTradingBalance('USDT', payout, 'add');
-    }
-
-    const tradeActivity = {
-      type: "spot_trade",
-      action: `${trade.direction.toUpperCase()} ADMIN_OVERRIDE`,
-      symbol: selectedPair,
-      amount: `$${trade.amount}`,
-      price: `$${trade.entry_price.toLocaleString()}`,
-      pnl: outcome === 'win' ? `+$${(payout - trade.amount).toFixed(2)}` : `-$${trade.amount}`,
-      status: outcome,
-      time: "Just now",
-      icon: outcome === 'win' ? "👑" : "💸"
-    };
-    addActivity(tradeActivity);
-  };
 
   // Options Trading State
   const [selectedAsset, setSelectedAsset] = useState("BTCUSDT");
