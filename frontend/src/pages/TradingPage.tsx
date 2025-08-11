@@ -1599,25 +1599,53 @@ const TradingPage = () => {
   // Staking Modal State
   const [stakingStakeAmount, setStakingStakeAmount] = useState("");
 
-  // Binary Options Data
+  // Binary Options Data - Using real-time prices
   const binaryAssets = [
-    // Crypto
-    { symbol: "BTCUSDT", name: "Bitcoin", price: 67543.21, change: 2.34, payout: "85%", category: "Crypto" },
-    { symbol: "ETHUSDT", name: "Ethereum", price: 3234.56, change: 1.23, payout: "82%", category: "Crypto" },
-    { symbol: "BNBUSDT", name: "BNB", price: 623.45, change: -0.56, payout: "80%", category: "Crypto" },
-    { symbol: "SOLUSDT", name: "Solana", price: 234.67, change: 4.12, payout: "83%", category: "Crypto" },
-    // Forex
+    // Crypto - Using real-time prices
+    { 
+      symbol: "BTCUSDT", 
+      name: "Bitcoin", 
+      price: getPrice("BTC") || 67543.21, 
+      change: 2.34, // This would need to be calculated from price history
+      payout: "85%", 
+      category: "Crypto" 
+    },
+    { 
+      symbol: "ETHUSDT", 
+      name: "Ethereum", 
+      price: getPrice("ETH") || 3234.56, 
+      change: 1.23, 
+      payout: "82%", 
+      category: "Crypto" 
+    },
+    { 
+      symbol: "BNBUSDT", 
+      name: "BNB", 
+      price: getPrice("BNB") || 623.45, 
+      change: -0.56, 
+      payout: "80%", 
+      category: "Crypto" 
+    },
+    { 
+      symbol: "SOLUSDT", 
+      name: "Solana", 
+      price: getPrice("SOL") || 234.67, 
+      change: 4.12, 
+      payout: "83%", 
+      category: "Crypto" 
+    },
+    // Forex - Keep static for now as we don't have forex price service
     { symbol: "EURUSD", name: "EUR/USD", price: 1.0864, change: 0.12, payout: "78%", category: "Forex" },
     { symbol: "GBPUSD", name: "GBP/USD", price: 1.2734, change: -0.08, payout: "80%", category: "Forex" },
     { symbol: "USDJPY", name: "USD/JPY", price: 148.32, change: 0.24, payout: "79%", category: "Forex" },
-    // Stocks
+    // Stocks - Keep static for now as we don't have stock price service
     { symbol: "AAPL", name: "Apple", price: 185.67, change: 1.45, payout: "82%", category: "Stocks" },
     { symbol: "TSLA", name: "Tesla", price: 248.85, change: 2.67, payout: "84%", category: "Stocks" },
     { symbol: "GOOGL", name: "Google", price: 2845.32, change: -0.45, payout: "81%", category: "Stocks" },
-    // Commodities
+    // Commodities - Keep static for now
     { symbol: "XAUUSD", name: "Gold", price: 2015.67, change: 0.78, payout: "83%", category: "Commodities" },
     { symbol: "XAGUSD", name: "Silver", price: 24.85, change: 1.23, payout: "80%", category: "Commodities" },
-    // Indices
+    // Indices - Keep static for now
     { symbol: "SPX500", name: "S&P 500", price: 4785.23, change: 0.45, payout: "79%", category: "Indices" },
     { symbol: "NAS100", name: "NASDAQ", price: 15234.56, change: 0.89, payout: "81%", category: "Indices" },
   ];
@@ -4873,7 +4901,11 @@ const TradingPage = () => {
                     {quantArbitrageProducts.map((product) => (
                       <Card 
                         key={product.id} 
-                        className="border-0 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                        className={`border-0 hover:shadow-lg transition-all duration-300 cursor-pointer group ${
+                          quantSelectedProduct === product.id.toString() 
+                            ? 'ring-2 ring-blue-500 bg-blue-500/10' 
+                            : ''
+                        }`}
                         onClick={() => setQuantSelectedProduct(product.id.toString())}
                       >
                         <CardHeader className="pb-4">
@@ -4939,8 +4971,33 @@ const TradingPage = () => {
                     <Card className="border-0 max-w-md mx-auto">
                       <CardHeader>
                         <CardTitle className="text-foreground">Invest in Arbitrage Strategy</CardTitle>
+                        {quantSelectedProduct && (
+                          <div className="text-sm text-muted-foreground">
+                            Selected: {quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.duration} 
+                            ({quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.riskLevel} Risk)
+                          </div>
+                        )}
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        {/* Selected Product Info */}
+                        {quantSelectedProduct && (
+                          <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-200">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-semibold text-blue-600">
+                                {quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.duration}
+                              </span>
+                              <Badge className={getQuantRiskColor(quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.riskLevel || 'Low')}>
+                                {quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.riskLevel}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-blue-600 space-y-1">
+                              <div>Daily Income: {quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.dailyIncomeRange}</div>
+                              <div>Total Return: {quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.totalReturn}</div>
+                              <div>Investment Range: {quantArbitrageProducts.find(p => p.id.toString() === quantSelectedProduct)?.investmentRange}</div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="space-y-2">
                           <Label htmlFor="quant-amount">Investment Amount (USDT)</Label>
                           <Input
