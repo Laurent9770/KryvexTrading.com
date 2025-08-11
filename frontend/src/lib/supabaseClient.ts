@@ -1,31 +1,50 @@
 import { createClient } from '@supabase/supabase-js';
 
 // =============================================
-// MINIMAL SUPABASE CLIENT SETUP
+// LAZY SUPABASE CLIENT INITIALIZATION
 // =============================================
 
-// Get environment variables directly
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+let supabaseInstance: any = null;
 
-// Validate environment variables
-if (!supabaseUrl) {
-  throw new Error('VITE_SUPABASE_URL is not defined');
-}
+const createSupabaseClient = () => {
+  // Get environment variables directly
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseAnonKey) {
-  throw new Error('VITE_SUPABASE_ANON_KEY is not defined');
-}
+  // Validate environment variables
+  if (!supabaseUrl) {
+    throw new Error('VITE_SUPABASE_URL is not defined');
+  }
 
-// Log environment status
-console.log('🔍 Environment Status:');
-console.log('Mode:', import.meta.env.MODE);
-console.log('Supabase URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
-console.log('Supabase Key:', supabaseAnonKey ? `✓ Set (${supabaseAnonKey.length} chars)` : '✗ Missing');
+  if (!supabaseAnonKey) {
+    throw new Error('VITE_SUPABASE_ANON_KEY is not defined');
+  }
 
-// Create Supabase client with absolutely minimal configuration
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  // Log environment status
+  console.log('🔍 Environment Status:');
+  console.log('Mode:', import.meta.env.MODE);
+  console.log('Supabase URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
+  console.log('Supabase Key:', supabaseAnonKey ? `✓ Set (${supabaseAnonKey.length} chars)` : '✗ Missing');
 
-console.log('✅ Supabase client created successfully');
+  try {
+    // Create Supabase client with absolutely minimal configuration
+    const client = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase client created successfully');
+    return client;
+  } catch (error) {
+    console.error('❌ Failed to create Supabase client:', error);
+    throw error;
+  }
+};
+
+// Create a proxy that maintains the same interface
+const supabase = new Proxy({}, {
+  get(target, prop) {
+    if (!supabaseInstance) {
+      supabaseInstance = createSupabaseClient();
+    }
+    return supabaseInstance[prop];
+  }
+});
 
 export default supabase;
