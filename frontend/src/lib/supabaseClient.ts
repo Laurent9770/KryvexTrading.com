@@ -1,57 +1,52 @@
 import { createClient } from '@supabase/supabase-js';
 
 // =============================================
-// FINAL COMPREHENSIVE SUPABASE CLIENT INITIALIZATION
+// VERIFIED SUPABASE CLIENT INITIALIZATION
 // =============================================
 
-// Enhanced environment variable validation with detailed logging
-const getEnvironmentVariables = () => {
+// Step 1: Verify Environment Variable Access
+const verifyEnvironmentVariables = () => {
+  console.log('🔍 VERIFYING ENVIRONMENT VARIABLES:');
+  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+  console.log('Supabase Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
+  
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  console.log('🔍 FINAL ENVIRONMENT VARIABLES CHECK:');
-  console.log('Mode:', import.meta.env.MODE);
-  console.log('Supabase URL:', supabaseUrl ? `✓ Set (${supabaseUrl.length} chars)` : '✗ Missing');
-  console.log('Supabase Key:', supabaseAnonKey ? `✓ Set (${supabaseAnonKey.length} chars)` : '✗ Missing');
-
-  // Validate environment variables
-  if (!supabaseUrl) {
-    throw new Error('VITE_SUPABASE_URL is not defined. Please check your .env file and deployment configuration.');
+  
+  // Validate that variables are actually defined and not undefined strings
+  if (!supabaseUrl || supabaseUrl === 'undefined' || supabaseUrl === '') {
+    throw new Error('VITE_SUPABASE_URL is not properly defined. Check your .env file and deployment configuration.');
   }
-
-  if (!supabaseAnonKey) {
-    throw new Error('VITE_SUPABASE_ANON_KEY is not defined. Please check your .env file and deployment configuration.');
+  
+  if (!supabaseAnonKey || supabaseAnonKey === 'undefined' || supabaseAnonKey === '') {
+    throw new Error('VITE_SUPABASE_ANON_KEY is not properly defined. Check your .env file and deployment configuration.');
   }
-
+  
   // Validate URL format
   try {
     new URL(supabaseUrl);
   } catch (error) {
     throw new Error(`Invalid VITE_SUPABASE_URL format: ${supabaseUrl}`);
   }
-
+  
   // Validate key format (should be a JWT starting with eyJ)
   if (!supabaseAnonKey.startsWith('eyJ')) {
     throw new Error('Invalid VITE_SUPABASE_ANON_KEY format. Should be a JWT token starting with "eyJ".');
   }
-
-  // Check for common deployment issues
-  if (supabaseUrl.includes('undefined') || supabaseAnonKey.includes('undefined')) {
-    throw new Error('Environment variables contain "undefined" - check your deployment platform configuration.');
-  }
-
+  
+  console.log('✅ Environment variables verified successfully');
   return { supabaseUrl, supabaseAnonKey };
 };
 
-// Create Supabase client with comprehensive error handling
+// Step 2: Ensure Correct Supabase Client Initialization
 let supabase: any = null;
 
 try {
-  const { supabaseUrl, supabaseAnonKey } = getEnvironmentVariables();
+  console.log('🔐 INITIALIZING SUPABASE CLIENT...');
   
-  console.log('🔐 Creating Supabase client...');
+  const { supabaseUrl, supabaseAnonKey } = verifyEnvironmentVariables();
   
-  // Create client with proper configuration to avoid headers issues
+  // Create client with explicit configuration to prevent headers issues
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
@@ -60,17 +55,24 @@ try {
     },
     db: {
       schema: 'public'
+    },
+    // Explicitly set headers to prevent undefined headers error
+    global: {
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Client-Info': 'kryvex-trading-platform'
+      }
     }
   });
   
-  console.log('✅ Supabase client created successfully');
+  console.log('✅ Supabase client created successfully with explicit headers configuration');
   
-  // Test the connection immediately with comprehensive error detection
+  // Step 3: Test the connection immediately
   (async () => {
     try {
       console.log('🔍 Testing Supabase connection...');
       
-      // Test basic query to check Data API and RLS policies
+      // Test basic query to verify everything works
       const { data, error } = await supabase.from('profiles').select('count').limit(1);
       
       if (error) {
@@ -108,6 +110,7 @@ try {
       console.error('2. Verify environment variables are loaded in your deployment platform');
       console.error('3. Ensure Data API is enabled in Supabase Settings → API');
       console.error('4. Create RLS policies for tables you\'re accessing');
+      console.error('5. Check that environment variables are not "undefined" strings');
       
       return {
         select: () => ({ 
