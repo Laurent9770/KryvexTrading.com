@@ -691,6 +691,224 @@ class SupabaseTradingService {
   }
 
   // =============================================
+  // ADMIN FUNCTIONS
+  // =============================================
+
+  async getActiveTrades(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      console.log('📊 Admin: Fetching active trades...');
+      
+      const { data, error } = await supabase
+        .from('spot_trades')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email
+          )
+        `)
+        .in('status', ['running'])
+        .order('start_time', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching active trades:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Active trades fetched successfully:', data?.length);
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Unexpected error fetching active trades:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async getTradingFeatures(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      console.log('📊 Admin: Fetching trading features...');
+      
+      // For now, return mock data since we don't have a trading_features table
+      const mockFeatures = [
+        {
+          id: 'spot-trading',
+          name: 'Spot Trading',
+          type: 'spot',
+          is_enabled: true,
+          min_investment: 10,
+          max_investment: 10000,
+          roi_percentage: 5,
+          duration_minutes: 5,
+          risk_level: 'medium'
+        },
+        {
+          id: 'futures-trading',
+          name: 'Futures Trading',
+          type: 'futures',
+          is_enabled: true,
+          min_investment: 50,
+          max_investment: 50000,
+          roi_percentage: 3,
+          duration_minutes: 10,
+          risk_level: 'high'
+        },
+        {
+          id: 'binary-options',
+          name: 'Binary Options',
+          type: 'binary',
+          is_enabled: true,
+          min_investment: 5,
+          max_investment: 5000,
+          roi_percentage: 85,
+          duration_minutes: 1,
+          risk_level: 'high'
+        },
+        {
+          id: 'options-trading',
+          name: 'Options Trading',
+          type: 'options',
+          is_enabled: true,
+          min_investment: 25,
+          max_investment: 25000,
+          roi_percentage: 10,
+          duration_minutes: 15,
+          risk_level: 'medium'
+        },
+        {
+          id: 'quant-trading',
+          name: 'Quant Trading',
+          type: 'quant',
+          is_enabled: true,
+          min_investment: 1000,
+          max_investment: 100000,
+          roi_percentage: 2,
+          duration_minutes: 1440,
+          risk_level: 'low'
+        }
+      ];
+
+      console.log('✅ Trading features fetched successfully:', mockFeatures.length);
+      return { success: true, data: mockFeatures };
+    } catch (error) {
+      console.error('❌ Unexpected error fetching trading features:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async forceTradeOutcome(tradeId: string, outcome: 'win' | 'lose', adminEmail: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log(`📊 Admin: Forcing trade outcome for ${tradeId} to ${outcome}`);
+      
+      // Get the trade first
+      const { data: trade, error: fetchError } = await supabase
+        .from('spot_trades')
+        .select('*')
+        .eq('id', tradeId)
+        .single();
+
+      if (fetchError || !trade) {
+        console.error('❌ Error fetching trade:', fetchError);
+        return { success: false, error: 'Trade not found' };
+      }
+
+      // Calculate payout based on outcome
+      const payout = outcome === 'win' ? trade.amount * (1 + trade.profit_percentage / 100) : 0;
+
+      // Update the trade
+      const { data: updatedTrade, error: updateError } = await supabase
+        .from('spot_trades')
+        .update({
+          status: 'completed',
+          outcome: 'admin_override',
+          admin_override: outcome,
+          payout: payout,
+          end_time: new Date().toISOString()
+        })
+        .eq('id', tradeId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Error updating trade:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      // Log admin action
+      await this.logAdminAction({
+        admin_email: adminEmail,
+        action_type: 'force_trade_outcome',
+        target_table: 'spot_trades',
+        target_id: tradeId,
+        description: `Admin ${adminEmail} forced trade ${tradeId} outcome to ${outcome}`,
+        old_values: { outcome: trade.outcome, status: trade.status },
+        new_values: { outcome: 'admin_override', status: 'completed', admin_override: outcome }
+      });
+
+      console.log('✅ Trade outcome forced successfully');
+      return { success: true, data: updatedTrade };
+    } catch (error) {
+      console.error('❌ Unexpected error forcing trade outcome:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async updateTradingFeature(featureId: string, updates: any): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log(`📊 Admin: Updating trading feature ${featureId}`);
+      
+      // For now, just log the update since we don't have a trading_features table
+      console.log('Feature update:', { featureId, updates });
+
+      // Log admin action
+      await this.logAdminAction({
+        admin_email: 'admin@kryvex.com',
+        action_type: 'update_trading_feature',
+        target_table: 'trading_features',
+        target_id: featureId,
+        description: `Admin updated trading feature ${featureId}`,
+        old_values: {},
+        new_values: updates
+      });
+
+      console.log('✅ Trading feature updated successfully');
+      return { success: true, data: { id: featureId, ...updates } };
+    } catch (error) {
+      console.error('❌ Unexpected error updating trading feature:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  private async logAdminAction(actionData: {
+    admin_email: string;
+    action_type: string;
+    target_table?: string;
+    target_id?: string;
+    description: string;
+    old_values?: any;
+    new_values?: any;
+  }) {
+    try {
+      const { error } = await supabase
+        .from('admin_actions')
+        .insert({
+          admin_email: actionData.admin_email,
+          action_type: actionData.action_type,
+          target_table: actionData.target_table,
+          target_id: actionData.target_id,
+          description: actionData.description,
+          old_values: actionData.old_values,
+          new_values: actionData.new_values,
+          created_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error logging admin action:', error);
+      }
+    } catch (error) {
+      console.error('Error logging admin action:', error);
+    }
+  }
+
+  // =============================================
   // CLEANUP
   // =============================================
 

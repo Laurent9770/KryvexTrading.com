@@ -312,6 +312,42 @@ async function checkIfAdmin(): Promise<boolean> {
   return role === 'admin';
 }
 
+// Helper - Log admin actions for audit trail
+async function logAdminAction(actionData: {
+  admin_id: string;
+  action_type: string;
+  target_user_id?: string;
+  target_table?: string;
+  target_id?: string;
+  old_values?: any;
+  new_values?: any;
+  description: string;
+  ip_address?: string;
+}) {
+  try {
+    const { error } = await supabase
+      .from('admin_actions')
+      .insert({
+        admin_id: actionData.admin_id,
+        action_type: actionData.action_type,
+        target_user_id: actionData.target_user_id,
+        target_table: actionData.target_table,
+        target_id: actionData.target_id,
+        old_values: actionData.old_values,
+        new_values: actionData.new_values,
+        description: actionData.description,
+        ip_address: actionData.ip_address || 'admin-panel',
+        created_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Error logging admin action:', error);
+    }
+  } catch (error) {
+    console.error('Error logging admin action:', error);
+  }
+}
+
 // Create Withdrawal Request
 export async function createWithdrawalRequest(withdrawalData: {
   amount: number;
@@ -610,7 +646,15 @@ export async function completeWithdrawal(withdrawalId: string, txHash: string, a
 }
 
 // Fund User Wallet (admin function)
-export async function fundUserWallet(userId: string, amount: number, currency: string, remarks?: string) {
+export async function fundUserWallet(
+  userId: string, 
+  username: string, 
+  walletType: 'funding' | 'trading', 
+  amount: number, 
+  currency: string, 
+  adminEmail: string, 
+  remarks?: string
+) {
   try {
     const isAdmin = await checkIfAdmin();
     if (!isAdmin) throw new Error('Unauthorized: Admin access required');
@@ -627,23 +671,34 @@ export async function fundUserWallet(userId: string, amount: number, currency: s
 
     if (profileError) throw profileError;
 
-    // Update funding wallet balance
-    const currentFundingWallet = profile.funding_wallet || {};
-    const currentBalance = currentFundingWallet[currency] || 0;
+    // Update the appropriate wallet based on walletType
+    const currentWallet = walletType === 'funding' 
+      ? (profile.funding_wallet || {})
+      : (profile.trading_wallet || {});
+    
+    const currentBalance = currentWallet[currency] || 0;
     const newBalance = currentBalance + amount;
 
-    const updatedFundingWallet = {
-      ...currentFundingWallet,
+    const updatedWallet = {
+      ...currentWallet,
       [currency]: newBalance
     };
+
+    // Prepare update object based on wallet type
+    const updateData: any = {
+      account_balance: profile.account_balance + amount
+    };
+
+    if (walletType === 'funding') {
+      updateData.funding_wallet = updatedWallet;
+    } else {
+      updateData.trading_wallet = updatedWallet;
+    }
 
     // Update profile with new balance
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
-        funding_wallet: updatedFundingWallet,
-        account_balance: profile.account_balance + amount
-      })
+      .update(updateData)
       .eq('user_id', userId);
 
     if (updateError) throw updateError;
@@ -654,22 +709,34 @@ export async function fundUserWallet(userId: string, amount: number, currency: s
       .insert({
         user_id: userId,
         action: 'admin_fund',
-        wallet_type: 'funding',
+        wallet_type: walletType,
         amount: amount,
         asset: currency,
         status: 'completed',
-        remarks: remarks || 'Funded by admin',
-        admin_email: user.email,
+        remarks: remarks || `Funded by admin (${walletType} wallet)`,
+        admin_email: adminEmail,
         balance: newBalance,
         created_at: new Date().toISOString()
       });
 
     if (transactionError) throw transactionError;
 
+    // Log admin action for audit trail
+    await logAdminAction({
+      admin_id: user.id,
+      action_type: 'wallet_fund',
+      target_user_id: userId,
+      target_table: 'profiles',
+      description: `Admin ${adminEmail} funded ${amount} ${currency} to ${username}'s ${walletType} wallet`,
+      old_values: { [walletType]: currentWallet },
+      new_values: { [walletType]: updatedWallet },
+      ip_address: 'admin-panel'
+    });
+
     return {
       success: true,
       newBalance: newBalance,
-      message: `Successfully funded ${amount} ${currency} to user wallet`
+      message: `Successfully funded ${amount} ${currency} to user's ${walletType} wallet`
     };
   } catch (error) {
     console.error('Error funding user wallet:', error);
@@ -682,7 +749,15 @@ export async function fundUserWallet(userId: string, amount: number, currency: s
 }
 
 // Deduct From User Wallet (admin function)
-export async function deductFromWallet(userId: string, amount: number, currency: string, remarks?: string) {
+export async function deductFromWallet(
+  userId: string, 
+  username: string, 
+  walletType: 'funding' | 'trading', 
+  amount: number, 
+  currency: string, 
+  adminEmail: string, 
+  remarks?: string
+) {
   try {
     const isAdmin = await checkIfAdmin();
     if (!isAdmin) throw new Error('Unauthorized: Admin access required');
@@ -699,28 +774,39 @@ export async function deductFromWallet(userId: string, amount: number, currency:
 
     if (profileError) throw profileError;
 
-    // Check if user has sufficient balance
-    const currentFundingWallet = profile.funding_wallet || {};
-    const currentBalance = currentFundingWallet[currency] || 0;
+    // Check if user has sufficient balance in the appropriate wallet
+    const currentWallet = walletType === 'funding' 
+      ? (profile.funding_wallet || {})
+      : (profile.trading_wallet || {});
+    
+    const currentBalance = currentWallet[currency] || 0;
 
     if (currentBalance < amount) {
-      throw new Error(`Insufficient balance. Current: ${currentBalance} ${currency}, Required: ${amount} ${currency}`);
+      throw new Error(`Insufficient balance in ${walletType} wallet. Current: ${currentBalance} ${currency}, Required: ${amount} ${currency}`);
     }
 
     const newBalance = currentBalance - amount;
 
-    const updatedFundingWallet = {
-      ...currentFundingWallet,
+    const updatedWallet = {
+      ...currentWallet,
       [currency]: newBalance
     };
+
+    // Prepare update object based on wallet type
+    const updateData: any = {
+      account_balance: profile.account_balance - amount
+    };
+
+    if (walletType === 'funding') {
+      updateData.funding_wallet = updatedWallet;
+    } else {
+      updateData.trading_wallet = updatedWallet;
+    }
 
     // Update profile with new balance
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
-        funding_wallet: updatedFundingWallet,
-        account_balance: profile.account_balance - amount
-      })
+      .update(updateData)
       .eq('user_id', userId);
 
     if (updateError) throw updateError;
@@ -731,22 +817,34 @@ export async function deductFromWallet(userId: string, amount: number, currency:
       .insert({
         user_id: userId,
         action: 'admin_deduct',
-        wallet_type: 'funding',
+        wallet_type: walletType,
         amount: amount,
         asset: currency,
         status: 'completed',
-        remarks: remarks || 'Deducted by admin',
-        admin_email: user.email,
+        remarks: remarks || `Deducted by admin (${walletType} wallet)`,
+        admin_email: adminEmail,
         balance: newBalance,
         created_at: new Date().toISOString()
       });
 
     if (transactionError) throw transactionError;
 
+    // Log admin action for audit trail
+    await logAdminAction({
+      admin_id: user.id,
+      action_type: 'wallet_deduct',
+      target_user_id: userId,
+      target_table: 'profiles',
+      description: `Admin ${adminEmail} deducted ${amount} ${currency} from ${username}'s ${walletType} wallet`,
+      old_values: { [walletType]: currentWallet },
+      new_values: { [walletType]: updatedWallet },
+      ip_address: 'admin-panel'
+    });
+
     return {
       success: true,
       newBalance: newBalance,
-      message: `Successfully deducted ${amount} ${currency} from user wallet`
+      message: `Successfully deducted ${amount} ${currency} from user's ${walletType} wallet`
     };
   } catch (error) {
     console.error('Error deducting from user wallet:', error);

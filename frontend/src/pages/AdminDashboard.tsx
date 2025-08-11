@@ -46,7 +46,7 @@ import AdminKYCVerification from '@/components/AdminKYCVerification';
 import AdminAuditTrail from '@/components/AdminAuditTrail';
 import AdminDepositManager from '@/components/AdminDepositManager';
 
-import AdminTradingControl from '@/components/AdminTradingControl';
+import AdminTradeControl from '@/components/AdminTradeControl';
 import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
 import AdminWalletManager from '@/components/AdminWalletManager';
 import { AdminRoomManagement } from '@/components/AdminRoomManagement';
@@ -1101,9 +1101,9 @@ export default function AdminDashboard() {
             <AdminUserManagement />
           </TabsContent>
 
-          <TabsContent value="trading-control">
-            <AdminTradingControl />
-          </TabsContent>
+                        <TabsContent value="trading-control">
+                <AdminTradeControl />
+              </TabsContent>
 
           <TabsContent value="rooms">
             <AdminRoomManagement />
