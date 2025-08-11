@@ -1,138 +1,171 @@
--- CREATE ADMIN USER SCRIPT
--- This script creates the admin user account with the specified password
+-- CREATE ADMIN USER AND FIX ALL ISSUES
+-- Run this in your Supabase SQL Editor
 
--- 1. Create the admin user in auth.users (if it doesn't exist)
--- Note: This will create the user with the specified password
+-- 1. First, let's check if the admin user already exists
+SELECT 'Checking existing users' as step, 
+       COUNT(*) as user_count 
+FROM auth.users 
+WHERE email = 'admin@kryvex.com';
+
+-- 2. Create the admin user in auth.users table
 DO $$
 DECLARE
-    admin_user_id UUID;
-    user_exists BOOLEAN;
+    admin_user_id uuid;
 BEGIN
-    -- Check if user already exists
-    SELECT EXISTS(SELECT 1 FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com') INTO user_exists;
+    -- Check if admin user already exists
+    SELECT id INTO admin_user_id
+    FROM auth.users
+    WHERE email = 'admin@kryvex.com';
     
-    IF NOT user_exists THEN
-        -- Create user in auth.users
+    -- If admin user doesn't exist, create it
+    IF admin_user_id IS NULL THEN
         INSERT INTO auth.users (
-            instance_id,
             id,
-            aud,
-            role,
             email,
             encrypted_password,
             email_confirmed_at,
-            recovery_sent_at,
-            last_sign_in_at,
-            raw_app_meta_data,
-            raw_user_meta_data,
             created_at,
             updated_at,
+            raw_app_meta_data,
+            raw_user_meta_data,
+            is_super_admin,
             confirmation_token,
             email_change,
             email_change_token_new,
             recovery_token
         ) VALUES (
-            '00000000-0000-0000-0000-000000000000', -- default instance_id
-            gen_random_uuid(), -- generate new UUID
-            'authenticated',
-            'authenticated',
-            'jeanlaurentkoterumutima@gmail.com',
-            crypt('Kotera@123', gen_salt('bf')), -- encrypt the password
-            NOW(), -- email confirmed
-            NULL,
-            NULL,
+            gen_random_uuid(),
+            'admin@kryvex.com',
+            crypt('Kryvex.@123', gen_salt('bf')),
+            now(),
+            now(),
+            now(),
             '{"provider": "email", "providers": ["email"]}',
-            '{"full_name": "Jean Laurent Koterumutima", "first_name": "Jean Laurent", "last_name": "Koterumutima"}',
-            NOW(),
-            NOW(),
+            '{"full_name": "System Administrator"}',
+            false,
             '',
             '',
             '',
             ''
-        ) RETURNING id INTO admin_user_id;
+        );
         
-        RAISE NOTICE '✅ New admin user created with ID: %', admin_user_id;
+        -- Get the newly created user ID
+        SELECT id INTO admin_user_id
+        FROM auth.users
+        WHERE email = 'admin@kryvex.com';
+        
+        RAISE NOTICE 'Admin user created with ID: %', admin_user_id;
     ELSE
-        -- User already exists, get the ID
-        SELECT id INTO admin_user_id FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com';
-        RAISE NOTICE 'ℹ️ Admin user already exists with ID: %', admin_user_id;
+        RAISE NOTICE 'Admin user already exists with ID: %', admin_user_id;
     END IF;
     
-    -- Set up profile and role for the user
-    IF admin_user_id IS NOT NULL THEN
-        -- Create user profile
-        INSERT INTO public.profiles (
-            id,
-            user_id,
-            email,
-            full_name,
-            phone,
-            country,
-            kyc_status,
-            account_status,
-            created_at,
-            updated_at
-        ) VALUES (
-            admin_user_id,
-            admin_user_id,
-            'jeanlaurentkoterumutima@gmail.com',
-            'Jean Laurent Koterumutima',
-            NULL,
-            NULL,
-            'approved',
-            'active',
-            NOW(),
-            NOW()
-        ) ON CONFLICT (user_id) DO NOTHING;
-        
-        -- Create admin role
-        INSERT INTO public.user_roles (
-            user_id,
-            role
-        ) VALUES (
-            admin_user_id,
-            'admin'
-        ) ON CONFLICT (user_id, role) DO NOTHING;
-        
-        -- Create initial wallet balance
-        INSERT INTO public.wallet_balances (
-            user_id,
-            currency,
-            balance,
-            available_balance,
-            locked_balance,
-            created_at,
-            updated_at
-        ) VALUES (
-            admin_user_id,
-            'USDT',
-            10000.00, -- Starting balance
-            10000.00,
-            0.00,
-            NOW(),
-            NOW()
-        ) ON CONFLICT (user_id, currency) DO NOTHING;
-        
-        RAISE NOTICE '✅ Admin user setup completed!';
-        RAISE NOTICE '📧 Email: jeanlaurentkoterumutima@gmail.com';
-        RAISE NOTICE '🔑 Password: Kotera@123';
-        RAISE NOTICE '👑 Role: admin';
-        RAISE NOTICE '💰 Initial USDT: 10,000';
-    ELSE
-        RAISE NOTICE '❌ Failed to create admin user';
-    END IF;
+    -- 3. Create profile for admin user
+    INSERT INTO public.profiles (
+        user_id,
+        email,
+        full_name,
+        phone,
+        country,
+        account_balance,
+        is_verified,
+        kyc_status,
+        account_status,
+        funding_wallet,
+        trading_wallet,
+        created_at,
+        updated_at
+    ) VALUES (
+        admin_user_id,
+        'admin@kryvex.com',
+        'System Administrator',
+        '+1234567890',
+        'United States',
+        10000.00,
+        true,
+        'approved',
+        'active',
+        10000.00,
+        10000.00,
+        now(),
+        now()
+    ) ON CONFLICT (user_id) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        is_verified = EXCLUDED.is_verified,
+        kyc_status = EXCLUDED.kyc_status,
+        account_status = EXCLUDED.account_status,
+        funding_wallet = EXCLUDED.funding_wallet,
+        trading_wallet = EXCLUDED.trading_wallet,
+        updated_at = now();
+    
+    -- 4. Assign admin role
+    DELETE FROM public.user_roles
+    WHERE user_id = admin_user_id;
+    
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (admin_user_id, 'admin')
+    ON CONFLICT (user_id, role) DO NOTHING;
+    
+    RAISE NOTICE 'Admin profile and role created successfully';
+    
 END $$;
 
--- 2. Verify the user was created
-SELECT 
-    'Admin user verification' as status,
-    u.email,
-    u.email_confirmed_at,
-    p.kyc_status,
-    ur.role,
-    wb.balance as usdt_balance
-FROM auth.users u
-LEFT JOIN public.profiles p ON u.id = p.user_id
-LEFT JOIN public.user_roles ur ON u.id = ur.user_id
-LEFT JOIN public.wallet_balances wb ON u.id = wb.user_id AND wb.currency = 'USDT'
-WHERE u.email = 'jeanlaurentkoterumutima@gmail.com';
+-- 5. Verify the setup
+SELECT 'Verification Results' as check_type;
+
+SELECT 'Admin user in auth.users' as table_name,
+       id,
+       email,
+       created_at
+FROM auth.users
+WHERE email = 'admin@kryvex.com';
+
+SELECT 'Admin profile in public.profiles' as table_name,
+       user_id,
+       email,
+       full_name,
+       kyc_status,
+       account_status,
+       funding_wallet,
+       trading_wallet
+FROM public.profiles
+WHERE email = 'admin@kryvex.com';
+
+SELECT 'Admin role in public.user_roles' as table_name,
+       user_id,
+       role
+FROM public.user_roles
+WHERE user_id IN (
+    SELECT id FROM auth.users WHERE email = 'admin@kryvex.com'
+);
+
+-- 6. Test the has_role function
+SELECT 'has_role function test' as test_type,
+       public.has_role(
+           (SELECT id FROM auth.users WHERE email = 'admin@kryvex.com'),
+           'admin'
+       ) as is_admin;
+
+-- 7. Create some sample data for testing
+INSERT INTO public.trading_pairs (symbol, base_currency, quote_currency, current_price, price_change_24h, volume_24h, is_active) VALUES
+  ('BTC/USDT', 'BTC', 'USDT', 50000.00, 2.5, 1000000.00, true),
+  ('ETH/USDT', 'ETH', 'USDT', 3000.00, 1.8, 500000.00, true),
+  ('ADA/USDT', 'ADA', 'USDT', 0.50, -1.2, 100000.00, true),
+  ('DOT/USDT', 'DOT', 'USDT', 20.00, 3.1, 200000.00, true),
+  ('LINK/USDT', 'LINK', 'USDT', 15.00, 0.8, 150000.00, true)
+ON CONFLICT (symbol) DO UPDATE SET
+  current_price = EXCLUDED.current_price,
+  price_change_24h = EXCLUDED.price_change_24h,
+  volume_24h = EXCLUDED.volume_24h,
+  updated_at = NOW();
+
+-- 8. Final verification
+SELECT 'Final Setup Summary' as summary,
+       (SELECT COUNT(*) FROM auth.users WHERE email = 'admin@kryvex.com') as admin_users_count,
+       (SELECT COUNT(*) FROM public.profiles WHERE email = 'admin@kryvex.com') as admin_profiles_count,
+       (SELECT COUNT(*) FROM public.user_roles WHERE role = 'admin') as admin_roles_count,
+       (SELECT COUNT(*) FROM public.trading_pairs) as trading_pairs_count;
+
+-- 9. Show admin credentials
+SELECT 'Admin Login Credentials' as info,
+       'admin@kryvex.com' as email,
+       'Kryvex.@123' as password;
