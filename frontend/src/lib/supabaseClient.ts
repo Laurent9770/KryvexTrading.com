@@ -93,24 +93,8 @@ const initializeSupabaseClient = () => {
   try {
     console.log('🔐 Creating Supabase client...');
     
-    // Create client with explicit options to avoid headers issues
-    supabase = createClient(env.config.supabaseUrl, env.config.supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      },
-      realtime: {
-        params: {
-          eventsPerSecond: 10
-        }
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'kryvex-trading-platform'
-        }
-      }
-    });
+    // Create client with no configuration to avoid headers issues
+    supabase = createClient(env.config.supabaseUrl, env.config.supabaseAnonKey);
 
     console.log('✅ Supabase client created successfully');
     
