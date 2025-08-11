@@ -127,23 +127,47 @@ export default function AdminDashboard() {
 
   // Additional security check - redirect if not admin
   useEffect(() => {
-    const hasAdminAccess = checkAdminAccess();
-    if (!hasAdminAccess) {
-      console.warn('Unauthorized access attempt to admin dashboard by:', user?.email);
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access the admin dashboard.",
-        variant: "destructive"
-      });
-      navigate('/');
-      return;
+    // Add a small delay to ensure auth state is fully loaded
+    const checkAccess = () => {
+      console.log('🔍 Admin access check - User:', user?.email, 'isAdmin:', isAdmin, 'isAuthenticated:', isAuthenticated);
+      
+      const hasAdminAccess = checkAdminAccess();
+      console.log('🔍 checkAdminAccess() result:', hasAdminAccess);
+      
+      if (!hasAdminAccess) {
+        console.warn('❌ Unauthorized access attempt to admin dashboard by:', user?.email);
+        console.warn('❌ Auth state - isAdmin:', isAdmin, 'isAuthenticated:', isAuthenticated);
+        
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to access the admin dashboard.",
+          variant: "destructive"
+        });
+        navigate('/');
+        return;
+      }
+      
+      console.log('✅ Admin dashboard access granted for:', user?.email);
+    };
+
+    // Check immediately if we have the data
+    if (user && isAuthenticated) {
+      checkAccess();
+    } else {
+      // Wait a bit for auth state to load
+      const timer = setTimeout(checkAccess, 500);
+      return () => clearTimeout(timer);
     }
-    
-    console.log('Admin dashboard accessed by:', user?.email);
   }, [user, isAuthenticated, isAdmin, checkAdminAccess, navigate, toast]);
 
-  // Don't render anything if not admin
-  if (!isAuthenticated || !isAdmin) {
+  // Don't render anything if not admin - but add better logging
+  if (!isAuthenticated) {
+    console.log('❌ Not authenticated, redirecting to home');
+    return <Navigate to="/" replace />;
+  }
+  
+  if (!isAdmin) {
+    console.log('❌ Not admin, redirecting to home. User:', user?.email, 'isAdmin:', isAdmin);
     return <Navigate to="/" replace />;
   }
   
