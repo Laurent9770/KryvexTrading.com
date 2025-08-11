@@ -121,35 +121,32 @@ class SupabaseAuthService {
     try {
       console.log('🔍 Processing user session for:', user.email);
       
-      // For mock client, we'll create a simple user profile
-      // In a real implementation, this would query the database
+      // Query the profiles table for user data
       let userProfile = null;
       let profileError = null;
       
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('user_id', user.id)
           .single();
         
         userProfile = data;
         profileError = error;
+        
+        if (error) {
+          console.error('❌ Failed to load user profile:', error);
+          // Don't create mock data - fail authentication if profile not found
+          throw new Error('User profile not found');
+        }
       } catch (error) {
-        console.log('ℹ️ Using mock user profile (database query failed)');
-        // Create a mock profile for development
-        userProfile = {
-          id: user.id,
-          first_name: user.email.split('@')[0],
-          last_name: '',
-          phone: '',
-          kyc_status: 'unverified',
-          created_at: user.created_at,
-          updated_at: user.updated_at
-        };
+        console.error('❌ Error loading user profile:', error);
+        // Don't create mock data - fail authentication
+        throw new Error('Failed to load user profile');
       }
 
-      // Get user role with fallback
+      // Get user role from database
       let isAdmin = false;
       try {
         const { data: roleData, error: roleError } = await supabase
@@ -159,37 +156,31 @@ class SupabaseAuthService {
           .single();
 
         if (roleError) {
-          console.log('ℹ️ Using fallback admin check');
-          // Fallback: check if user email is admin (for development)
-          isAdmin = user.email?.toLowerCase().includes('admin') || 
-                   user.email?.toLowerCase().includes('kryvex') ||
-                   user.email === 'jeanlaurentkoterumutima@gmail.com'; // Your email
+          console.error('❌ Failed to load user role:', roleError);
+          // Default to non-admin if role not found
+          isAdmin = false;
         } else {
           isAdmin = roleData?.role === 'admin';
         }
       } catch (error) {
-        console.log('ℹ️ Role check failed, using fallback admin check');
-        // Fallback: check if user email is admin (for development)
-        isAdmin = user.email?.toLowerCase().includes('admin') || 
-                 user.email?.toLowerCase().includes('kryvex') ||
-                 user.email === 'jeanlaurentkoterumutima@gmail.com'; // Your email
+        console.error('❌ Error loading user role:', error);
+        // Default to non-admin if role check fails
+        isAdmin = false;
       }
 
-      // Create AuthUser object
+      // Create AuthUser object from real profile data
       const authUser: AuthUser = {
         id: user.id,
         email: user.email,
-        fullName: userProfile?.first_name && userProfile?.last_name ? 
-          `${userProfile.first_name} ${userProfile.last_name}` : 
-          user.user_metadata?.full_name || user.email.split('@')[0],
+        fullName: userProfile?.full_name || user.user_metadata?.full_name || user.email.split('@')[0],
         avatar: user.user_metadata?.avatar_url,
         phone: userProfile?.phone || user.user_metadata?.phone || '',
-        country: user.user_metadata?.country || '',
-        accountBalance: 1000, // Mock balance for development
-        isVerified: userProfile?.kyc_status === 'verified',
-        kycStatus: userProfile?.kyc_status || 'unverified',
+        country: userProfile?.country || user.user_metadata?.country || '',
+        accountBalance: 0, // Will be loaded from wallet service
+        isVerified: userProfile?.kyc_level1_status === 'verified',
+        kycStatus: userProfile?.kyc_level2_status || 'unverified',
         isAdmin,
-        accountStatus: 'active',
+        accountStatus: userProfile?.account_status || 'active',
         createdAt: userProfile?.created_at || user.created_at,
         updatedAt: userProfile?.updated_at || user.updated_at
       };

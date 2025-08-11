@@ -316,7 +316,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }, 200);
       }
     } else if (!isAuthenticated && !isLoading) {
-      console.log('🔄 User is not authenticated, should be on public pages');
+      console.log('🔄 User is not authenticated, redirecting to auth page');
+      
+      // Redirect unauthenticated users to auth page
+      if (window.location.pathname !== '/auth' && 
+          window.location.pathname !== '/' && 
+          !window.location.pathname.startsWith('/public')) {
+        console.log('🚫 Unauthenticated user accessing protected route, redirecting to /auth');
+        window.location.href = '/auth';
+      }
     }
   }, [isAuthenticated, isLoading, isAdmin, user?.email]);
 
@@ -659,10 +667,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Wallet persistence functions
   const saveWalletToStorage = useCallback((tradingAcc: any, fundingAcc: any) => {
     try {
-      const userId = user?.id || 'anonymous';
-      localStorage.setItem(`kryvex_trading_account_${userId}`, JSON.stringify(tradingAcc));
-      localStorage.setItem(`kryvex_funding_account_${userId}`, JSON.stringify(fundingAcc));
-      localStorage.setItem(`kryvex_wallet_last_updated_${userId}`, new Date().toISOString());
+      // Only save data if user is authenticated
+      if (!user?.id) {
+        console.warn('⚠️ Cannot save wallet data: No authenticated user');
+        return;
+      }
+      
+      localStorage.setItem(`kryvex_trading_account_${user.id}`, JSON.stringify(tradingAcc));
+      localStorage.setItem(`kryvex_funding_account_${user.id}`, JSON.stringify(fundingAcc));
+      localStorage.setItem(`kryvex_wallet_last_updated_${user.id}`, new Date().toISOString());
     } catch (error) {
       console.error('Error saving wallet to storage:', error);
     }
@@ -670,10 +683,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadWalletFromStorage = useCallback(() => {
     try {
-      const userId = user?.id || 'anonymous';
-      const savedTradingAccount = localStorage.getItem(`kryvex_trading_account_${userId}`);
-      const savedFundingAccount = localStorage.getItem(`kryvex_funding_account_${userId}`);
-      const lastUpdated = localStorage.getItem(`kryvex_wallet_last_updated_${userId}`);
+      // Only load data if user is authenticated
+      if (!user?.id) {
+        console.warn('⚠️ Cannot load wallet data: No authenticated user');
+        return false;
+      }
+      
+      const savedTradingAccount = localStorage.getItem(`kryvex_trading_account_${user.id}`);
+      const savedFundingAccount = localStorage.getItem(`kryvex_funding_account_${user.id}`);
+      const lastUpdated = localStorage.getItem(`kryvex_wallet_last_updated_${user.id}`);
 
       if (savedTradingAccount && savedFundingAccount) {
         const tradingData = JSON.parse(savedTradingAccount);
@@ -686,7 +704,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setTradingAccount(tradingData);
           setFundingAccount(fundingData);
           
-          console.log('✅ Wallet loaded from storage for user:', userId, { tradingData, fundingData, lastUpdated });
+          console.log('✅ Wallet loaded from storage for user:', user.id, { tradingData, fundingData, lastUpdated });
           return true;
         }
       }
@@ -699,8 +717,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const saveActivityFeedToStorage = useCallback((activities: ActivityItem[]) => {
     try {
-      const userId = user?.id || 'anonymous';
-      localStorage.setItem(`kryvex_activity_feed_${userId}`, JSON.stringify(activities));
+      // Only save data if user is authenticated
+      if (!user?.id) {
+        console.warn('⚠️ Cannot save activity feed: No authenticated user');
+        return;
+      }
+      
+      localStorage.setItem(`kryvex_activity_feed_${user.id}`, JSON.stringify(activities));
     } catch (error) {
       console.error('Error saving activity feed to storage:', error);
     }
@@ -708,13 +731,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadActivityFeedFromStorage = useCallback(() => {
     try {
-      const userId = user?.id || 'anonymous';
-      const savedActivities = localStorage.getItem(`kryvex_activity_feed_${userId}`);
+      // Only load data if user is authenticated
+      if (!user?.id) {
+        console.warn('⚠️ Cannot load activity feed: No authenticated user');
+        return false;
+      }
+      
+      const savedActivities = localStorage.getItem(`kryvex_activity_feed_${user.id}`);
       if (savedActivities) {
         const activities = JSON.parse(savedActivities);
         if (Array.isArray(activities)) {
           setActivityFeed(activities);
-          console.log('✅ Activity feed loaded from storage for user:', userId, activities.length, 'activities');
+          console.log('✅ Activity feed loaded from storage for user:', user.id, activities.length, 'activities');
           return true;
         }
       }
@@ -727,8 +755,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const saveTradingHistoryToStorage = useCallback((trades: any[]) => {
     try {
-      const userId = user?.id || 'anonymous';
-      localStorage.setItem(`kryvex_trading_history_${userId}`, JSON.stringify(trades));
+      // Only save data if user is authenticated
+      if (!user?.id) {
+        console.warn('⚠️ Cannot save trading history: No authenticated user');
+        return;
+      }
+      
+      localStorage.setItem(`kryvex_trading_history_${user.id}`, JSON.stringify(trades));
     } catch (error) {
       console.error('Error saving trading history to storage:', error);
     }
@@ -736,13 +769,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadTradingHistoryFromStorage = useCallback(() => {
     try {
-      const userId = user?.id || 'anonymous';
-      const savedTrades = localStorage.getItem(`kryvex_trading_history_${userId}`);
+      // Only load data if user is authenticated
+      if (!user?.id) {
+        console.warn('⚠️ Cannot load trading history: No authenticated user');
+        return false;
+      }
+      
+      const savedTrades = localStorage.getItem(`kryvex_trading_history_${user.id}`);
       if (savedTrades) {
         const trades = JSON.parse(savedTrades);
         if (Array.isArray(trades)) {
           setTradingHistory(trades);
-          console.log('✅ Trading history loaded from storage for user:', userId, trades.length, 'trades');
+          console.log('✅ Trading history loaded from storage for user:', user.id, trades.length, 'trades');
           return true;
         }
       }
@@ -758,11 +796,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setWalletError(null);
 
     try {
+      // Only initialize wallet for authenticated users
+      if (!user?.id) {
+        console.warn('⚠️ Cannot initialize wallet: No authenticated user');
+        setWalletLoading(false);
+        return;
+      }
+
       // Try to load from localStorage first
       const loadedFromStorage = loadWalletFromStorage();
       
       if (!loadedFromStorage) {
-        // If no stored data, initialize with default values
+        // If no stored data, initialize with default values for new authenticated users
         const defaultTradingAccount = {
           USDT: { balance: '1000.00000000', usdValue: '$1000.00', available: '1000.00000000' },
           BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
@@ -777,7 +822,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setFundingAccount(defaultFundingAccount);
         saveWalletToStorage(defaultTradingAccount, defaultFundingAccount);
         
-        console.log('✅ Wallet initialized with default values');
+        console.log('✅ Wallet initialized with default values for authenticated user:', user.id);
       }
 
       // Load activity feed and trading history from localStorage
@@ -798,7 +843,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setWalletLoading(false);
     }
-  }, [loadWalletFromStorage, saveWalletToStorage, loadActivityFeedFromStorage, loadTradingHistoryFromStorage]);
+  }, [user?.id, loadWalletFromStorage, saveWalletToStorage, loadActivityFeedFromStorage, loadTradingHistoryFromStorage]);
 
   const updateTradingBalance = useCallback((asset: string, amount: number, operation: 'add' | 'subtract') => {
     setTradingAccount(prev => {
