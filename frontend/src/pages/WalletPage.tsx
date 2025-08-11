@@ -32,6 +32,8 @@ const WalletPage = () => {
     tradingAccount, 
     fundingAccount, 
     realTimePrices,
+    activityFeed,
+    tradingHistory,
     updateTradingBalance, 
     updateFundingBalance, 
     addActivity 
@@ -83,14 +85,26 @@ const WalletPage = () => {
   }, [tradingAccount, fundingAccount, realTimePrices]);
 
   const getAssetBasePrice = (asset: string): number => {
-    const basePrices: { [key: string]: number } = {
-      BTC: 45000,
-      ETH: 3000,
+    // Use real-time price as base price, or fallback to reasonable defaults
+    const realTimePrice = realTimePrices[asset]?.price;
+    if (realTimePrice && realTimePrice > 0) {
+      return realTimePrice;
+    }
+    
+    // Fallback prices based on current market rates
+    const fallbackPrices: { [key: string]: number } = {
+      BTC: 67500,
+      ETH: 3200,
       USDT: 1,
-      SOL: 400,
-      ADA: 0.8
+      SOL: 150,
+      ADA: 0.5,
+      BNB: 600,
+      DOT: 7,
+      LINK: 15,
+      MATIC: 0.8,
+      UNI: 7
     };
-    return basePrices[asset] || 0;
+    return fallbackPrices[asset] || 0;
   };
 
   const handleDeposit = () => {
@@ -170,7 +184,7 @@ const WalletPage = () => {
       updateFundingBalance(usdtValue, 'add');
 
       const transferActivity = {
-        type: "wallet" as const,
+        type: "trade" as const,
         action: "TRANSFERRED_TO_FUNDING",
         description: `Transferred ${availableBalance} ${asset} to Funding Account`,
         symbol: asset,
@@ -218,7 +232,7 @@ const WalletPage = () => {
       updateTradingBalance('USDT', fundingBalance, 'add');
 
       const transferActivity = {
-        type: "wallet" as const,
+        type: "trade" as const,
         action: "TRANSFERRED_TO_TRADING",
         description: `Transferred ${fundingBalance} USDT to Trading Account`,
         symbol: "USDT",
@@ -260,14 +274,40 @@ const WalletPage = () => {
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
-  // Get real transaction data from trading engine
+  // Get real transaction data from AuthContext
   const getTransactionHistory = () => {
-    return []; // Empty array - only real transaction data will be shown
+    // Filter activity feed for wallet-related transactions
+    return activityFeed
+      .filter(activity => 
+        activity.type === 'trade' || 
+        activity.type === 'deposit' || 
+        activity.type === 'withdrawal'
+      )
+      .slice(0, 10) // Show last 10 transactions
+      .map(activity => ({
+        id: activity.id,
+        type: activity.type,
+        action: activity.description || activity.type,
+        asset: activity.currency || 'USDT',
+        amount: activity.amount?.toString() || '0',
+        time: activity.time,
+        status: 'completed' as const
+      }));
   };
 
-  // Get real deposit data - empty for now, will be populated with real data
+  // Get real deposit data from AuthContext
   const getDepositHistory = () => {
-    return []; // Empty array - only real deposit data will be shown
+    // Filter activity feed for deposit transactions
+    return activityFeed
+      .filter(activity => activity.type === 'deposit')
+      .slice(0, 5) // Show last 5 deposits
+      .map(activity => ({
+        id: activity.id,
+        amount: activity.amount?.toString() || '0',
+        asset: activity.currency || 'USDT',
+        time: activity.time,
+        status: 'completed' as const
+      }));
   };
 
   return (
