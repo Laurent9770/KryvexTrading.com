@@ -7,75 +7,95 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // Create a safe Supabase client that handles the headers error
 let supabase: any;
 
+// Check if we're in a browser environment and have proper URLs
+const isBrowser = typeof window !== 'undefined';
+const hasValidUrl = supabaseUrl && supabaseUrl.startsWith('http');
+const hasValidKey = supabaseAnonKey && supabaseAnonKey.length > 0;
+
+console.log('🔍 Environment check:', {
+  isBrowser,
+  hasValidUrl,
+  hasValidKey,
+  supabaseUrl: supabaseUrl ? 'SET' : 'MISSING',
+  supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.length} chars` : 'MISSING'
+});
+
 try {
-  // Validate environment variables
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('❌ CRITICAL ERROR: Missing Supabase environment variables');
-    console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'SET' : 'MISSING');
-    console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'MISSING');
-    
-    // Create a minimal fallback client
-    console.warn('⚠️ Creating fallback Supabase client due to missing environment variables');
-    supabase = createClient('https://placeholder.supabase.co', 'placeholder-key');
-  } else {
+  // Only try to create real client if we have valid credentials and are in browser
+  if (isBrowser && hasValidUrl && hasValidKey) {
     console.log('🔐 Initializing Supabase client...');
     console.log('🔍 Environment:', import.meta.env.MODE);
     
-    // Create the Supabase client with error handling
+    // Create the Supabase client with minimal configuration
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
-      },
-      realtime: {
-        params: {
-          eventsPerSecond: 10
-        }
       }
     });
 
     console.log('✅ Supabase client initialized successfully');
+  } else {
+    throw new Error('Invalid environment or credentials');
   }
 } catch (error) {
   console.error('❌ Error initializing Supabase client:', error);
   
-  // Create a minimal fallback client that won't cause crashes
-  console.warn('⚠️ Creating fallback Supabase client due to initialization error');
+  // Create a comprehensive mock client that includes all necessary methods
+  console.warn('⚠️ Creating comprehensive mock Supabase client');
   
-  try {
-    supabase = createClient('https://placeholder.supabase.co', 'placeholder-key');
-  } catch (fallbackError) {
-    console.error('❌ Even fallback client failed:', fallbackError);
-    
-    // Create a mock client as last resort
-    supabase = {
-      auth: {
-        getSession: async () => ({ data: { session: null }, error: null }),
-        getUser: async () => ({ data: { user: null }, error: null }),
-        signInWithPassword: async () => ({ data: { user: null, session: null }, error: { message: 'Client initialization failed' } }),
-        signUp: async () => ({ data: { user: null, session: null }, error: { message: 'Client initialization failed' } }),
-        signOut: async () => ({ error: null }),
-        onAuthStateChange: () => ({ data: { subscription: null } })
+  supabase = {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      getUser: async () => ({ data: { user: null }, error: null }),
+      signInWithPassword: async () => ({ 
+        data: { user: null, session: null }, 
+        error: { message: 'Supabase client initialization failed' } 
+      }),
+      signUp: async () => ({ 
+        data: { user: null, session: null }, 
+        error: { message: 'Supabase client initialization failed' } 
+      }),
+      signOut: async () => ({ error: null }),
+      onAuthStateChange: (callback: any) => {
+        // Return a subscription object
+        const subscription = {
+          data: { subscription: null },
+          unsubscribe: () => {}
+        };
+        return subscription;
       },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: null, error: { message: 'Client initialization failed' } }),
-            maybeSingle: () => Promise.resolve({ data: null, error: { message: 'Client initialization failed' } })
-          }),
-          insert: () => ({
-            select: () => Promise.resolve({ data: null, error: { message: 'Client initialization failed' } })
-          }),
-          update: () => ({
-            eq: () => ({
-              select: () => Promise.resolve({ data: null, error: { message: 'Client initialization failed' } })
-            })
+      getAccessToken: async () => ({ data: { access_token: null }, error: null }),
+      refreshSession: async () => ({ data: { session: null }, error: null })
+    },
+    from: (table: string) => ({
+      select: (columns?: string) => ({
+        eq: (column: string, value: any) => ({
+          single: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } }),
+          maybeSingle: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
+        }),
+        insert: (data: any) => ({
+          select: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
+        }),
+        update: (data: any) => ({
+          eq: (column: string, value: any) => ({
+            select: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
           })
+        }),
+        delete: () => ({
+          eq: (column: string, value: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
         })
       })
-    };
-  }
+    }),
+    rpc: (func: string, params?: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } }),
+    channel: (name: string) => ({
+      on: (event: string, callback: any) => ({
+        subscribe: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
+      }),
+      subscribe: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
+    })
+  };
 }
 
 export default supabase;
