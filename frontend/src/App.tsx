@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import SupabaseErrorBoundary from '@/components/SupabaseErrorBoundary';
 import SafeComponent from '@/components/SafeComponent';
 import NavbarLayout from '@/layouts/NavbarLayout';
 import NoNavbarLayout from '@/layouts/NoNavbarLayout';
@@ -75,9 +76,11 @@ const logEnvironmentStatus = () => {
 const SafeRoute = ({ children }: { children: React.ReactNode }) => {
   return (
     <SafeComponent componentName="SafeRoute">
-      <ErrorBoundary>
-        {children}
-      </ErrorBoundary>
+      <SupabaseErrorBoundary>
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+      </SupabaseErrorBoundary>
     </SafeComponent>
   );
 };

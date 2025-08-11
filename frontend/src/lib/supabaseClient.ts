@@ -1,182 +1,175 @@
 import { createClient } from '@supabase/supabase-js';
+import { validateEnvironment, logEnvironmentStatus } from './envValidation';
 
-// Polyfill for headers issue in some Supabase versions
-if (typeof globalThis !== 'undefined' && !globalThis.Headers) {
-  (globalThis as any).Headers = class Headers {
-    private headers: Map<string, string> = new Map();
-    
-    constructor(init?: any) {
-      if (init) {
-        Object.entries(init).forEach(([key, value]) => {
-          this.headers.set(key.toLowerCase(), String(value));
-        });
-      }
-    }
-    
-    append(name: string, value: string) {
-      this.headers.set(name.toLowerCase(), value);
-    }
-    
-    delete(name: string) {
-      this.headers.delete(name.toLowerCase());
-    }
-    
-    get(name: string) {
-      return this.headers.get(name.toLowerCase()) || null;
-    }
-    
-    has(name: string) {
-      return this.headers.has(name.toLowerCase());
-    }
-    
-    set(name: string, value: string) {
-      this.headers.set(name.toLowerCase(), value);
-    }
-    
-    forEach(callback: (value: string, key: string) => void) {
-      this.headers.forEach((value, key) => callback(value, key));
-    }
-  };
-}
+// =============================================
+// COMPREHENSIVE SUPABASE CLIENT INITIALIZATION
+// =============================================
 
-// Get environment variables with fallbacks
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key-here';
-
-// Create a safe Supabase client that handles the headers error
-let supabase: any;
-
-// Check if we're in a browser environment and have proper URLs
-const isBrowser = typeof window !== 'undefined';
-const hasValidUrl = supabaseUrl && supabaseUrl.startsWith('http') && !supabaseUrl.includes('your-project');
-const hasValidKey = supabaseAnonKey && supabaseAnonKey.length > 20 && !supabaseAnonKey.includes('your-anon-key');
-
-console.log('🔍 Environment check:', {
-  isBrowser,
-  hasValidUrl,
-  hasValidKey,
-  supabaseUrl: supabaseUrl ? 'SET' : 'MISSING',
-  supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.length} chars` : 'MISSING',
-  mode: import.meta.env.MODE,
-  envKeys: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-});
-
-try {
-  // Only try to create real client if we have valid credentials and are in browser
-  if (isBrowser && hasValidUrl && hasValidKey) {
-    console.log('🔐 Initializing Supabase client...');
-    console.log('🔍 URL:', supabaseUrl);
-    console.log('🔍 Key length:', supabaseAnonKey.length);
-    
-    // Try to create the client with explicit error handling
-    try {
-      // Using a more compatible approach without global headers
-      supabase = createClient(supabaseUrl, supabaseAnonKey);
-      console.log('✅ Supabase client created successfully');
-    } catch (createError) {
-      console.error('❌ Error in createClient:', createError);
-      throw createError;
-    }
-
-    // Test the connection immediately
-    const testConnection = async () => {
-      try {
-        const { data, error } = await supabase.from('profiles').select('count').limit(1);
-        if (error) {
-          console.warn('⚠️ Supabase connection test failed:', error.message);
-          return false;
+// Global polyfills for browser compatibility
+if (typeof globalThis !== 'undefined') {
+  // Headers polyfill
+  if (!globalThis.Headers) {
+    (globalThis as any).Headers = class Headers {
+      private headers: Map<string, string> = new Map();
+      
+      constructor(init?: any) {
+        if (init) {
+          Object.entries(init).forEach(([key, value]) => {
+            this.headers.set(key.toLowerCase(), String(value));
+          });
         }
-        console.log('✅ Supabase connection test successful');
-        return true;
-      } catch (testError) {
-        console.warn('⚠️ Supabase connection test error:', testError);
-        return false;
+      }
+      
+      append(name: string, value: string) {
+        this.headers.set(name.toLowerCase(), value);
+      }
+      
+      delete(name: string) {
+        this.headers.delete(name.toLowerCase());
+      }
+      
+      get(name: string) {
+        return this.headers.get(name.toLowerCase()) || null;
+      }
+      
+      has(name: string) {
+        return this.headers.has(name.toLowerCase());
+      }
+      
+      set(name: string, value: string) {
+        this.headers.set(name.toLowerCase(), value);
+      }
+      
+      forEach(callback: (value: string, key: string) => void) {
+        this.headers.forEach((value, key) => callback(value, key));
       }
     };
-
-    // Run connection test in background
-    testConnection();
-
-    console.log('✅ Supabase client initialized successfully');
-  } else {
-    console.error('❌ Invalid environment or credentials:', {
-      isBrowser,
-      hasValidUrl,
-      hasValidKey,
-      supabaseUrl: supabaseUrl?.substring(0, 20) + '...',
-      supabaseAnonKey: supabaseAnonKey?.substring(0, 10) + '...'
-    });
-    throw new Error('Invalid environment or credentials - please check your .env file');
   }
-} catch (error) {
-  console.error('❌ Error initializing Supabase client:', error);
+
+  // Request polyfill
+  if (!globalThis.Request) {
+    (globalThis as any).Request = class Request {
+      constructor(input: any, init?: any) {
+        // Basic implementation
+      }
+    };
+  }
+
+  // Response polyfill
+  if (!globalThis.Response) {
+    (globalThis as any).Response = class Response {
+      constructor(body?: any, init?: any) {
+        // Basic implementation
+      }
+    };
+  }
+}
+
+// =============================================
+// SUPABASE CLIENT CREATION
+// =============================================
+
+let supabase: any = null;
+
+const initializeSupabaseClient = () => {
+  // Validate environment
+  const env = validateEnvironment();
   
-  // Create a comprehensive mock client that includes all necessary methods
-  console.warn('⚠️ Creating comprehensive mock Supabase client');
+  // Log environment status
+  logEnvironmentStatus(env);
   
-  supabase = {
-    auth: {
-      getSession: async () => ({ data: { session: null }, error: null }),
-      getUser: async () => ({ data: { user: null }, error: null }),
-      signInWithPassword: async () => ({ 
-        data: { user: null, session: null }, 
-        error: { message: 'Supabase client initialization failed - please check your .env file' } 
-      }),
-      signUp: async () => ({ 
-        data: { user: null, session: null }, 
-        error: { message: 'Supabase client initialization failed - please check your .env file' } 
-      }),
-      signOut: async () => ({ error: null }),
-      onAuthStateChange: (callback: any) => {
-        // Return a subscription object
-        const subscription = {
-          data: { subscription: null },
-          unsubscribe: () => {}
-        };
-        return subscription;
+  if (!env.isValid) {
+    const errorMessage = `Supabase environment validation failed:\n${env.errors.join('\n')}`;
+    console.error('❌', errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    console.warn('⚠️ Not in browser environment, skipping Supabase client initialization');
+    return null;
+  }
+
+  try {
+    console.log('🔐 Creating Supabase client...');
+    
+    // Create client with explicit options to avoid headers issues
+    supabase = createClient(env.config.supabaseUrl, env.config.supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
       },
-      getAccessToken: async () => ({ data: { access_token: null }, error: null }),
-      refreshSession: async () => ({ data: { session: null }, error: null })
-    },
-    from: (table: string) => ({
-      select: (columns?: string) => ({
-        eq: (column: string, value: any) => ({
-          single: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } }),
-          maybeSingle: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-        }),
-        insert: (data: any) => ({
-          select: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-        }),
-        update: (data: any) => ({
-          eq: (column: string, value: any) => ({
-            select: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-          })
-        }),
-        delete: () => ({
-          eq: (column: string, value: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-        }),
-        order: (column: string, options?: any) => ({
-          limit: (count: number) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-        }),
-        limit: (count: number) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-      })
-    }),
-    rpc: (func: string, params?: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } }),
-    channel: (name: string) => ({
-      on: (event: string, callback: any) => ({
-        subscribe: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-      }),
-      subscribe: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } })
-    }),
-    storage: {
-      from: (bucket: string) => ({
-        upload: (path: string, file: any, options?: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } }),
-        download: (path: string) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } }),
-        remove: (paths: string[]) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed - please check your .env file' } }),
-        getPublicUrl: (path: string) => ({ data: { publicUrl: '' } })
-      })
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'kryvex-trading-platform'
+        }
+      }
+    });
+
+    console.log('✅ Supabase client created successfully');
+    
+    // Test the connection
+    testSupabaseConnection();
+    
+    return supabase;
+  } catch (error) {
+    console.error('❌ Failed to create Supabase client:', error);
+    throw error;
+  }
+};
+
+// =============================================
+// CONNECTION TESTING
+// =============================================
+
+const testSupabaseConnection = async () => {
+  if (!supabase) return;
+  
+  try {
+    console.log('🔍 Testing Supabase connection...');
+    
+    // Test basic query
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      console.warn('⚠️ Supabase connection test failed:', error.message);
+      return false;
     }
-  };
+    
+    console.log('✅ Supabase connection test successful');
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Supabase connection test error:', error);
+    return false;
+  }
+};
+
+// =============================================
+// CLIENT EXPORT
+// =============================================
+
+// Initialize the client immediately
+try {
+  supabase = initializeSupabaseClient();
+} catch (error) {
+  console.error('❌ Critical: Supabase client initialization failed:', error);
+  
+  // In production, we should fail fast
+  if (import.meta.env.PROD) {
+    throw new Error(`Supabase client initialization failed: ${error}`);
+  }
+  
+  // In development, we can provide a more detailed error
+  console.error('💡 Development tip: Check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are properly set');
 }
 
 export default supabase;
