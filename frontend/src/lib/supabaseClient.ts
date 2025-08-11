@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 // =============================================
-// VERIFIED SUPABASE CLIENT INITIALIZATION
+// SOLUTION 1: EXPLICIT CLIENT CONFIGURATION
 // =============================================
 
-// Step 1: Verify Environment Variable Access
-const verifyEnvironmentVariables = () => {
-  console.log('🔍 VERIFYING ENVIRONMENT VARIABLES:');
-  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-  console.log('Supabase Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
+// Step 1: Debugging Initialization (Solution 3)
+const debugEnvironmentVariables = () => {
+  console.log('🔍 DEBUGGING INITIALIZATION:');
+  console.log('URL:', import.meta.env.VITE_SUPABASE_URL);
+  console.log('Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
   
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -38,34 +38,27 @@ const verifyEnvironmentVariables = () => {
   return { supabaseUrl, supabaseAnonKey };
 };
 
-// Step 2: Ensure Correct Supabase Client Initialization
+// Step 2: Solution 1 - Explicit Client Configuration
 let supabase: any = null;
 
 try {
-  console.log('🔐 INITIALIZING SUPABASE CLIENT...');
+  console.log('🔐 CREATING SUPABASE CLIENT WITH EXPLICIT CONFIGURATION...');
   
-  const { supabaseUrl, supabaseAnonKey } = verifyEnvironmentVariables();
+  const { supabaseUrl, supabaseAnonKey } = debugEnvironmentVariables();
   
-  // Create client with explicit configuration to prevent headers issues
+  // Solution 1: Explicit Client Configuration with minimal options
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    },
-    db: {
-      schema: 'public'
-    },
-    // Explicitly set headers to prevent undefined headers error
     global: {
       headers: { 
-        'Content-Type': 'application/json',
-        'X-Client-Info': 'kryvex-trading-platform'
+        'Content-Type': 'application/json'
       }
+    },
+    auth: {
+      persistSession: true
     }
   });
   
-  console.log('✅ Supabase client created successfully with explicit headers configuration');
+  console.log('✅ Supabase Client Created Successfully');
   
   // Step 3: Test the connection immediately
   (async () => {
@@ -99,7 +92,7 @@ try {
   })();
   
 } catch (error) {
-  console.error('❌ Failed to create Supabase client:', error);
+  console.error('❌ Supabase Client Creation Error:', error);
   
   // Create a comprehensive fallback client with detailed error messages
   supabase = {
@@ -111,6 +104,8 @@ try {
       console.error('3. Ensure Data API is enabled in Supabase Settings → API');
       console.error('4. Create RLS policies for tables you\'re accessing');
       console.error('5. Check that environment variables are not "undefined" strings');
+      console.error('6. Try clearing browser cache and rebuilding project');
+      console.error('7. Check @supabase/supabase-js library version');
       
       return {
         select: () => ({ 
