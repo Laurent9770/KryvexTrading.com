@@ -699,11 +699,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       time: new Date().toLocaleTimeString()
     };
     
-    setActivityFeed(prev => [newActivity, ...prev.slice(0, 49)]); // Keep last 50 activities
+    setActivityFeed(prev => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Filter out activities older than 30 days
+      const filteredActivities = prev.filter(act => 
+        new Date(act.timestamp) > thirtyDaysAgo
+      );
+      
+      return [newActivity, ...filteredActivities];
+    });
   }, [user?.id]);
 
   const addTrade = useCallback((trade: any) => {
-    setTradingHistory(prev => [trade, ...prev.slice(0, 99)]); // Keep last 100 trades
+    setTradingHistory(prev => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Filter out trades older than 30 days
+      const filteredTrades = prev.filter(t => 
+        new Date(t.timestamp || t.time || Date.now()) > thirtyDaysAgo
+      );
+      
+      return [trade, ...filteredTrades];
+    });
   }, []);
 
   const updatePortfolioStats = useCallback(() => {

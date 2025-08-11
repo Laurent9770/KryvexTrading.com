@@ -1218,14 +1218,65 @@ const TradingPage = () => {
   const [optionsEntryPremium, setOptionsEntryPremium] = useState("");
   const [optionsCurrentPrice, setOptionsCurrentPrice] = useState(67543);
 
-  // Options Data
-  const optionsChain = [
-    { strike: 65000, callPrice: 2850, putPrice: 350, callIV: "45.2%", putIV: "43.8%", callDelta: "0.72", putDelta: "-0.28" },
-    { strike: 67000, callPrice: 1920, putPrice: 620, callIV: "42.1%", putIV: "44.2%", callDelta: "0.58", putDelta: "-0.42" },
-    { strike: 69000, callPrice: 1240, putPrice: 940, callIV: "40.8%", putIV: "45.1%", callDelta: "0.42", putDelta: "-0.58" },
-    { strike: 71000, callPrice: 780, putPrice: 1480, callIV: "39.5%", putIV: "46.3%", callDelta: "0.28", putDelta: "-0.72" },
-    { strike: 73000, callPrice: 450, putPrice: 2250, callIV: "38.9%", putIV: "47.8%", callDelta: "0.15", putDelta: "-0.85" },
-  ];
+  // Options Data - Using real-time prices
+  const getOptionsChain = () => {
+    const currentPrice = getPrice("BTC") || 67543.21;
+    const baseStrike = Math.round(currentPrice / 1000) * 1000; // Round to nearest 1000
+    
+    return [
+      { 
+        strike: baseStrike - 2000, 
+        callPrice: Math.round((currentPrice - (baseStrike - 2000)) * 0.1), 
+        putPrice: Math.round(((baseStrike - 2000) - currentPrice) * 0.1), 
+        callIV: "45.2%", 
+        putIV: "43.8%", 
+        callDelta: "0.72", 
+        putDelta: "-0.28" 
+      },
+      { 
+        strike: baseStrike - 1000, 
+        callPrice: Math.round((currentPrice - (baseStrike - 1000)) * 0.1), 
+        putPrice: Math.round(((baseStrike - 1000) - currentPrice) * 0.1), 
+        callIV: "42.1%", 
+        putIV: "44.2%", 
+        callDelta: "0.58", 
+        putDelta: "-0.42" 
+      },
+      { 
+        strike: baseStrike, 
+        callPrice: Math.round((currentPrice - baseStrike) * 0.1), 
+        putPrice: Math.round((baseStrike - currentPrice) * 0.1), 
+        callIV: "40.8%", 
+        putIV: "45.1%", 
+        callDelta: "0.42", 
+        putDelta: "-0.58" 
+      },
+      { 
+        strike: baseStrike + 1000, 
+        callPrice: Math.round((currentPrice - (baseStrike + 1000)) * 0.1), 
+        putPrice: Math.round(((baseStrike + 1000) - currentPrice) * 0.1), 
+        callIV: "39.5%", 
+        putIV: "46.3%", 
+        callDelta: "0.28", 
+        putDelta: "-0.72" 
+      },
+      { 
+        strike: baseStrike + 2000, 
+        callPrice: Math.round((currentPrice - (baseStrike + 2000)) * 0.1), 
+        putPrice: Math.round(((baseStrike + 2000) - currentPrice) * 0.1), 
+        callIV: "38.9%", 
+        putIV: "47.8%", 
+        callDelta: "0.15", 
+        putDelta: "-0.85" 
+      },
+    ].map(option => ({
+      ...option,
+      callPrice: Math.max(option.callPrice, 50), // Minimum call price
+      putPrice: Math.max(option.putPrice, 50),   // Minimum put price
+    }));
+  };
+
+  const optionsChain = getOptionsChain();
 
   const strategies = [
     { 

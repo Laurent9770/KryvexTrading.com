@@ -43,10 +43,15 @@ class SupabaseSupportService {
     if (!this.userId) throw new Error('User ID not set')
 
     try {
+      // Calculate 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data, error } = await supabase
         .from('support_tickets')
         .select('*')
         .eq('user_id', this.userId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -71,7 +76,10 @@ class SupabaseSupportService {
 
       if (ticketError) throw ticketError
 
-      // Get messages for this ticket
+      // Get messages for this ticket (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data: messages, error: messagesError } = await supabase
         .from('support_messages')
         .select(`
@@ -79,6 +87,7 @@ class SupabaseSupportService {
           sender:profiles!support_messages_sender_id_fkey(full_name, email)
         `)
         .eq('ticket_id', ticketId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: true })
 
       if (messagesError) throw messagesError
@@ -144,13 +153,17 @@ class SupabaseSupportService {
 
       if (error) throw error
 
-      // Get messages for each ticket
+      // Get messages for each ticket (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const ticketsWithMessages = await Promise.all(
         (data || []).map(async (ticket) => {
           const { data: messages } = await supabase
             .from('support_messages')
             .select('*')
             .eq('ticket_id', ticket.id)
+            .gte('created_at', thirtyDaysAgo.toISOString())
             .order('created_at', { ascending: true })
 
           return {
@@ -233,6 +246,35 @@ class SupabaseSupportService {
         callback
       )
       .subscribe()
+  }
+
+  // Cleanup old support tickets and messages (older than 30 days)
+  async cleanupOldSupportData(): Promise<void> {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Delete old support messages first (due to foreign key constraints)
+      const { error: messagesError } = await supabase
+        .from('support_messages')
+        .delete()
+        .lt('created_at', thirtyDaysAgo.toISOString())
+
+      if (messagesError) throw messagesError
+
+      // Delete old support tickets
+      const { error: ticketsError } = await supabase
+        .from('support_tickets')
+        .delete()
+        .lt('created_at', thirtyDaysAgo.toISOString())
+
+      if (ticketsError) throw ticketsError
+
+      console.log('✅ Cleaned up support data older than 30 days')
+    } catch (error) {
+      console.error('Error cleaning up old support data:', error)
+      throw error
+    }
   }
 }
 

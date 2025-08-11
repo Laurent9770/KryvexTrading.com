@@ -28,10 +28,15 @@ class SupabaseNotificationService {
     if (!this.userId) throw new Error('User ID not set')
 
     try {
+      // Calculate 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', this.userId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -94,6 +99,10 @@ class SupabaseNotificationService {
   // Admin methods
   async getAdminNotifications(adminId: string): Promise<AdminNotification[]> {
     try {
+      // Calculate 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data, error } = await supabase
         .from('admin_notifications')
         .select(`
@@ -101,6 +110,7 @@ class SupabaseNotificationService {
           target_user:profiles!admin_notifications_target_user_id_fkey(full_name, email)
         `)
         .eq('admin_id', adminId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -235,6 +245,35 @@ class SupabaseNotificationService {
         callback
       )
       .subscribe()
+  }
+
+  // Cleanup old notifications (older than 30 days)
+  async cleanupOldNotifications(): Promise<void> {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Delete old user notifications
+      const { error: userError } = await supabase
+        .from('notifications')
+        .delete()
+        .lt('created_at', thirtyDaysAgo.toISOString())
+
+      if (userError) throw userError
+
+      // Delete old admin notifications
+      const { error: adminError } = await supabase
+        .from('admin_notifications')
+        .delete()
+        .lt('created_at', thirtyDaysAgo.toISOString())
+
+      if (adminError) throw adminError
+
+      console.log('✅ Cleaned up notifications older than 30 days')
+    } catch (error) {
+      console.error('Error cleaning up old notifications:', error)
+      throw error
+    }
   }
 }
 
