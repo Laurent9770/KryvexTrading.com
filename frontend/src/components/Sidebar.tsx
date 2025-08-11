@@ -44,7 +44,6 @@ interface NavItem {
   shortcut?: string;
   description?: string;
   requiresAuth?: boolean;
-  requiresKYC?: boolean;
 }
 
 export function Sidebar() {
@@ -128,9 +127,8 @@ export function Sidebar() {
       href: "/withdraw",
       icon: Send,
       shortcut: "W",
-      description: "Withdraw funds (requires KYC)",
-      requiresAuth: true,
-      requiresKYC: true
+      description: "Withdraw funds from your account",
+      requiresAuth: true
     },
                     {
                   title: "KYC Verification",
@@ -157,12 +155,6 @@ export function Sidebar() {
     const active = isActive(item.href);
     
     const handleClick = () => {
-      // Check if KYC is required for certain routes
-      if (item.requiresKYC && user?.kycStatus !== 'verified') {
-        navigate('/kyc');
-        return;
-      }
-      
       navigate(item.href);
     };
     
@@ -190,11 +182,7 @@ export function Sidebar() {
                     {item.badge}
                   </Badge>
                 )}
-                {item.requiresKYC && user?.kycStatus !== 'verified' && (
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    KYC
-                  </Badge>
-                )}
+
               </>
             )}
           </Button>
