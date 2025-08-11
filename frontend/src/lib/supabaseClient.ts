@@ -26,14 +26,41 @@ try {
     console.log('🔐 Initializing Supabase client...');
     console.log('🔍 Environment:', import.meta.env.MODE);
     
-    // Create the Supabase client with minimal configuration
+    // Create the Supabase client with proper configuration for all tables
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'kryvex-trading-platform'
+        }
       }
     });
+
+    // Test the connection immediately
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase.from('profiles').select('count').limit(1);
+        if (error) {
+          console.warn('⚠️ Supabase connection test failed:', error.message);
+          return false;
+        }
+        console.log('✅ Supabase connection test successful');
+        return true;
+      } catch (testError) {
+        console.warn('⚠️ Supabase connection test error:', testError);
+        return false;
+      }
+    };
+
+    // Run connection test in background
+    testConnection();
 
     console.log('✅ Supabase client initialized successfully');
   } else {
@@ -85,7 +112,11 @@ try {
         }),
         delete: () => ({
           eq: (column: string, value: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
-        })
+        }),
+        order: (column: string, options?: any) => ({
+          limit: (count: number) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
+        }),
+        limit: (count: number) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
       })
     }),
     rpc: (func: string, params?: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } }),
@@ -94,7 +125,15 @@ try {
         subscribe: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
       }),
       subscribe: () => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } })
-    })
+    }),
+    storage: {
+      from: (bucket: string) => ({
+        upload: (path: string, file: any, options?: any) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } }),
+        download: (path: string) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } }),
+        remove: (paths: string[]) => Promise.resolve({ data: null, error: { message: 'Supabase client initialization failed' } }),
+        getPublicUrl: (path: string) => ({ data: { publicUrl: '' } })
+      })
+    }
   };
 }
 
