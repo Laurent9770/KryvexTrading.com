@@ -267,10 +267,10 @@ USING (public.has_role(auth.uid(), 'admin'::app_role));
 CREATE OR REPLACE FUNCTION public.log_admin_action(
   p_admin_id UUID,
   p_action_type TEXT,
+  p_description TEXT,
   p_target_user_id UUID DEFAULT NULL,
   p_target_table TEXT DEFAULT NULL,
   p_target_id UUID DEFAULT NULL,
-  p_description TEXT,
   p_old_values JSONB DEFAULT NULL,
   p_new_values JSONB DEFAULT NULL
 )
@@ -339,10 +339,10 @@ BEGIN
   PERFORM public.log_admin_action(
     p_admin_id,
     'trade_outcome_control',
+    'Forced trade outcome to ' || p_outcome,
     trade_record.user_id,
     'trades',
     p_trade_id,
-    'Forced trade outcome to ' || p_outcome,
     NULL,
     jsonb_build_object('outcome', p_outcome, 'payout', payout_amount)
   );
@@ -386,10 +386,10 @@ BEGIN
   PERFORM public.log_admin_action(
     p_admin_id,
     'trading_feature_update',
+    'Updated trading feature settings',
     NULL,
     'trading_features',
     p_feature_id,
-    'Updated trading feature settings',
     old_values,
     p_updates
   );
@@ -493,10 +493,10 @@ BEGIN
   PERFORM public.log_admin_action(
     p_admin_id,
     'wallet_adjustment',
+    p_operation || ' ' || p_amount || ' ' || p_asset || ' to ' || p_wallet_type || ' wallet',
     p_user_id,
     'profiles',
     profile_record.id,
-    p_operation || ' ' || p_amount || ' ' || p_asset || ' to ' || p_wallet_type || ' wallet',
     jsonb_build_object('balance_before', balance_before),
     jsonb_build_object('balance_after', balance_after)
   );

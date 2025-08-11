@@ -13,6 +13,12 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Check if admin profile already exists
+  IF EXISTS (SELECT 1 FROM public.profiles WHERE email = 'admin@kryvex.com') THEN
+    RAISE NOTICE 'Admin profile already exists';
+    RETURN;
+  END IF;
+
   -- Insert admin user into auth.users
   INSERT INTO auth.users (
     instance_id,

@@ -10,7 +10,6 @@ import {
   Bot,
   Activity,
   BarChart3,
-  Zap,
   Settings,
   User,
   LogOut,
@@ -33,7 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import KryvexLogo from "@/components/KryvexLogo";
+import { Zap } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface NavItem {
@@ -210,7 +209,7 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b">
         <div className="flex items-center gap-2">
-          <KryvexLogo className="h-8 w-8" />
+          <Zap className="h-8 w-8 text-primary" />
           {!isCollapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Trading</span>
