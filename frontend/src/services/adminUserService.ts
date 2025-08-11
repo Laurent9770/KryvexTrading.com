@@ -1,5 +1,4 @@
 import supabase from '@/lib/supabaseClient';
-import { httpDb } from '@/integrations/supabase/httpClient';
 
 export interface AdminUser {
   id: string;
@@ -41,6 +40,9 @@ class AdminUserService {
   async getAllUsers(): Promise<{ success: boolean; users?: AdminUser[]; error?: string }> {
     try {
       console.log('🔍 Fetching all users from database...');
+      
+      // Lazy import httpDb to prevent headers error
+      const { httpDb } = await import('@/integrations/supabase/httpClient');
       
       // Get users from profiles table (which should have all users due to trigger)
       const { data: profiles, error: profileError } = await httpDb.select('profiles', `
@@ -169,6 +171,9 @@ class AdminUserService {
     try {
       console.log('🔧 Updating user status:', userId, status);
       
+      // Lazy import httpDb to prevent headers error
+      const { httpDb } = await import('@/integrations/supabase/httpClient');
+
       // Update in profiles table if it exists
       try {
         const { error } = await httpDb.update('profiles', 
@@ -207,6 +212,9 @@ class AdminUserService {
     try {
       console.log('💰 Adjusting user balance:', userId, type, amount);
       
+      // Lazy import httpDb to prevent headers error
+      const { httpDb } = await import('@/integrations/supabase/httpClient');
+
       // Update in profiles table if it exists
       try {
         const { data: currentProfile, error: fetchError } = await httpDb.select('profiles', 'account_balance', { user_id: userId });
@@ -255,6 +263,9 @@ class AdminUserService {
     try {
       console.log('💬 Sending message to user:', userId);
       
+      // Lazy import httpDb to prevent headers error
+      const { httpDb } = await import('@/integrations/supabase/httpClient');
+
       // Create a support ticket for the message
       try {
         await httpDb.insert('support_tickets', {
@@ -292,6 +303,9 @@ class AdminUserService {
     try {
       console.log('🎯 Forcing trade outcome:', tradeId, outcome);
       
+      // Lazy import httpDb to prevent headers error
+      const { httpDb } = await import('@/integrations/supabase/httpClient');
+
       // Update trade in trades table if it exists
       try {
         const { error } = await httpDb.update('trades',
