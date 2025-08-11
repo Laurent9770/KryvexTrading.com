@@ -18,13 +18,17 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Minus,
+  User,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import supabaseTradingService from "@/services/supabaseTradingService";
 
 const TradingHistoryPage = () => {
-  const { user } = useAuth();
+  const { user, tradingHistory, activityFeed } = useAuth();
   const [tradeHistory, setTradeHistory] = useState<any[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,29 +49,120 @@ const TradingHistoryPage = () => {
       if (!user?.id) return;
       
       try {
+        // Try to load from Supabase first
         const historyResponse = await supabaseTradingService.getTradeHistory(user.id, 1, 100);
         const statsResponse = await supabaseTradingService.getTradingStats(user.id);
         
-        if (historyResponse.success) {
-          setTradeHistory(historyResponse.trades || []);
+        let allTrades: any[] = [];
+        
+        if (historyResponse.success && historyResponse.data) {
+          allTrades = [...historyResponse.data];
         }
         
-        if (statsResponse.success && statsResponse.stats) {
-          setStatistics({
-            totalTrades: statsResponse.stats.totalTrades,
-            wins: statsResponse.stats.winningTrades,
-            losses: statsResponse.stats.losingTrades,
-            netProfit: statsResponse.stats.netProfit,
-            winRate: statsResponse.stats.winRate
-          });
+        // Add trades from AuthContext (local state)
+        if (tradingHistory && tradingHistory.length > 0) {
+          allTrades = [...allTrades, ...tradingHistory];
         }
+        
+        // Add trade activities from activityFeed
+        const tradeActivities = activityFeed
+          .filter(activity => activity.type === 'trade')
+          .map(activity => ({
+            id: activity.id,
+            type: 'trade',
+            action: activity.description.includes('buy') ? 'buy' : 'sell',
+            symbol: activity.description.split(' ')[1] || 'Unknown',
+            amount: activity.amount || 0,
+            price: activity.amount || 0,
+            profit: activity.description.includes('won') ? activity.amount : 0,
+            loss: activity.description.includes('lost') ? activity.amount : 0,
+            status: activity.description.includes('won') ? 'won' : 
+                   activity.description.includes('lost') ? 'lost' : 'pending',
+            timestamp: activity.timestamp,
+            outcome: activity.description.includes('won') ? 'win' : 
+                    activity.description.includes('lost') ? 'lose' : 'pending'
+          }));
+        
+        allTrades = [...allTrades, ...tradeActivities];
+        
+        // Remove duplicates based on id and timestamp
+        const uniqueTrades = allTrades.filter((trade, index, self) => 
+          index === self.findIndex(t => 
+            t.id === trade.id && t.timestamp === trade.timestamp
+          )
+        );
+        
+        // Sort by timestamp (newest first)
+        uniqueTrades.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        setTradeHistory(uniqueTrades);
+        
+        // Calculate statistics
+        const totalTrades = uniqueTrades.length;
+        const wins = uniqueTrades.filter(t => t.status === 'won' || t.outcome === 'win').length;
+        const losses = uniqueTrades.filter(t => t.status === 'lost' || t.outcome === 'lose').length;
+        const netProfit = uniqueTrades.reduce((sum, t) => sum + (t.profit || 0) - (t.loss || 0), 0);
+        const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+        
+        setStatistics({
+          totalTrades,
+          wins,
+          losses,
+          netProfit,
+          winRate
+        });
+        
       } catch (error) {
         console.error('Error loading trade history:', error);
+        
+        // Fallback to AuthContext data only
+        const allTrades = [...tradingHistory];
+        const tradeActivities = activityFeed
+          .filter(activity => activity.type === 'trade')
+          .map(activity => ({
+            id: activity.id,
+            type: 'trade',
+            action: activity.description.includes('buy') ? 'buy' : 'sell',
+            symbol: activity.description.split(' ')[1] || 'Unknown',
+            amount: activity.amount || 0,
+            price: activity.amount || 0,
+            profit: activity.description.includes('won') ? activity.amount : 0,
+            loss: activity.description.includes('lost') ? activity.amount : 0,
+            status: activity.description.includes('won') ? 'won' : 
+                   activity.description.includes('lost') ? 'lost' : 'pending',
+            timestamp: activity.timestamp,
+            outcome: activity.description.includes('won') ? 'win' : 
+                    activity.description.includes('lost') ? 'lose' : 'pending'
+          }));
+        
+        const uniqueTrades = [...allTrades, ...tradeActivities]
+          .filter((trade, index, self) => 
+            index === self.findIndex(t => 
+              t.id === trade.id && t.timestamp === trade.timestamp
+            )
+          )
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        setTradeHistory(uniqueTrades);
+        
+        const totalTrades = uniqueTrades.length;
+        const wins = uniqueTrades.filter(t => t.status === 'won' || t.outcome === 'win').length;
+        const losses = uniqueTrades.filter(t => t.status === 'lost' || t.outcome === 'lose').length;
+        const netProfit = uniqueTrades.reduce((sum, t) => sum + (t.profit || 0) - (t.loss || 0), 0);
+        const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+        
+        setStatistics({
+          totalTrades,
+          wins,
+          losses,
+          netProfit,
+          winRate
+        });
       }
     };
     
     loadTradeHistory();
-  }, [user?.id]);
+  }, [user?.id, tradingHistory, activityFeed]);
 
   // Filter trade history
   useEffect(() => {
@@ -76,8 +171,9 @@ const TradingHistoryPage = () => {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(trade => 
-        trade.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trade.id.toLowerCase().includes(searchTerm.toLowerCase())
+        trade.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trade.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        trade.type?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -88,7 +184,9 @@ const TradingHistoryPage = () => {
 
     // Filter by status
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(trade => trade.status === selectedStatus);
+      filtered = filtered.filter(trade => 
+        trade.status === selectedStatus || trade.outcome === selectedStatus
+      );
     }
 
     // Filter by date range
@@ -105,11 +203,14 @@ const TradingHistoryPage = () => {
     setFilteredHistory(filtered);
   }, [tradeHistory, searchTerm, selectedType, selectedStatus, dateRange]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (status: string, outcome?: string) => {
+    const finalStatus = status || outcome;
+    switch (finalStatus) {
       case 'won':
+      case 'win':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'lost':
+      case 'lose':
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'pending':
         return <Clock className="w-4 h-4 text-yellow-500" />;
@@ -118,11 +219,14 @@ const TradingHistoryPage = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status: string, outcome?: string) => {
+    const finalStatus = status || outcome;
+    switch (finalStatus) {
       case 'won':
+      case 'win':
         return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Won</Badge>;
       case 'lost':
+      case 'lose':
         return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Lost</Badge>;
       case 'pending':
         return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Pending</Badge>;
@@ -147,6 +251,8 @@ const TradingHistoryPage = () => {
         return <Activity className="w-4 h-4" />;
       case 'staking':
         return <DollarSign className="w-4 h-4" />;
+      case 'trade':
+        return <Activity className="w-4 h-4" />;
       default:
         return <Activity className="w-4 h-4" />;
     }
@@ -165,7 +271,7 @@ const TradingHistoryPage = () => {
         trade.price,
         trade.profit || 0,
         trade.loss || 0,
-        trade.status,
+        trade.status || trade.outcome,
         new Date(trade.timestamp).toLocaleString()
       ].join(','))
     ].join('\n');
@@ -289,6 +395,7 @@ const TradingHistoryPage = () => {
                 <SelectItem value="quant">Quant</SelectItem>
                 <SelectItem value="bot">Bot</SelectItem>
                 <SelectItem value="staking">Staking</SelectItem>
+                <SelectItem value="trade">Trade</SelectItem>
               </SelectContent>
             </Select>
 
@@ -359,7 +466,7 @@ const TradingHistoryPage = () => {
                       </td>
                       <td className="py-4 px-2">
                         <Badge className={trade.action === 'buy' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
-                          {trade.action.toUpperCase()}
+                          {trade.action?.toUpperCase() || 'TRADE'}
                         </Badge>
                       </td>
                       <td className="py-4 px-2 font-medium">{trade.symbol}</td>
@@ -376,8 +483,8 @@ const TradingHistoryPage = () => {
                       </td>
                       <td className="py-4 px-2 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {getStatusIcon(trade.status)}
-                          {getStatusBadge(trade.status)}
+                          {getStatusIcon(trade.status, trade.outcome)}
+                          {getStatusBadge(trade.status, trade.outcome)}
                         </div>
                       </td>
                       <td className="py-4 px-2 text-right text-sm text-muted-foreground">
