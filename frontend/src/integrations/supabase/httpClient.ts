@@ -381,7 +381,9 @@ export const httpDb = {
     try {
       const { supabaseUrl } = getSupabaseConfig();
       
-      let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
+      // Ensure table name has proper schema prefix
+      const tableName = table.includes('.') ? table : `public.${table}`;
+      let url = `${supabaseUrl}/rest/v1/${tableName}?select=${columns}`;
       
       if (filters) {
         const params = new URLSearchParams();
@@ -390,6 +392,8 @@ export const httpDb = {
         });
         url += `&${params.toString()}`;
       }
+      
+      console.log('🔍 HTTP select URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -426,7 +430,10 @@ export const httpDb = {
     try {
       const { supabaseUrl } = getSupabaseConfig();
       
-      const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+      // Ensure table name has proper schema prefix
+      const tableName = table.includes('.') ? table : `public.${table}`;
+      
+      const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data)
@@ -462,7 +469,9 @@ export const httpDb = {
     try {
       const { supabaseUrl } = getSupabaseConfig();
       
-      let url = `${supabaseUrl}/rest/v1/${table}`;
+      // Ensure table name has proper schema prefix
+      const tableName = table.includes('.') ? table : `public.${table}`;
+      let url = `${supabaseUrl}/rest/v1/${tableName}`;
       
       if (filters) {
         const params = new URLSearchParams();
@@ -508,7 +517,9 @@ export const httpDb = {
     try {
       const { supabaseUrl } = getSupabaseConfig();
       
-      let url = `${supabaseUrl}/rest/v1/${table}`;
+      // Ensure table name has proper schema prefix
+      const tableName = table.includes('.') ? table : `public.${table}`;
+      let url = `${supabaseUrl}/rest/v1/${tableName}`;
       
       if (filters) {
         const params = new URLSearchParams();
