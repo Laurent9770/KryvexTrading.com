@@ -84,7 +84,11 @@ const createMockSession = (user: any) => ({
 const supabase = {
   from: (table: string) => ({
     select: (columns = '*') => createMockQueryBuilder(),
-    insert: (data: any) => Promise.resolve({ data: null, error: null }),
+    insert: (data: any) => ({
+      select: (columns = '*') => Promise.resolve({ data: data, error: null }),
+      then: (callback: any) => Promise.resolve({ data: data, error: null }).then(callback),
+      catch: (callback: any) => Promise.resolve({ data: data, error: null }).catch(callback)
+    }),
     upsert: (data: any) => Promise.resolve({ data: null, error: null }),
     update: (data: any) => createMockQueryBuilder(),
     delete: () => createMockQueryBuilder(),

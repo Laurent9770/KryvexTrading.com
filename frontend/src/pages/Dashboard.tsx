@@ -374,7 +374,7 @@ const Dashboard = () => {
                           activity.type === 'withdrawal' ? 'text-red-600' : 
                           'text-foreground'
                         }`}>
-                          {activity.type === 'deposit' ? '+' : ''}${activity.amount.toFixed(2)}
+                          {activity.type === 'deposit' ? '+' : ''}${safeNumber(activity.amount).toFixed(2)}
                         </span>
                       )}
                       <span className="text-xs text-muted-foreground">
@@ -486,7 +486,7 @@ const Dashboard = () => {
                           activity.type === 'withdrawal' ? 'text-red-600' : 
                           'text-foreground'
                         }`}>
-                          {activity.type === 'deposit' ? '+' : ''}${activity.amount.toFixed(2)}
+                          {activity.type === 'deposit' ? '+' : ''}${safeNumber(activity.amount).toFixed(2)}
                         </span>
                       )}
                       <span className="text-xs text-muted-foreground">
