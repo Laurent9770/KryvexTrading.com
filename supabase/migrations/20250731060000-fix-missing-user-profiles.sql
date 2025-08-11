@@ -90,9 +90,9 @@ BEGIN
         );
     END IF;
     
-    -- Insert into user_roles table (default to 'user' role)
-    INSERT INTO public.user_roles (user_id, role, created_at, updated_at)
-    VALUES (NEW.id, 'user', NOW(), NOW());
+    -- Insert into user_roles table (default to 'user' role) - using only existing columns
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (NEW.id, 'user');
     
     RETURN NEW;
 END;
@@ -103,7 +103,9 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
     
-RAISE NOTICE 'handle_new_user trigger recreated successfully';
+DO $$ BEGIN
+    RAISE NOTICE 'handle_new_user trigger recreated successfully';
+END $$;
 
 -- Now, let's create profiles for any users that exist in auth.users but not in public.profiles
 -- First, check if KYC columns exist
@@ -183,13 +185,11 @@ BEGIN
     END IF;
 END $$;
 
--- Create user_roles for any users that don't have them
-INSERT INTO public.user_roles (user_id, role, created_at, updated_at)
+-- Create user_roles for any users that don't have them (using only existing columns)
+INSERT INTO public.user_roles (user_id, role)
 SELECT 
     au.id,
-    'user',
-    au.created_at,
-    NOW()
+    'user'
 FROM auth.users au
 LEFT JOIN public.user_roles ur ON au.id = ur.user_id
 WHERE ur.user_id IS NULL

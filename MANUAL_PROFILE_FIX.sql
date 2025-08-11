@@ -8,6 +8,13 @@ WHERE table_schema = 'public'
 AND table_name = 'profiles' 
 ORDER BY ordinal_position;
 
+-- Check what columns exist in the user_roles table
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND table_name = 'user_roles' 
+ORDER BY ordinal_position;
+
 -- Check if the specific user exists in auth.users
 SELECT id, email, created_at 
 FROM auth.users 
@@ -42,13 +49,11 @@ FROM auth.users au
 WHERE au.id = '26123553-2931-4ed5-950e-2919ae8470ee'
 ON CONFLICT (user_id) DO NOTHING;
 
--- Create user role if it doesn't exist
-INSERT INTO public.user_roles (user_id, role, created_at, updated_at)
+-- Create user role if it doesn't exist (using only existing columns)
+INSERT INTO public.user_roles (user_id, role)
 SELECT 
     au.id,
-    'user',
-    au.created_at,
-    NOW()
+    'user'
 FROM auth.users au
 WHERE au.id = '26123553-2931-4ed5-950e-2919ae8470ee'
 ON CONFLICT (user_id, role) DO NOTHING;
