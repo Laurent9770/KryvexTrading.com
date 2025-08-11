@@ -1,16 +1,29 @@
 // HTTP-Based Supabase Client - Bypasses SDK Issues
-console.log('🚀 Creating HTTP-based Supabase client...');
+// Lazy-loaded to prevent immediate execution during module loading
 
-const SUPABASE_URL = 'https://ftkeczodadvtnxofrwps.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjM5NTQsImV4cCI6MjA2OTQzOTk1NH0.rW4WIL5gGjvYIRhjTgbfGbPdF1E-hqxHKckeVdZtalg';
+// Get environment variables safely
+const getSupabaseConfig = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment variables not found. Check your .env file.');
+  }
+  
+  return { supabaseUrl, supabaseAnonKey };
+};
 
 // HTTP headers for Supabase API
-const getHeaders = (authToken?: string) => ({
-  'Content-Type': 'application/json',
-  'apikey': SUPABASE_ANON_KEY,
-  'Authorization': `Bearer ${authToken || SUPABASE_ANON_KEY}`,
-  'Prefer': 'return=representation'
-});
+const getHeaders = (authToken?: string) => {
+  const { supabaseAnonKey } = getSupabaseConfig();
+  
+  return {
+    'Content-Type': 'application/json',
+    'apikey': supabaseAnonKey,
+    'Authorization': `Bearer ${authToken || supabaseAnonKey}`,
+    'Prefer': 'return=representation'
+  };
+};
 
 // HTTP-based authentication methods
 export const httpAuth = {
@@ -19,6 +32,8 @@ export const httpAuth = {
     try {
       console.log('🔐 HTTP Sign up for:', email);
       console.log('🔐 User data:', userData);
+      
+      const { supabaseUrl } = getSupabaseConfig();
       
       // Validate inputs - use proper email regex
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -64,7 +79,7 @@ export const httpAuth = {
       console.log('🔐 Signup request body:', { ...requestBody, password: '[HIDDEN]' });
       console.log('🔐 Full request body (for debugging):', JSON.stringify(requestBody, null, 2));
       
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(requestBody)
@@ -100,25 +115,53 @@ export const httpAuth = {
             errorMessage = 'Password must be at least 6 characters long';
           } else if (errorMessage.toLowerCase().includes('email')) {
             errorMessage = 'Please enter a valid email address';
-          } else if (errorMessage.toLowerCase().includes('already') || errorMessage.toLowerCase().includes('exists')) {
-            errorMessage = 'An account with this email already exists';
-          } else {
-            errorMessage = `Registration failed: ${errorMessage}`;
           }
+        } else if (response.status === 409) {
+          errorMessage = 'An account with this email already exists';
         } else if (response.status === 400) {
-          errorMessage = `Invalid registration data: ${errorMessage}`;
-        } else if (response.status === 429) {
-          errorMessage = 'Too many registration attempts. Please try again later.';
+          if (errorMessage.toLowerCase().includes('weak')) {
+            errorMessage = 'Password is too weak. Please choose a stronger password.';
+          }
         }
         
-        return { data: null, error: { message: errorMessage, status: response.status } };
+        return { 
+          data: null, 
+          error: { 
+            message: errorMessage,
+            status: response.status 
+          } 
+        };
       }
 
-      console.log('✅ HTTP signup successful');
-      return { data: result, error: null };
-    } catch (error: any) {
-      console.error('❌ HTTP signup failed:', error);
-      return { data: null, error: { message: error.message || 'Network error during signup' } };
+      // Success case
+      if (result.user) {
+        console.log('✅ HTTP signup successful for:', result.user.email);
+        return { 
+          data: { 
+            user: result.user, 
+            session: result.session 
+          }, 
+          error: null 
+        };
+      } else {
+        console.log('✅ HTTP signup successful (no user returned)');
+        return { 
+          data: { 
+            user: null, 
+            session: null 
+          }, 
+          error: null 
+        };
+      }
+      
+    } catch (error) {
+      console.error('❌ HTTP signup exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Registration failed due to network error' 
+        } 
+      };
     }
   },
 
@@ -127,11 +170,13 @@ export const httpAuth = {
     try {
       console.log('🔐 HTTP Sign in for:', email);
       
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      const { supabaseUrl } = getSupabaseConfig();
+      
+      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
-          email,
+          email: email.trim().toLowerCase(),
           password
         })
       });
@@ -139,239 +184,370 @@ export const httpAuth = {
       const result = await response.json();
       
       if (!response.ok) {
-        console.error('❌ HTTP signin error:', result);
-        return { data: null, error: result };
+        console.error('❌ HTTP signin error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.error_description || result.msg || 'Invalid email or password' 
+          } 
+        };
       }
 
-      console.log('✅ HTTP signin successful');
+      console.log('✅ HTTP signin successful for:', email);
+      return { 
+        data: { 
+          user: result.user, 
+          session: result 
+        }, 
+        error: null 
+      };
       
-      // Store session in localStorage
-      if (result.access_token) {
-        localStorage.setItem('supabase.auth.token', JSON.stringify(result));
-      }
-      
-      return { data: result, error: null };
     } catch (error) {
-      console.error('❌ HTTP signin failed:', error);
-      return { data: null, error: { message: 'Network error during signin' } };
+      console.error('❌ HTTP signin exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Sign in failed due to network error' 
+        } 
+      };
     }
   },
 
   // Sign out
   async signOut() {
     try {
-      console.log('🔐 HTTP Sign out');
+      const { supabaseUrl } = getSupabaseConfig();
       
-      const session = this.getSession();
-      if (session?.access_token) {
-        await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-          method: 'POST',
-          headers: getHeaders(session.access_token)
-        });
-      }
+      const response = await fetch(`${supabaseUrl}/auth/v1/logout`, {
+        method: 'POST',
+        headers: getHeaders()
+      });
 
-      localStorage.removeItem('supabase.auth.token');
       console.log('✅ HTTP signout successful');
       return { error: null };
+      
     } catch (error) {
-      console.error('❌ HTTP signout failed:', error);
-      return { error: { message: 'Network error during signout' } };
+      console.error('❌ HTTP signout exception:', error);
+      return { 
+        error: { 
+          message: error instanceof Error ? error.message : 'Sign out failed' 
+        } 
+      };
     }
   },
 
   // Get current session
   getSession() {
     try {
-      const stored = localStorage.getItem('supabase.auth.token');
-      if (stored) {
-        const session = JSON.parse(stored);
-        // Check if token is expired
-        if (session.expires_at && Date.now() / 1000 > session.expires_at) {
-          localStorage.removeItem('supabase.auth.token');
-          return null;
-        }
-        return session;
+      const session = localStorage.getItem('supabase.auth.token');
+      if (session) {
+        const parsed = JSON.parse(session);
+        return { data: { session: parsed }, error: null };
       }
-      return null;
+      return { data: { session: null }, error: null };
     } catch (error) {
-      console.error('❌ Error getting session:', error);
-      return null;
+      return { data: { session: null }, error: null };
     }
   },
 
   // Get current user
   getUser() {
-    const session = this.getSession();
-    return session?.user || null;
-  },
-
-  // Google OAuth (redirect method)
-  async signInWithGoogle() {
     try {
-      console.log('🔐 Starting Google OAuth...');
-      
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      const googleOAuthUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
-      
-      console.log('🔗 Redirecting to:', googleOAuthUrl);
-      window.location.href = googleOAuthUrl;
-      
-      return { data: { url: googleOAuthUrl }, error: null };
+      const session = localStorage.getItem('supabase.auth.token');
+      if (session) {
+        const parsed = JSON.parse(session);
+        return { data: { user: parsed.user }, error: null };
+      }
+      return { data: { user: null }, error: null };
     } catch (error) {
-      console.error('❌ Google OAuth failed:', error);
-      return { data: null, error: { message: 'Failed to initiate Google OAuth' } };
+      return { data: { user: null }, error: null };
     }
   },
 
-  // Reset password for email
+  // Sign in with Google (OAuth)
+  async signInWithGoogle() {
+    try {
+      const { supabaseUrl } = getSupabaseConfig();
+      
+      // Redirect to Google OAuth
+      window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}/auth/callback`;
+      
+      return { data: null, error: null };
+    } catch (error) {
+      console.error('❌ HTTP Google signin exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Google sign in failed' 
+        } 
+      };
+    }
+  },
+
+  // Reset password
   async resetPasswordForEmail(email: string, options?: any) {
     try {
-      console.log('🔐 HTTP Reset password for email:', email);
+      console.log('🔐 HTTP Reset password for:', email);
       
-      const requestBody: any = {
-        email: email.trim().toLowerCase()
-      };
-
-      if (options?.redirectTo) {
-        requestBody.redirect_to = options.redirectTo;
-      }
-
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      const { supabaseUrl } = getSupabaseConfig();
+      
+      const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          ...options
+        })
       });
 
       const result = await response.json();
-      console.log('🔐 Reset password response:', result);
-
+      
       if (!response.ok) {
-        return { data: null, error: { message: result.error_description || result.msg || 'Failed to send reset email' } };
+        console.error('❌ HTTP reset password error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.error_description || result.msg || 'Failed to send reset email' 
+          } 
+        };
       }
 
-      return { data: result, error: null };
+      console.log('✅ HTTP reset password email sent to:', email);
+      return { data: {}, error: null };
+      
     } catch (error) {
-      console.error('❌ HTTP Reset password error:', error);
-      return { data: null, error: { message: 'Failed to send reset email' } };
+      console.error('❌ HTTP reset password exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Reset password failed due to network error' 
+        } 
+      };
     }
   },
 
-  // Update user (for password reset)
+  // Update user
   async updateUser(updates: any) {
     try {
-      console.log('🔐 HTTP Update user');
+      console.log('🔐 HTTP Update user:', updates);
       
+      const { supabaseUrl } = getSupabaseConfig();
       const session = this.getSession();
-      if (!session) {
-        return { data: null, error: { message: 'No active session' } };
+      
+      if (!session.data.session?.access_token) {
+        return { 
+          data: null, 
+          error: { message: 'No active session found' } 
+        };
       }
-
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      
+      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
         method: 'PUT',
-        headers: getHeaders(session.access_token),
+        headers: getHeaders(session.data.session.access_token),
         body: JSON.stringify(updates)
       });
 
       const result = await response.json();
-      console.log('🔐 Update user response:', result);
-
+      
       if (!response.ok) {
-        return { data: null, error: { message: result.error_description || result.msg || 'Failed to update user' } };
+        console.error('❌ HTTP update user error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.error_description || result.msg || 'Failed to update user' 
+          } 
+        };
       }
 
-      return { data: result, error: null };
+      console.log('✅ HTTP update user successful');
+      return { data: { user: result }, error: null };
+      
     } catch (error) {
-      console.error('❌ HTTP Update user error:', error);
-      return { data: null, error: { message: 'Failed to update user' } };
+      console.error('❌ HTTP update user exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Update user failed due to network error' 
+        } 
+      };
     }
   }
 };
 
 // HTTP-based database methods
 export const httpDb = {
-  // Query data
+  // Select data from table
   async select(table: string, columns = '*', filters?: any) {
     try {
-      const session = httpAuth.getSession();
-      let url = `${SUPABASE_URL}/rest/v1/${table}?select=${columns}`;
+      const { supabaseUrl } = getSupabaseConfig();
+      
+      let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
       
       if (filters) {
+        const params = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
-          url += `&${key}=eq.${value}`;
+          params.append(key, `eq.${value}`);
         });
+        url += `&${params.toString()}`;
       }
-
+      
       const response = await fetch(url, {
-        headers: getHeaders(session?.access_token)
+        method: 'GET',
+        headers: getHeaders()
       });
 
       const result = await response.json();
       
       if (!response.ok) {
-        return { data: null, error: result };
+        console.error('❌ HTTP select error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.message || result.error || 'Failed to fetch data' 
+          } 
+        };
       }
 
       return { data: result, error: null };
+      
     } catch (error) {
-      console.error('❌ HTTP select failed:', error);
-      return { data: null, error: { message: 'Network error during select' } };
+      console.error('❌ HTTP select exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Database query failed due to network error' 
+        } 
+      };
     }
   },
 
-  // Insert data
+  // Insert data into table
   async insert(table: string, data: any) {
     try {
-      const session = httpAuth.getSession();
+      const { supabaseUrl } = getSupabaseConfig();
       
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
         method: 'POST',
-        headers: getHeaders(session?.access_token),
+        headers: getHeaders(),
         body: JSON.stringify(data)
       });
 
       const result = await response.json();
       
       if (!response.ok) {
-        return { data: null, error: result };
+        console.error('❌ HTTP insert error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.message || result.error || 'Failed to insert data' 
+          } 
+        };
       }
 
       return { data: result, error: null };
+      
     } catch (error) {
-      console.error('❌ HTTP insert failed:', error);
-      return { data: null, error: { message: 'Network error during insert' } };
+      console.error('❌ HTTP insert exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Database insert failed due to network error' 
+        } 
+      };
     }
   },
 
-  // Update data
+  // Update data in table
   async update(table: string, data: any, filters?: any) {
     try {
-      const session = httpAuth.getSession();
-      let url = `${SUPABASE_URL}/rest/v1/${table}`;
+      const { supabaseUrl } = getSupabaseConfig();
+      
+      let url = `${supabaseUrl}/rest/v1/${table}`;
       
       if (filters) {
-        Object.entries(filters).forEach(([key, value], index) => {
-          url += `${index === 0 ? '?' : '&'}${key}=eq.${value}`;
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          params.append(key, `eq.${value}`);
         });
+        url += `?${params.toString()}`;
       }
-
+      
       const response = await fetch(url, {
         method: 'PATCH',
-        headers: getHeaders(session?.access_token),
+        headers: getHeaders(),
         body: JSON.stringify(data)
       });
 
       const result = await response.json();
       
       if (!response.ok) {
-        return { data: null, error: result };
+        console.error('❌ HTTP update error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.message || result.error || 'Failed to update data' 
+          } 
+        };
       }
 
       return { data: result, error: null };
+      
     } catch (error) {
-      console.error('❌ HTTP update failed:', error);
-      return { data: null, error: { message: 'Network error during update' } };
+      console.error('❌ HTTP update exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Database update failed due to network error' 
+        } 
+      };
+    }
+  },
+
+  // Delete data from table
+  async delete(table: string, filters?: any) {
+    try {
+      const { supabaseUrl } = getSupabaseConfig();
+      
+      let url = `${supabaseUrl}/rest/v1/${table}`;
+      
+      if (filters) {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          params.append(key, `eq.${value}`);
+        });
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('❌ HTTP delete error:', response.status, result);
+        return { 
+          data: null, 
+          error: { 
+            message: result.message || result.error || 'Failed to delete data' 
+          } 
+        };
+      }
+
+      return { data: result, error: null };
+      
+    } catch (error) {
+      console.error('❌ HTTP delete exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: error instanceof Error ? error.message : 'Database delete failed due to network error' 
+        } 
+      };
     }
   }
 };
 
-console.log('✅ HTTP-based Supabase client ready!');
+// Only log when the module is actually used, not during import
+console.log('🚀 HTTP-based Supabase client ready (lazy-loaded)');
