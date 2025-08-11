@@ -140,7 +140,25 @@ ADD COLUMN IF NOT EXISTS kyc_level2_rejection_reason TEXT,
 ADD COLUMN IF NOT EXISTS kyc_documents JSONB DEFAULT '{}';
 
 -- =============================================
--- 8. ENABLE ROW LEVEL SECURITY
+-- 8. ENSURE HAS_ROLE FUNCTION EXISTS
+-- =============================================
+
+-- Create security definer function to check user roles if it doesn't exist
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  )
+$$;
+
+-- =============================================
+-- 9. ENABLE ROW LEVEL SECURITY
 -- =============================================
 
 ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
@@ -149,7 +167,7 @@ ALTER TABLE public.trading_features ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
--- 9. RLS POLICIES FOR WALLET TRANSACTIONS
+-- 10. RLS POLICIES FOR WALLET TRANSACTIONS
 -- =============================================
 
 -- Users can view their own wallet transactions
@@ -168,10 +186,10 @@ WITH CHECK (auth.uid() = user_id AND action IN ('transfer_funding_to_trading', '
 CREATE POLICY "Admins can manage all wallet transactions" 
 ON public.wallet_transactions 
 FOR ALL 
-USING (public.has_role(auth.uid(), 'admin'));
+USING (public.has_role(auth.uid(), 'admin'::app_role));
 
 -- =============================================
--- 10. RLS POLICIES FOR WITHDRAWAL REQUESTS
+-- 11. RLS POLICIES FOR WITHDRAWAL REQUESTS
 -- =============================================
 
 -- Users can view their own withdrawal requests
@@ -196,10 +214,10 @@ USING (auth.uid() = user_id AND status = 'pending');
 CREATE POLICY "Admins can manage all withdrawal requests" 
 ON public.withdrawal_requests 
 FOR ALL 
-USING (public.has_role(auth.uid(), 'admin'));
+USING (public.has_role(auth.uid(), 'admin'::app_role));
 
 -- =============================================
--- 11. RLS POLICIES FOR TRADING FEATURES
+-- 12. RLS POLICIES FOR TRADING FEATURES
 -- =============================================
 
 -- Everyone can view trading features
@@ -212,26 +230,26 @@ USING (true);
 CREATE POLICY "Only admins can modify trading features" 
 ON public.trading_features 
 FOR ALL 
-USING (public.has_role(auth.uid(), 'admin'));
+USING (public.has_role(auth.uid(), 'admin'::app_role));
 
 -- =============================================
--- 12. RLS POLICIES FOR ADMIN ACTIONS
+-- 13. RLS POLICIES FOR ADMIN ACTIONS
 -- =============================================
 
 -- Only admins can view admin actions
 CREATE POLICY "Only admins can view admin actions" 
 ON public.admin_actions 
 FOR SELECT 
-USING (public.has_role(auth.uid(), 'admin'));
+USING (public.has_role(auth.uid(), 'admin'::app_role));
 
 -- Only admins can create admin actions
 CREATE POLICY "Only admins can create admin actions" 
 ON public.admin_actions 
 FOR INSERT 
-WITH CHECK (public.has_role(auth.uid(), 'admin') AND auth.uid() = admin_id);
+WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role) AND auth.uid() = admin_id);
 
 -- =============================================
--- 13. ENHANCE TRADES TABLE POLICIES
+-- 14. ENHANCE TRADES TABLE POLICIES
 -- =============================================
 
 -- Update existing trades policies to include admin override
@@ -239,10 +257,10 @@ DROP POLICY IF EXISTS "Admins can view and modify all trades" ON public.trades;
 CREATE POLICY "Admins can view and modify all trades" 
 ON public.trades 
 FOR ALL 
-USING (public.has_role(auth.uid(), 'admin'));
+USING (public.has_role(auth.uid(), 'admin'::app_role));
 
 -- =============================================
--- 14. FUNCTIONS FOR ADMIN OPERATIONS
+-- 15. FUNCTIONS FOR ADMIN OPERATIONS
 -- =============================================
 
 -- Function to log admin actions
@@ -488,7 +506,7 @@ END;
 $$;
 
 -- =============================================
--- 15. TRIGGERS FOR AUTOMATIC UPDATES
+-- 16. TRIGGERS FOR AUTOMATIC UPDATES
 -- =============================================
 
 -- Trigger for withdrawal requests updated_at
@@ -504,7 +522,7 @@ CREATE TRIGGER update_trading_features_updated_at
   EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =============================================
--- 16. INDEXES FOR PERFORMANCE
+-- 17. INDEXES FOR PERFORMANCE
 -- =============================================
 
 -- Wallet transactions indexes
@@ -533,7 +551,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_outcome ON public.trades(outcome);
 CREATE INDEX IF NOT EXISTS idx_trades_admin_override ON public.trades(admin_override);
 
 -- =============================================
--- 17. ENABLE REALTIME FOR LIVE UPDATES
+-- 18. ENABLE REALTIME FOR LIVE UPDATES
 -- =============================================
 
 ALTER TABLE public.wallet_transactions REPLICA IDENTITY FULL;
@@ -543,7 +561,7 @@ ALTER TABLE public.admin_actions REPLICA IDENTITY FULL;
 ALTER TABLE public.trades REPLICA IDENTITY FULL;
 
 -- =============================================
--- 18. COMMENTS FOR DOCUMENTATION
+-- 19. COMMENTS FOR DOCUMENTATION
 -- =============================================
 
 COMMENT ON TABLE public.wallet_transactions IS 'All wallet transactions including admin adjustments and user transfers';
@@ -559,7 +577,7 @@ COMMENT ON COLUMN public.trades.admin_override_by IS 'Admin user who forced the 
 COMMENT ON COLUMN public.trades.admin_override_reason IS 'Reason for admin override of trade outcome';
 
 -- =============================================
--- 19. FINAL SETUP COMPLETE
+-- 20. FINAL SETUP COMPLETE
 -- =============================================
 
 -- Grant necessary permissions
