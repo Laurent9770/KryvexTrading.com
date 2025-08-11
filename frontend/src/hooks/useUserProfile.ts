@@ -27,6 +27,13 @@ export const useUserProfile = () => {
       setLoading(true);
 
       try {
+        // Check if Supabase client is properly initialized
+        if (!supabase || typeof supabase.auth?.getUser !== 'function') {
+          console.warn('⚠️ Supabase client not properly initialized in useUserProfile');
+          setLoading(false);
+          return;
+        }
+
         // Get authenticated user
         const { data: authUser, error: authError } = await supabase.auth.getUser();
         
@@ -37,6 +44,13 @@ export const useUserProfile = () => {
         }
 
         setUser(authUser.user);
+
+        // Check if Supabase client is available for database queries
+        if (!supabase || typeof supabase.from !== 'function') {
+          console.warn('⚠️ Supabase client not available for profile queries');
+          setLoading(false);
+          return;
+        }
 
         // Get user profile from profiles table
         const { data: profileData, error: profileError } = await supabase

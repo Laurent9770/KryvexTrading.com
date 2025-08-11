@@ -161,8 +161,8 @@ class RealTimePriceService {
         this.updatePrices();
       }, 30000);
 
-      // Try to connect to Supabase realtime
-      this.connectToSupabaseRealtime();
+      // Don't connect to Supabase realtime immediately - make it lazy
+      // this.connectToSupabaseRealtime();
     } catch (error) {
       console.error('❌ Error starting real-time updates:', error);
     }
@@ -170,7 +170,8 @@ class RealTimePriceService {
 
   private async connectToSupabaseRealtime() {
     try {
-      if (!supabase) {
+      // Only try to connect if Supabase is properly initialized
+      if (!supabase || typeof supabase.channel !== 'function') {
         console.warn('⚠️ Supabase client not available for realtime');
         return;
       }
@@ -304,6 +305,14 @@ class RealTimePriceService {
 
   public isRealtimeConnected(): boolean {
     return this.isConnected;
+  }
+
+  public async connectToRealtime(): Promise<void> {
+    try {
+      await this.connectToSupabaseRealtime();
+    } catch (error) {
+      console.error('❌ Error connecting to realtime:', error);
+    }
   }
 
   public async addPriceUpdate(priceUpdate: PriceUpdate) {
