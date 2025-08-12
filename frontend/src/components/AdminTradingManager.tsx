@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import supabaseTradingService from '@/services/supabaseTradingService';
 import supabase from '@/lib/supabaseClient';
@@ -17,7 +18,10 @@ import {
   Search,
   RefreshCw,
   DollarSign,
-  Activity
+  Activity,
+  Zap,
+  Target,
+  Settings
 } from 'lucide-react';
 
 interface Trade {
@@ -33,13 +37,25 @@ interface Trade {
   created_at: string;
 }
 
+interface UserTradingMode {
+  userId: string;
+  username: string;
+  userEmail: string;
+  mode: 'normal' | 'force_win' | 'force_loss' | 'bot_80_win';
+  totalTrades: number;
+  winRate: number;
+}
+
 const AdminTradingManager: React.FC = () => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [filteredTrades, setFilteredTrades] = useState<Trade[]>([]);
+  const [userTradingModes, setUserTradingModes] = useState<UserTradingMode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
   const [resultFilter, setResultFilter] = useState<'all' | 'win' | 'loss'>('all');
+  const [selectedUser, setSelectedUser] = useState<UserTradingMode | null>(null);
+  const [simulationMode, setSimulationMode] = useState<'normal' | 'force_win' | 'force_loss' | 'bot_80_win'>('normal');
   const [stats, setStats] = useState({
     totalTrades: 0,
     pendingTrades: 0,
@@ -96,6 +112,7 @@ const AdminTradingManager: React.FC = () => {
 
       setTrades(tradesWithUsers);
       calculateStats(tradesWithUsers);
+      generateUserTradingModes(tradesWithUsers);
       
     } catch (error) {
       console.error('Error loading trades:', error);
@@ -107,6 +124,53 @@ const AdminTradingManager: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const generateUserTradingModes = async (tradesData: Trade[]) => {
+    const userMap = new Map<string, UserTradingMode>();
+
+    tradesData.forEach(trade => {
+      if (!userMap.has(trade.userId)) {
+        const userTrades = tradesData.filter(t => t.userId === trade.userId);
+        const completedTrades = userTrades.filter(t => t.status === 'completed');
+        const wins = completedTrades.filter(t => t.result === 'win').length;
+        const winRate = completedTrades.length > 0 ? (wins / completedTrades.length) * 100 : 0;
+
+        userMap.set(trade.userId, {
+          userId: trade.userId,
+          username: trade.username,
+          userEmail: trade.userEmail,
+          mode: 'normal', // Default mode
+          totalTrades: userTrades.length,
+          winRate: winRate
+        });
+      }
+    });
+
+    // Load existing trading modes from database
+    try {
+      const userIds = Array.from(userMap.keys());
+      const { data: tradingModes, error } = await supabase
+        .from('user_trading_modes')
+        .select('user_id, mode')
+        .in('user_id', userIds);
+
+      if (!error && tradingModes) {
+        const modesMap = new Map(tradingModes.map((tm: any) => [tm.user_id, tm.mode]));
+        
+        // Update user modes with database values
+        userMap.forEach((user, userId) => {
+          const savedMode = modesMap.get(userId) as string;
+          if (savedMode && ['normal', 'force_win', 'force_loss', 'bot_80_win'].includes(savedMode)) {
+            user.mode = savedMode as 'normal' | 'force_win' | 'force_loss' | 'bot_80_win';
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading trading modes:', error);
+    }
+
+    setUserTradingModes(Array.from(userMap.values()));
   };
 
   const calculateStats = (tradesData: Trade[]) => {
@@ -153,6 +217,61 @@ const AdminTradingManager: React.FC = () => {
     }
 
     setFilteredTrades(filtered);
+  };
+
+  const handleSetTradingMode = async () => {
+    if (!selectedUser) return;
+
+    try {
+      // Update user trading mode in database
+      const { error } = await supabase
+        .from('user_trading_modes')
+        .upsert({
+          user_id: selectedUser.userId,
+          mode: simulationMode,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setUserTradingModes(prev => prev.map(user => 
+        user.userId === selectedUser.userId 
+          ? { ...user, mode: simulationMode }
+          : user
+      ));
+
+      toast({
+        title: "Trading Mode Updated",
+        description: `${selectedUser.username} trading mode set to ${simulationMode.replace('_', ' ')}`,
+      });
+
+      setSelectedUser(null);
+      setSimulationMode('normal');
+      
+    } catch (error) {
+      console.error('Error updating trading mode:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update trading mode",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getTradingModeBadge = (mode: string) => {
+    switch (mode) {
+      case 'normal':
+        return <Badge variant="outline" className="flex items-center gap-1"><Settings className="w-3 h-3" /> Normal</Badge>;
+      case 'force_win':
+        return <Badge variant="default" className="flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Force Win</Badge>;
+      case 'force_loss':
+        return <Badge variant="destructive" className="flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Force Loss</Badge>;
+      case 'bot_80_win':
+        return <Badge variant="secondary" className="flex items-center gap-1"><Target className="w-3 h-3" /> Bot 80% Win</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -249,6 +368,95 @@ const AdminTradingManager: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* User Trading Modes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5" />
+            Trading Simulation Controls
+          </CardTitle>
+          <CardDescription>
+            Control trading results for specific users. Set simulation modes to override normal trading.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {userTradingModes.map((user) => (
+              <div key={user.userId} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <h4 className="font-medium">{user.username}</h4>
+                      <p className="text-sm text-muted-foreground">{user.userEmail}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Trades: {user.totalTrades}</span>
+                      <span className="text-sm text-muted-foreground">Win Rate: {user.winRate.toFixed(1)}%</span>
+                    </div>
+                    {getTradingModeBadge(user.mode)}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setSimulationMode('normal');
+                        }}
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Set Mode
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Set Trading Mode for {user.username}</DialogTitle>
+                        <DialogDescription>
+                          Choose how trading results will be simulated for this user.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Simulation Mode</label>
+                          <Select value={simulationMode} onValueChange={(value: any) => setSimulationMode(value)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="normal">Normal Trading (Random)</SelectItem>
+                              <SelectItem value="force_win">Force All Wins</SelectItem>
+                              <SelectItem value="force_loss">Force All Losses</SelectItem>
+                              <SelectItem value="bot_80_win">Bot Mode (80% Win Rate)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <p><strong>Normal:</strong> Realistic trading with random outcomes</p>
+                          <p><strong>Force Win:</strong> All trades will result in wins</p>
+                          <p><strong>Force Loss:</strong> All trades will result in losses</p>
+                          <p><strong>Bot 80% Win:</strong> Simulated bot with 80% win rate</p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setSelectedUser(null)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleSetTradingMode}>
+                          Apply Mode
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>
