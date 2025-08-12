@@ -158,13 +158,10 @@ ALTER TABLE public.withdrawal_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deposits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
 
--- 8. Create RLS policies for new tables
+-- 8. Create basic RLS policies for new tables (without admin function references)
 -- User wallets policies
 CREATE POLICY "Users can view their own wallet" ON public.user_wallets
   FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all wallets" ON public.user_wallets
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 
 -- Withdrawal requests policies
 CREATE POLICY "Users can view their own withdrawal requests" ON public.withdrawal_requests
@@ -173,9 +170,6 @@ CREATE POLICY "Users can view their own withdrawal requests" ON public.withdrawa
 CREATE POLICY "Users can create withdrawal requests" ON public.withdrawal_requests
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Admins can manage all withdrawal requests" ON public.withdrawal_requests
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
-
 -- Deposits policies
 CREATE POLICY "Users can view their own deposits" ON public.deposits
   FOR SELECT USING (auth.uid() = user_id);
@@ -183,15 +177,9 @@ CREATE POLICY "Users can view their own deposits" ON public.deposits
 CREATE POLICY "Users can create deposits" ON public.deposits
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Admins can manage all deposits" ON public.deposits
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
-
--- Admin actions policies (only admins can access)
-CREATE POLICY "Admins can view admin actions" ON public.admin_actions
-  FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can create admin actions" ON public.admin_actions
-  FOR INSERT WITH CHECK (public.has_role(auth.uid(), 'admin'));
+-- Admin actions policies (basic - will be enhanced in next migration)
+CREATE POLICY "Admin actions are admin only" ON public.admin_actions
+  FOR ALL USING (false); -- Will be replaced with proper admin check in next migration
 
 -- 9. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_user_wallets_user_id ON public.user_wallets(user_id);
@@ -208,12 +196,7 @@ GRANT SELECT, INSERT, UPDATE ON public.withdrawal_requests TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.deposits TO authenticated;
 GRANT SELECT, INSERT ON public.admin_actions TO authenticated;
 
--- 11. Create trigger for updated_at on user_wallets
-CREATE TRIGGER update_user_wallets_updated_at
-  BEFORE UPDATE ON public.user_wallets
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- 12. Insert some sample data for testing
+-- 11. Insert some sample data for testing
 INSERT INTO public.user_wallets (user_id, trading_account, funding_account)
 SELECT 
   p.user_id,
@@ -225,7 +208,7 @@ WHERE NOT EXISTS (
 )
 ON CONFLICT (user_id) DO NOTHING;
 
--- 13. Verify the setup
+-- 12. Verify the setup
 DO $$
 DECLARE
     profiles_count INTEGER;

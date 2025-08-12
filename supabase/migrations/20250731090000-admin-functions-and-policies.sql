@@ -9,6 +9,7 @@ DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
 DROP POLICY IF EXISTS "Admins can update trades" ON public.trades;
+DROP POLICY IF EXISTS "Admin actions are admin only" ON public.admin_actions;
 
 -- 2. Drop existing functions if they exist to avoid conflicts
 DROP FUNCTION IF EXISTS public.has_role(UUID, TEXT) CASCADE;
@@ -392,6 +393,22 @@ CREATE POLICY "Admins can view all trades" ON public.trades
 CREATE POLICY "Admins can update trades" ON public.trades
   FOR UPDATE USING (public.is_admin());
 
+-- Enhanced admin policies for existing tables
+CREATE POLICY "Admins can view all wallets" ON public.user_wallets
+  FOR ALL USING (public.is_admin());
+
+CREATE POLICY "Admins can manage all withdrawal requests" ON public.withdrawal_requests
+  FOR ALL USING (public.is_admin());
+
+CREATE POLICY "Admins can manage all deposits" ON public.deposits
+  FOR ALL USING (public.is_admin());
+
+CREATE POLICY "Admins can view admin actions" ON public.admin_actions
+  FOR SELECT USING (public.is_admin());
+
+CREATE POLICY "Admins can create admin actions" ON public.admin_actions
+  FOR INSERT WITH CHECK (public.is_admin());
+
 -- 13. Create admin dashboard view (with error handling for missing tables)
 CREATE OR REPLACE VIEW public.admin_dashboard_view AS
 SELECT 
@@ -445,7 +462,18 @@ LEFT JOIN (
     GROUP BY user_id
 ) d ON p.user_id = d.user_id;
 
--- 14. Grant permissions for admin functions
+-- 14. Create trigger for updated_at on user_wallets (if function exists)
+DO $$
+BEGIN
+    CREATE TRIGGER update_user_wallets_updated_at
+      BEFORE UPDATE ON public.user_wallets
+      FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+EXCEPTION WHEN OTHERS THEN
+    -- Function might not exist, just continue
+    NULL;
+END $$;
+
+-- 15. Grant permissions for admin functions
 GRANT EXECUTE ON FUNCTION public.has_role(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_stats() TO authenticated;
@@ -458,7 +486,7 @@ GRANT EXECUTE ON FUNCTION public.process_deposit(UUID, TEXT, TEXT) TO authentica
 -- Grant permissions for admin dashboard view
 GRANT SELECT ON public.admin_dashboard_view TO authenticated;
 
--- 15. Create indexes for better performance
+-- 16. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 CREATE INDEX IF NOT EXISTS idx_profiles_kyc_status ON public.profiles(kyc_status);
 CREATE INDEX IF NOT EXISTS idx_profiles_is_verified ON public.profiles(is_verified);
@@ -468,7 +496,7 @@ CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status_created ON public.with
 CREATE INDEX IF NOT EXISTS idx_deposits_status_created ON public.deposits(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_action_type ON public.admin_actions(action_type);
 
--- 16. Verify the setup
+-- 17. Verify the setup
 DO $$
 DECLARE
     admin_count INTEGER;
