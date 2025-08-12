@@ -205,6 +205,7 @@ ALTER TABLE public.user_trading_modes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
 
 -- Step 7: Create admin helper function
+DROP FUNCTION IF EXISTS has_role(UUID, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION has_role(user_id UUID, required_role TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
