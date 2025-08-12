@@ -84,7 +84,7 @@ const DepositPage = () => {
       label: "TRC20 (Tron)", 
       address: "TXgmyWRAyuLfoJipSijEwjWJtApuMa4tYU",
       minDeposit: "10 USDT",
-      confirmations: "20 confirmations",
+      confirmations: " confirmations",
       fee: "1 USDT"
     },
     { 
@@ -128,7 +128,7 @@ const DepositPage = () => {
       network: "Multi-Network", 
       address: "TXgmyWRAyuLfoJipSijEwjWJtApuMa4tYU",
       minDeposit: "10 USDT",
-      confirmations: "20 confirmations"
+      confirmations: "2 confirmations"
     }
   ];
 
@@ -694,6 +694,7 @@ const DepositPage = () => {
               <h3 className="text-lg font-semibold mb-4 text-white">Need Help?</h3>
               <div className="space-y-3">
                 <Button 
+                  onClick={() => navigate('/deposit-guide')}
                   variant="outline" 
                   className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
                 >
@@ -701,6 +702,10 @@ const DepositPage = () => {
                   View Deposit Guide
                 </Button>
                 <Button 
+                  onClick={() => {
+                    const chatUrl = 'https://www.smartsupp.com/chat/67805a30e60ab37fa695869a4b94967b14e41dbb';
+                    window.open(chatUrl, '_blank', 'width=400,height=600');
+                  }}
                   variant="outline" 
                   className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
                 >
