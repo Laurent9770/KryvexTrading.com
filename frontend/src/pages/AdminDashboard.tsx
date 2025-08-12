@@ -14,40 +14,22 @@ import {
   Users, 
   DollarSign, 
   TrendingUp, 
-  AlertTriangle, 
-  FileText, 
-  Settings,
   Shield,
   Eye,
   CheckCircle,
   XCircle,
-  Clock,
   Search,
-  Filter,
   Download,
   BarChart3,
   Activity,
-  Zap,
-  Lock,
-  Unlock,
-  UserCheck,
   CreditCard,
   Banknote,
-  PieChart,
-  Wallet,
-  Target,
-  Play,
-  Pause,
   RefreshCw,
-  ArrowLeft,
-  User,
   Key,
   Wallet as WalletIcon
 } from 'lucide-react';
 
-import AdminUserManagement from '@/components/AdminUserManagement';
 import AdminKYCVerification from '@/components/AdminKYCVerification';
-import AdminAuditTrail from '@/components/AdminAuditTrail';
 import AdminDepositManager from '@/components/AdminDepositManager';
 import AdminTradeControl from '@/components/AdminTradeControl';
 import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
@@ -63,38 +45,6 @@ interface User {
   account_balance: number;
   is_verified: boolean;
   created_at: string;
-}
-
-interface Deposit {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  created_at: string;
-  user_id: string;
-  profiles: { full_name: string; email: string };
-}
-
-interface Trade {
-  id: string;
-  amount: number;
-  trade_type: string;
-  status: string;
-  result: string;
-  profit_loss: number;
-  created_at: string;
-  user_id: string;
-  profiles: { full_name: string; email: string };
-}
-
-interface WithdrawalRequest {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  requested_at: string;
-  user_id: string;
-  profiles: { full_name: string; email: string };
 }
 
 interface DashboardStats {
