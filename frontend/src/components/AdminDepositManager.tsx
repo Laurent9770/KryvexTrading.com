@@ -34,25 +34,25 @@ const AdminDepositManager = () => {
   const [selectedRequest, setSelectedRequest] = useState<AdminDepositRequest | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const fetchDepositRequests = async () => {
+    try {
+      console.log('=== DEBUG: AdminDepositManager loading deposit requests ===');
+      
+      // Use supabaseAdminDataService to get real deposit requests based on actual users
+      const requests = await supabaseAdminDataService.getDepositRequests();
+      console.log('Deposit requests loaded:', requests.length);
+      console.log('Deposit requests data:', requests);
+      
+      setDepositRequests(requests);
+      setFilteredRequests(requests);
+      
+      console.log('=== DEBUG: AdminDepositManager data loading complete ===');
+    } catch (error) {
+      console.error('Error fetching deposit requests:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchDepositRequests = async () => {
-      try {
-        console.log('=== DEBUG: AdminDepositManager loading deposit requests ===');
-        
-            // Use supabaseAdminDataService to get real deposit requests based on actual users
-    const requests = await supabaseAdminDataService.getDepositRequests();
-        console.log('Deposit requests loaded:', requests.length);
-        console.log('Deposit requests data:', requests);
-        
-        setDepositRequests(requests);
-        setFilteredRequests(requests);
-        
-        console.log('=== DEBUG: AdminDepositManager data loading complete ===');
-      } catch (error) {
-        console.error('Error fetching deposit requests:', error);
-      }
-    };
-    
     fetchDepositRequests();
     
     // Set up WebSocket listener for real-time deposit requests
@@ -64,12 +64,14 @@ const AdminDepositManager = () => {
         userId: data.userId,
         userEmail: data.userEmail,
         amount: data.amount,
+        currency: data.currency || 'USDT',
         network: data.network || 'TRC20',
         transactionHash: data.transactionHash,
         notes: data.notes,
         proofFile: data.proofFile,
         proofPreview: data.proofPreview,
         status: 'pending',
+        requestedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
       
@@ -350,7 +352,7 @@ const AdminDepositManager = () => {
                 )}
                 
                 <div className="text-xs text-muted-foreground">
-                  Created: {new Date(request.createdAt).toLocaleString()}
+                  Created: {request.createdAt ? new Date(request.createdAt).toLocaleString() : 'N/A'}
                   {request.processedAt && (
                     <span className="ml-4">
                       Processed: {new Date(request.processedAt).toLocaleString()}
@@ -417,7 +419,7 @@ const AdminDepositManager = () => {
                   <label className="text-sm font-medium text-muted-foreground">Payment Proof</label>
                   <div className="flex items-center gap-2 mt-2">
                     <FileText className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm">{selectedRequest.proofFile.name}</span>
+                    <span className="text-sm">{selectedRequest.proofFile}</span>
                     <Button variant="outline" size="sm">
                       <Download className="w-4 h-4 mr-2" />
                       Download
@@ -434,7 +436,7 @@ const AdminDepositManager = () => {
               )}
               
               <div className="text-sm text-muted-foreground">
-                <p>Created: {new Date(selectedRequest.createdAt).toLocaleString()}</p>
+                <p>Created: {selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleString() : 'N/A'}</p>
                 {selectedRequest.processedAt && (
                   <p>Processed: {new Date(selectedRequest.processedAt).toLocaleString()}</p>
                 )}
