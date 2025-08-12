@@ -590,10 +590,53 @@ class SupabaseTradingService {
   // Alias for getTradeStatistics to match the expected method name
   async getTradingStats(userId?: string): Promise<{ success: boolean; stats?: any; error?: string }> {
     try {
-      console.log('📊 Fetching trading stats for user:', userId);
+      console.log('📊 Fetching trading stats for user:', userId || 'all users');
       
       if (!userId) {
-        return { success: false, error: 'User ID is required' };
+        // For admin dashboard, get stats for all users
+        const { data: allTrades, error } = await supabase
+          .from('spot_trades')
+          .select(`
+            user_id,
+            status,
+            outcome,
+            amount,
+            payout,
+            created_at
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ Error fetching all trades for stats:', error);
+          return { success: false, error: error.message };
+        }
+
+        // Calculate overall stats
+        const totalTrades = allTrades?.length || 0;
+        const completedTrades = allTrades?.filter(trade => trade.status === 'completed').length || 0;
+        const winningTrades = allTrades?.filter(trade => trade.outcome === 'win').length || 0;
+        const totalVolume = allTrades?.reduce((sum, trade) => sum + (trade.amount || 0), 0) || 0;
+        const totalProfit = allTrades?.reduce((sum, trade) => {
+          if (trade.outcome === 'win' && trade.payout) {
+            return sum + (trade.payout - trade.amount);
+          } else if (trade.outcome === 'lose') {
+            return sum - trade.amount;
+          }
+          return sum;
+        }, 0) || 0;
+
+        const stats = {
+          totalTrades,
+          completedTrades,
+          winningTrades,
+          losingTrades: completedTrades - winningTrades,
+          totalVolume,
+          totalProfit,
+          winRate: completedTrades > 0 ? (winningTrades / completedTrades) * 100 : 0,
+          averageTradeSize: totalTrades > 0 ? totalVolume / totalTrades : 0
+        };
+
+        return { success: true, stats };
       }
 
       const result = await this.getTradeStatistics(userId);

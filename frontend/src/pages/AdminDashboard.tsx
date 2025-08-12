@@ -449,10 +449,10 @@ export default function AdminDashboard() {
         index === self.findIndex(u => u.id === user.id)
       );
 
-      // Get real trade data from Supabase
-      const tradeHistoryResponse = await supabaseTradingService.getTradeHistory('all', 1, 100);
-      const tradeStatsResponse = await supabaseTradingService.getTradingStats('all');
-      const spotTradesResponse = await supabaseTradingService.getTrades('all');
+      // Get real trade data from Supabase - don't pass 'all' as userId
+      const tradeHistoryResponse = await supabaseTradingService.getTradeHistory('', 1, 100);
+      const tradeStatsResponse = await supabaseTradingService.getTradingStats();
+      const spotTradesResponse = await supabaseTradingService.getTrades();
       
       const tradeHistory = tradeHistoryResponse.success ? tradeHistoryResponse.data || [] : [];
       const tradeStats = tradeStatsResponse.success ? tradeStatsResponse.stats : null;

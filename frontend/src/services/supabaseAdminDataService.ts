@@ -91,52 +91,58 @@ class SupabaseAdminDataService {
   // Get all users with admin data
   async getAllUsers(): Promise<AdminUser[]> {
     try {
+      console.log('🔄 Fetching all users from profiles table...');
+      
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           user_id,
           email,
-          full_name,
-          phone,
-          country,
-          kyc_status,
-          account_status,
+          first_name,
+          last_name,
+          kyc_level1_status,
+          kyc_level2_status,
           created_at,
-          updated_at,
-          funding_wallet,
-          trading_wallet
+          updated_at
         `)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching users:', error);
+        console.error('❌ Error fetching users:', error);
         return [];
       }
 
+      console.log('✅ Successfully fetched users:', data?.length || 0);
+
       return data.map(user => {
-        // Split full_name into first and last name
-        const nameParts = (user.full_name || '').split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
+        // Determine KYC status based on available columns
+        let kycStatus = 'pending';
+        if (user.kyc_level2_status === 'approved') {
+          kycStatus = 'verified';
+        } else if (user.kyc_level1_status === 'approved') {
+          kycStatus = 'pending';
+        } else if (user.kyc_level1_status === 'rejected' || user.kyc_level2_status === 'rejected') {
+          kycStatus = 'rejected';
+        }
         
         return {
           id: user.user_id,
-          email: user.email,
-          firstName,
-          lastName,
-          username: user.email?.split('@')[0] || '',
-          kycStatus: user.kyc_status || 'pending',
-          kycLevel: user.kyc_status === 'approved' ? 2 : user.kyc_status === 'pending' ? 1 : 0,
-          status: user.account_status || 'active',
+          email: user.email || 'No email',
+          firstName: user.first_name || '',
+          lastName: user.last_name || '',
+          username: user.email?.split('@')[0] || 'unknown',
+          kycStatus: kycStatus as 'pending' | 'verified' | 'rejected',
+          kycLevel: user.kyc_level2_status === 'approved' ? 2 : user.kyc_level1_status === 'approved' ? 1 : 0,
+          status: 'active' as 'active' | 'suspended' | 'banned',
           createdAt: user.created_at,
           lastLogin: user.updated_at || user.created_at,
-          tradingBalance: user.trading_wallet || 0,
+          tradingBalance: 0, // Will be fetched from user_wallets table
           totalTrades: 0, // Will be calculated separately
           totalVolume: 0  // Will be calculated separately
         };
       });
     } catch (error) {
-      console.error('Error getting all users:', error);
+      console.error('❌ Error getting all users:', error);
       return [];
     }
   }
@@ -144,36 +150,57 @@ class SupabaseAdminDataService {
   // Get trade summaries for all users
   async getTradeSummaries(): Promise<AdminTradeSummary[]> {
     try {
-      const { data, error } = await supabase
-        .from('trades')
+      console.log('🔄 Fetching trade summaries...');
+      
+      // First get all users to map user IDs to emails
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .not('user_id', 'is', null);
+
+      if (usersError) {
+        console.error('❌ Error fetching users for trade mapping:', usersError);
+        return [];
+      }
+
+      // Create a map of user_id to email
+      const userEmailMap = new Map<string, string>();
+      users.forEach(user => {
+        userEmailMap.set(user.user_id, user.email || 'unknown@email.com');
+      });
+
+      // Get trades from spot_trades table (which exists)
+      const { data: spotTrades, error: spotError } = await supabase
+        .from('spot_trades')
         .select(`
           user_id,
           status,
-          result,
+          outcome,
           amount,
-          profit_loss,
-          created_at,
-          profiles!inner(email)
+          payout,
+          created_at
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching trade summaries:', error);
+      if (spotError) {
+        console.error('❌ Error fetching spot trades:', spotError);
         return [];
       }
+
+      console.log('✅ Successfully fetched spot trades:', spotTrades?.length || 0);
 
       // Group trades by user and calculate summaries
       const userTradeMap = new Map<string, AdminTradeSummary>();
       
-      data.forEach(trade => {
+      spotTrades.forEach(trade => {
         const userId = trade.user_id;
-        const userEmail = trade.profiles?.[0]?.email || 'unknown@email.com';
+        const userEmail = userEmailMap.get(userId) || 'unknown@email.com';
         
         if (!userTradeMap.has(userId)) {
           userTradeMap.set(userId, {
             userId,
             userEmail,
-            username: userEmail.split('@')[0], // Use email prefix as username
+            username: userEmail.split('@')[0],
             email: userEmail,
             totalTrades: 0,
             winningTrades: 0,
@@ -191,24 +218,29 @@ class SupabaseAdminDataService {
         const summary = userTradeMap.get(userId)!;
         summary.totalTrades++;
         summary.totalVolume += trade.amount || 0;
-        summary.totalProfit += trade.profit_loss || 0;
+        summary.totalProfit += (trade.payout || 0) - (trade.amount || 0);
         summary.lastTradeDate = trade.created_at;
 
-        if (trade.result === 'win') {
+        if (trade.outcome === 'win') {
           summary.winningTrades++;
-        } else if (trade.result === 'loss') {
+        } else if (trade.outcome === 'lose') {
           summary.losingTrades++;
+        }
+
+        if (trade.status === 'running') {
+          summary.activeTrades++;
         }
       });
 
       // Calculate averages
       userTradeMap.forEach(summary => {
         summary.averageTradeSize = summary.totalTrades > 0 ? summary.totalVolume / summary.totalTrades : 0;
+        summary.totalActive = summary.totalTrades;
       });
 
       return Array.from(userTradeMap.values());
     } catch (error) {
-      console.error('Error getting trade summaries:', error);
+      console.error('❌ Error getting trade summaries:', error);
       return [];
     }
   }
@@ -216,51 +248,80 @@ class SupabaseAdminDataService {
   // Get wallet data for all users
   async getWalletData(): Promise<AdminWalletData[]> {
     try {
+      console.log('🔄 Fetching wallet data...');
+      
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_wallets')
         .select(`
-          id,
-          email,
-          trading_balance,
-          total_deposits,
-          total_withdrawals,
-          last_transaction
+          user_id,
+          trading_account,
+          funding_account,
+          created_at,
+          updated_at
         `)
-        .order('trading_balance', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching wallet data:', error);
+        console.error('❌ Error fetching wallet data:', error);
         return [];
       }
 
-      // Get pending withdrawals count
-      const { data: pendingWithdrawals, error: withdrawalError } = await supabase
-        .from('withdrawal_requests')
-        .select('user_id, status')
-        .eq('status', 'pending');
+      console.log('✅ Successfully fetched wallet data:', data?.length || 0);
 
-      const pendingCounts = new Map<string, number>();
-      if (!withdrawalError && pendingWithdrawals) {
-        pendingWithdrawals.forEach(req => {
-          const count = pendingCounts.get(req.user_id) || 0;
-          pendingCounts.set(req.user_id, count + 1);
-        });
+      // Get user emails for mapping
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .not('user_id', 'is', null);
+
+      if (usersError) {
+        console.error('❌ Error fetching users for wallet mapping:', usersError);
+        return [];
       }
 
-      return data.map(user => ({
-        userId: user.id,
-        userEmail: user.email,
-        username: user.email.split('@')[0], // Use email prefix as username
-        fundingWallet: 0, // Default value for now
-        tradingWallet: user.trading_balance || 0,
-        balance: user.trading_balance || 0,
-        totalDeposits: user.total_deposits || 0,
-        totalWithdrawals: user.total_withdrawals || 0,
-        pendingWithdrawals: pendingCounts.get(user.id) || 0,
-        lastTransaction: user.last_transaction || new Date().toISOString()
-      }));
+      const userEmailMap = new Map<string, string>();
+      users.forEach(user => {
+        userEmailMap.set(user.user_id, user.email || 'unknown@email.com');
+      });
+
+      return data.map(wallet => {
+        const userEmail = userEmailMap.get(wallet.user_id) || 'unknown@email.com';
+        
+        // Calculate total balance from trading and funding accounts
+        let tradingBalance = 0;
+        let fundingBalance = 0;
+        
+        if (wallet.trading_account && typeof wallet.trading_account === 'object') {
+          Object.values(wallet.trading_account).forEach((asset: any) => {
+            if (asset && asset.balance) {
+              tradingBalance += parseFloat(asset.balance) || 0;
+            }
+          });
+        }
+        
+        if (wallet.funding_account && typeof wallet.funding_account === 'object') {
+          Object.values(wallet.funding_account).forEach((asset: any) => {
+            if (asset && asset.balance) {
+              fundingBalance += parseFloat(asset.balance) || 0;
+            }
+          });
+        }
+
+        return {
+          userId: wallet.user_id,
+          userEmail,
+          username: userEmail.split('@')[0],
+          fundingWallet: fundingBalance,
+          tradingWallet: tradingBalance,
+          balance: tradingBalance + fundingBalance,
+          totalDeposits: 0, // Will be calculated from activity feed
+          totalWithdrawals: 0, // Will be calculated from activity feed
+          pendingWithdrawals: 0, // Will be calculated from withdrawal requests
+          lastTransaction: wallet.updated_at || wallet.created_at
+        };
+      });
     } catch (error) {
-      console.error('Error getting wallet data:', error);
+      console.error('❌ Error getting wallet data:', error);
       return [];
     }
   }
