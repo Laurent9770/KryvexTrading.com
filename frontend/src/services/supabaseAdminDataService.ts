@@ -347,6 +347,128 @@ class SupabaseAdminDataService {
     }
   }
 
+  // Get deposit requests
+  async getDepositRequests(): Promise<AdminDepositRequest[]> {
+    try {
+      console.log('🔄 Fetching deposit requests...');
+      
+      const { data, error } = await supabase
+        .from('deposits')
+        .select(`
+          id,
+          user_id,
+          amount,
+          currency,
+          status,
+          proof_file,
+          created_at,
+          processed_at,
+          remarks
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching deposit requests:', error);
+        throw error;
+      }
+
+      // Get user emails for the deposits
+      const userIds = [...new Set((data || []).map((deposit: any) => deposit.user_id))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .in('user_id', userIds);
+
+      if (profilesError) {
+        console.warn('⚠️ Error fetching user profiles for deposits:', profilesError);
+      }
+
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.user_id, p.email]));
+
+      // Map to AdminDepositRequest interface
+      const depositRequests: AdminDepositRequest[] = (data || []).map((deposit: any) => ({
+        id: deposit.id,
+        userId: deposit.user_id,
+        userEmail: profilesMap.get(deposit.user_id) || 'Unknown User',
+        amount: deposit.amount,
+        currency: deposit.currency || 'USDT',
+        status: deposit.status || 'pending',
+        proofFile: deposit.proof_file,
+        requestedAt: deposit.created_at,
+        processedAt: deposit.processed_at,
+        remarks: deposit.remarks,
+        network: 'TRC20', // Default network
+        transactionHash: deposit.proof_file, // Use proof_file as transaction hash for now
+        notes: deposit.remarks,
+        createdAt: deposit.created_at
+      }));
+
+      console.log('✅ Deposit requests loaded:', depositRequests.length);
+      return depositRequests;
+    } catch (error) {
+      console.error('❌ Error in getDepositRequests:', error);
+      throw error;
+    }
+  }
+
+  // Get withdrawal requests
+  async getWithdrawalRequests(): Promise<AdminWithdrawalRequest[]> {
+    try {
+      console.log('🔄 Fetching withdrawal requests...');
+      
+      const { data, error } = await supabase
+        .from('withdrawal_requests')
+        .select(`
+          id,
+          user_id,
+          amount,
+          currency,
+          status,
+          requested_at,
+          processed_at,
+          remarks
+        `)
+        .order('requested_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching withdrawal requests:', error);
+        throw error;
+      }
+
+      // Get user emails for the withdrawals
+      const userIds = [...new Set((data || []).map((withdrawal: any) => withdrawal.user_id))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .in('user_id', userIds);
+
+      if (profilesError) {
+        console.warn('⚠️ Error fetching user profiles for withdrawals:', profilesError);
+      }
+
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.user_id, p.email]));
+
+      // Map to AdminWithdrawalRequest interface
+      const withdrawalRequests: AdminWithdrawalRequest[] = (data || []).map((withdrawal: any) => ({
+        id: withdrawal.id,
+        userId: withdrawal.user_id,
+        userEmail: profilesMap.get(withdrawal.user_id) || 'Unknown User',
+        amount: withdrawal.amount,
+        currency: withdrawal.currency || 'USDT',
+        status: withdrawal.status || 'pending',
+        requestedAt: withdrawal.requested_at,
+        processedAt: withdrawal.processed_at,
+        remarks: withdrawal.remarks
+      }));
+
+      console.log('✅ Withdrawal requests loaded:', withdrawalRequests.length);
+      return withdrawalRequests;
+    } catch (error) {
+      console.error('❌ Error in getWithdrawalRequests:', error);
+      throw error;
+    }
+  }
+
   // Log admin action
   async logAdminAction(actionType: string, targetTable: string, targetId: string, description: string, oldValues?: any, newValues?: any): Promise<boolean> {
     try {
