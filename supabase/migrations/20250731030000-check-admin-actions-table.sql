@@ -25,7 +25,7 @@ BEGIN
             AND table_name = 'admin_actions'
             ORDER BY ordinal_position
         LOOP
-            RAISE NOTICE '- % (%%)', col_name, col_type;
+            RAISE NOTICE '- % (%)', col_name, col_type;
         END LOOP;
     ELSE
         RAISE NOTICE '=== ADMIN_ACTIONS TABLE DOES NOT EXIST ===';
@@ -46,6 +46,6 @@ BEGIN
         AND table_name = 'profiles'
         ORDER BY ordinal_position
     LOOP
-        RAISE NOTICE '- % (%%)', col_name, col_type;
+        RAISE NOTICE '- % (%)', col_name, col_type;
     END LOOP;
 END $$;
