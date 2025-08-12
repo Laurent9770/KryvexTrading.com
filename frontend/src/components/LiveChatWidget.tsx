@@ -2,13 +2,22 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 
+// Global function to open Smartsupp chat
+declare global {
+  interface Window {
+    smartsupp: any;
+    _smartsupp: any;
+    openSmartsuppChat: () => void;
+  }
+}
+
 const LiveChatWidget = () => {
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     console.log('🔄 Initializing Smartsupp Live Chat...');
 
-    // Method 1: Direct script injection
+    // Method 1: Direct script injection with proper initialization
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.innerHTML = `
@@ -42,6 +51,17 @@ const LiveChatWidget = () => {
     window._smartsupp = window._smartsupp || {};
     window._smartsupp.key = '67805a30e60ab37fa695869a4b94967b14e41dbb';
     
+    // Create global function to open chat
+    window.openSmartsuppChat = () => {
+      if (window.smartsupp) {
+        console.log('🔄 Opening Smartsupp chat widget...');
+        window.smartsupp('open');
+      } else {
+        console.log('⚠️ Smartsupp not loaded, showing fallback');
+        setShowFallback(true);
+      }
+    };
+    
     // Check if widget appears
     const checkWidget = () => {
       const widgetElements = document.querySelectorAll('[data-smartsupp], iframe[src*="smartsupp"], .smartsupp-widget, #smartsupp-widget');
@@ -69,13 +89,19 @@ const LiveChatWidget = () => {
       if (document.head.contains(script2)) {
         document.head.removeChild(script2);
       }
+      // Remove global function
+      delete window.openSmartsuppChat;
     };
   }, []);
 
   const handleFallbackClick = () => {
-    // Open Smartsupp chat in new window
-    const chatUrl = 'https://www.smartsupp.com/chat/67805a30e60ab37fa695869a4b94967b14e41dbb';
-    window.open(chatUrl, '_blank', 'width=400,height=600');
+    // Try to open Smartsupp chat widget
+    if (window.openSmartsuppChat) {
+      window.openSmartsuppChat();
+    } else {
+      // Fallback: show a simple alert
+      alert('Chat support is currently unavailable. Please try again later or contact support via email.');
+    }
   };
 
   return (
@@ -92,13 +118,5 @@ const LiveChatWidget = () => {
     </>
   );
 };
-
-// Add TypeScript declarations
-declare global {
-  interface Window {
-    smartsupp: any;
-    _smartsupp: any;
-  }
-}
 
 export default LiveChatWidget;

@@ -84,7 +84,7 @@ const DepositPage = () => {
       label: "TRC20 (Tron)", 
       address: "TXgmyWRAyuLfoJipSijEwjWJtApuMa4tYU",
       minDeposit: "10 USDT",
-      confirmations: " confirmations",
+      confirmations: "2 confirmations",
       fee: "1 USDT"
     },
     { 
@@ -703,8 +703,11 @@ const DepositPage = () => {
                 </Button>
                 <Button 
                   onClick={() => {
-                    const chatUrl = 'https://www.smartsupp.com/chat/67805a30e60ab37fa695869a4b94967b14e41dbb';
-                    window.open(chatUrl, '_blank', 'width=400,height=600');
+                    if (window.openSmartsuppChat) {
+                      window.openSmartsuppChat();
+                    } else {
+                      alert('Chat support is currently unavailable. Please try again later.');
+                    }
                   }}
                   variant="outline" 
                   className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"

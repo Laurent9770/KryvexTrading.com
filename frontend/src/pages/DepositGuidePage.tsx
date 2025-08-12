@@ -30,9 +30,12 @@ const DepositGuidePage = () => {
   };
 
   const openSmartsuppChat = () => {
-    // Open Smartsupp chat in new window
-    const chatUrl = 'https://www.smartsupp.com/chat/67805a30e60ab37fa695869a4b94967b14e41dbb';
-    window.open(chatUrl, '_blank', 'width=400,height=600');
+    // Open Smartsupp chat widget
+    if (window.openSmartsuppChat) {
+      window.openSmartsuppChat();
+    } else {
+      alert('Chat support is currently unavailable. Please try again later.');
+    }
   };
 
   const copyToClipboard = (text: string) => {
