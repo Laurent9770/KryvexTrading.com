@@ -98,21 +98,26 @@ const AdminWalletManager: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-    console.log('=== DEBUG: AdminWalletManager loading data ===');
-    
-    // Use supabaseAdminDataService to get real wallet data based on actual users
-    const wallets = await supabaseAdminDataService.getWalletData();
-    console.log('User wallets loaded:', wallets.length);
-    console.log('User wallets data:', wallets);
-    
-          const transactions = await getWalletTransactions();
-    console.log('Wallet transactions loaded:', transactions.length);
-    console.log('Wallet transactions data:', transactions);
-    
-    setUserWallets(wallets);
-    setWalletTransactions(transactions);
-    
-    console.log('=== DEBUG: AdminWalletManager data loading complete ===');
+    try {
+      console.log('=== DEBUG: AdminWalletManager loading data ===');
+      
+      // Use supabaseAdminDataService to get real wallet data based on actual users
+      const wallets = await supabaseAdminDataService.getWalletData();
+      console.log('User wallets loaded:', wallets.length);
+      console.log('User wallets data:', wallets);
+      
+      const transactions = await getWalletTransactions();
+      console.log('Wallet transactions loaded:', transactions.length);
+      console.log('Wallet transactions data:', transactions);
+      
+      setUserWallets(wallets);
+      setWalletTransactions(transactions);
+      
+      console.log('=== DEBUG: AdminWalletManager data loading complete ===');
+    } catch (error) {
+      console.error('Error loading wallet data:', error);
+      // Don't set empty arrays to avoid infinite loops
+    }
   };
 
   const handleFundWallet = async (userWallet: AdminWalletData) => {
@@ -130,7 +135,12 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-              const result = await fundUserWallet(
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Operation timed out')), 10000)
+      );
+      
+      const fundPromise = fundUserWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,
@@ -139,6 +149,8 @@ const AdminWalletManager: React.FC = () => {
         user.email,
         fundForm.remarks
       );
+
+      const result = await Promise.race([fundPromise, timeoutPromise]) as any;
 
       if (result.success) {
         toast({
@@ -157,7 +169,7 @@ const AdminWalletManager: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Funding Failed",
-          description: "Failed to fund user wallet"
+          description: result.message || "Failed to fund user wallet"
         });
       }
     } catch (error) {
@@ -165,7 +177,7 @@ const AdminWalletManager: React.FC = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to fund user wallet"
+        description: error instanceof Error ? error.message : "Failed to fund user wallet"
       });
     } finally {
       setIsProcessing(false);
