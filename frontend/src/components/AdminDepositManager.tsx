@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { subscribeToTransactions } from '@/services/walletService';
+// import { subscribeToTransactions } from '@/services/walletService';
 import supabaseAdminDataService, { AdminDepositRequest } from '@/services/supabaseAdminDataService';
 import { useAuth } from '@/contexts/AuthContext';
 import supabase from '@/lib/supabaseClient';
@@ -82,15 +82,11 @@ const AdminDepositManager = () => {
       });
     };
     
-    // Subscribe to Supabase real-time events
-    const depositSubscription = subscribeToTransactions(handleNewDepositRequest);
-    
     // Set up periodic refresh
     const interval = setInterval(fetchDepositRequests, 30000);
     
     return () => {
       clearInterval(interval);
-      if (depositSubscription) depositSubscription.unsubscribe();
     };
   }, []);
 
@@ -135,7 +131,7 @@ const AdminDepositManager = () => {
       });
       
       // Refresh deposits list
-      fetchDeposits();
+      fetchDepositRequests();
     } catch (error) {
       console.error('Error approving deposit:', error);
       toast({
@@ -165,7 +161,7 @@ const AdminDepositManager = () => {
       });
       
       // Refresh deposits list
-      fetchDeposits();
+      fetchDepositRequests();
     } catch (error) {
       console.error('Error rejecting deposit:', error);
       toast({

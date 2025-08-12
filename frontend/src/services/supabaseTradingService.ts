@@ -736,25 +736,42 @@ class SupabaseTradingService {
     try {
       console.log('📊 Admin: Fetching active trades...');
       
-      const { data, error } = await supabase
+      // First, get trades without join to avoid foreign key issues
+      const { data: trades, error: tradesError } = await supabase
         .from('trades')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            email
-          )
-        `)
+        .select('*')
         .in('status', ['pending'])
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching active trades:', error);
-        return { success: false, error: error.message };
+      if (tradesError) {
+        console.error('❌ Error fetching active trades:', tradesError);
+        return { success: false, error: tradesError.message };
       }
 
-      console.log('✅ Active trades fetched successfully:', data?.length);
-      return { success: true, data: data || [] };
+      // Then, get user profiles separately and combine the data
+      if (trades && trades.length > 0) {
+        const userIds = trades.map(trade => trade.user_id).filter(Boolean);
+        
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, email')
+            .in('user_id', userIds);
+
+          if (profilesError) {
+            console.warn('⚠️ Error fetching profiles, continuing without user data:', profilesError);
+          } else {
+            // Combine trades with profile data
+            const profilesMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+            trades.forEach(trade => {
+              trade.profiles = profilesMap.get(trade.user_id) || null;
+            });
+          }
+        }
+      }
+
+      console.log('✅ Active trades fetched successfully:', trades?.length);
+      return { success: true, data: trades || [] };
     } catch (error) {
       console.error('❌ Unexpected error fetching active trades:', error);
       return { success: false, error: 'An unexpected error occurred' };
