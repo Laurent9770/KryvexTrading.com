@@ -4133,20 +4133,20 @@ const TradingPage = () => {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Available Balance:</span>
-                      <span className="text-sm font-medium">$12,450.00</span>
+                      <span className="text-sm font-medium">${formatCurrency(parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0'))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Used Margin:</span>
-                      <span className="text-sm">$3,998.00</span>
+                      <span className="text-sm">$0.00</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Unrealized PnL:</span>
-                      <span className="text-sm text-green-500">+$653.50</span>
+                      <span className="text-sm text-green-500">$0.00</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-sm font-medium text-muted-foreground">Total Balance:</span>
-                      <span className="text-sm font-bold">$16,448.00</span>
+                      <span className="text-sm font-bold">${formatCurrency(parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0'))}</span>
                     </div>
                   </div>
                 </Card>
