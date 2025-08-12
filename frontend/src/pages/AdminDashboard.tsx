@@ -125,6 +125,44 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Determine active tab based on URL
+  const getInitialTab = () => {
+    if (location.pathname === '/admin/trading-control') {
+      return 'trading-control';
+    }
+    return 'users'; // Default to Users tab for admins
+  };
+  
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  const [activeTab, setActiveTab] = useState(getInitialTab());
+  const [users, setUsers] = useState<User[]>([]);
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [spotTrades, setSpotTrades] = useState<SpotTrade[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalDeposits: 0,
+    totalTrades: 0,
+    pendingKyc: 0,
+    totalVolume: 0,
+    activeUsers: 0,
+    pendingDeposits: 0,
+    totalBalance: 0,
+    avgWinRate: 0,
+    newUsersToday: 0,
+    withdrawalStats: {
+      totalRequests: 0,
+      pendingRequests: 0,
+      approvedRequests: 0,
+      rejectedRequests: 0,
+      totalAmount: 0
+    }
+  });
+
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
   // Simplified admin access check - only redirect if definitely not admin
   useEffect(() => {
     // Only check if we have user data and they're authenticated
@@ -147,6 +185,8 @@ export default function AdminDashboard() {
       console.log('✅ Admin dashboard access granted for:', user?.email);
     }
   }, [user, isAuthenticated, isAdmin, navigate, toast]);
+
+  // NOW WE CAN HAVE CONDITIONAL RETURNS AFTER ALL HOOKS ARE CALLED
 
   // Show loading while auth state is being determined
   if (isLoading) {
@@ -184,45 +224,6 @@ export default function AdminDashboard() {
     );
   }
   
-  // Determine active tab based on URL
-  const getInitialTab = () => {
-    if (location.pathname === '/admin/trading-control') {
-      return 'trading-control';
-    }
-    return 'users'; // Default to Users tab for admins
-  };
-  
-  const [activeTab, setActiveTab] = useState(getInitialTab());
-  const [users, setUsers] = useState<User[]>([]);
-  const [deposits, setDeposits] = useState<Deposit[]>([]);
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [spotTrades, setSpotTrades] = useState<SpotTrade[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalDeposits: 0,
-    totalTrades: 0,
-    pendingKyc: 0,
-    totalVolume: 0,
-    activeUsers: 0,
-    pendingDeposits: 0,
-    totalBalance: 0,
-    avgWinRate: 0,
-    newUsersToday: 0,
-    withdrawalStats: {
-      totalRequests: 0,
-      pendingRequests: 0,
-      approvedRequests: 0,
-      rejectedRequests: 0,
-      totalAmount: 0
-    }
-  });
-
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
-
-
-
   useEffect(() => {
     // Subscribe to WebSocket events for real-time updates
     const handleNewUserRegistration = (data: any) => {
