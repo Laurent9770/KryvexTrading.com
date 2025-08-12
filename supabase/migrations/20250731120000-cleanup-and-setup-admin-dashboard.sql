@@ -135,8 +135,6 @@ CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON public.deposit_reques
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_status ON public.deposit_requests(status);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_admin_email ON public.admin_actions(admin_email);
 CREATE INDEX IF NOT EXISTS idx_user_trading_modes_user_id ON public.user_trading_modes(user_id);
-CREATE INDEX IF NOT EXISTS idx_kyc_documents_user_id ON public.kyc_documents(user_id);
-CREATE INDEX IF NOT EXISTS idx_kyc_documents_status ON public.kyc_documents(status);
 
 -- Step 5: Create triggers for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -191,6 +189,10 @@ DROP TRIGGER IF EXISTS update_kyc_documents_updated_at ON public.kyc_documents;
 CREATE TRIGGER update_kyc_documents_updated_at
     BEFORE UPDATE ON public.kyc_documents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create KYC indexes
+CREATE INDEX IF NOT EXISTS idx_kyc_documents_user_id ON public.kyc_documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_kyc_documents_status ON public.kyc_documents(status);
 
 -- Step 7: Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
