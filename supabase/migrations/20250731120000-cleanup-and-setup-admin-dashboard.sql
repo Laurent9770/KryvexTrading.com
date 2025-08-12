@@ -357,6 +357,9 @@ CREATE POLICY "Admins can update all KYC documents" ON public.kyc_documents
     FOR UPDATE USING (has_role(auth.uid(), 'admin'));
 
 -- Step 9: Create admin promotion/demotion functions
+DROP FUNCTION IF EXISTS promote_to_admin(UUID) CASCADE;
+DROP FUNCTION IF EXISTS demote_from_admin(UUID) CASCADE;
+
 CREATE OR REPLACE FUNCTION promote_to_admin(target_user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
