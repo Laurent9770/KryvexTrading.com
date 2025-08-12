@@ -7,7 +7,7 @@ DECLARE
     user_email text;
     user_created_at timestamp;
     profile_exists boolean;
-    is_admin boolean;
+    is_admin_exists boolean;
     role_exists boolean;
     wallet_exists boolean;
 BEGIN
@@ -27,25 +27,38 @@ BEGIN
     RAISE NOTICE '   User ID: %', user_id;
     RAISE NOTICE '   Created: %', user_created_at;
     
-    -- Check if profile exists
-    SELECT EXISTS(SELECT 1 FROM public.profiles WHERE user_id = user_id) INTO profile_exists;
+    -- Check if profile exists (using table alias to avoid ambiguity)
+    SELECT EXISTS(SELECT 1 FROM public.profiles p WHERE p.user_id = user_id) INTO profile_exists;
     IF profile_exists THEN
-        SELECT is_admin INTO is_admin FROM public.profiles WHERE user_id = user_id;
-        RAISE NOTICE '✅ Profile exists (Admin: %)', is_admin;
+        RAISE NOTICE '✅ Profile exists';
+        
+        -- Check if is_admin column exists in profiles table
+        SELECT EXISTS(
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'profiles' 
+            AND column_name = 'is_admin'
+        ) INTO is_admin_exists;
+        
+        IF is_admin_exists THEN
+            RAISE NOTICE '✅ is_admin column exists in profiles table';
+        ELSE
+            RAISE NOTICE '❌ is_admin column missing from profiles table';
+        END IF;
     ELSE
         RAISE NOTICE '❌ Profile does NOT exist';
     END IF;
     
-    -- Check if user role exists
-    SELECT EXISTS(SELECT 1 FROM public.user_roles WHERE user_id = user_id AND role = 'admin') INTO role_exists;
+    -- Check if user role exists (using table alias)
+    SELECT EXISTS(SELECT 1 FROM public.user_roles ur WHERE ur.user_id = user_id AND ur.role = 'admin') INTO role_exists;
     IF role_exists THEN
         RAISE NOTICE '✅ Admin role exists';
     ELSE
         RAISE NOTICE '❌ Admin role does NOT exist';
     END IF;
     
-    -- Check if wallet exists
-    SELECT EXISTS(SELECT 1 FROM public.user_wallets WHERE user_id = user_id) INTO wallet_exists;
+    -- Check if wallet exists (using table alias)
+    SELECT EXISTS(SELECT 1 FROM public.user_wallets uw WHERE uw.user_id = user_id) INTO wallet_exists;
     IF wallet_exists THEN
         RAISE NOTICE '✅ Wallet exists';
     ELSE
@@ -59,6 +72,7 @@ BEGIN
     RAISE NOTICE 'Profile: %', CASE WHEN profile_exists THEN 'EXISTS' ELSE 'MISSING' END;
     RAISE NOTICE 'Admin Role: %', CASE WHEN role_exists THEN 'EXISTS' ELSE 'MISSING' END;
     RAISE NOTICE 'Wallet: %', CASE WHEN wallet_exists THEN 'EXISTS' ELSE 'MISSING' END;
+    RAISE NOTICE 'is_admin Column: %', CASE WHEN is_admin_exists THEN 'EXISTS' ELSE 'MISSING' END;
     
     IF profile_exists AND role_exists AND wallet_exists THEN
         RAISE NOTICE '';
