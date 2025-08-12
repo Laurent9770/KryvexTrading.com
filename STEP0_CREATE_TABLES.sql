@@ -18,6 +18,17 @@ BEGIN
         RAISE NOTICE '✅ Created profiles table';
     ELSE
         RAISE NOTICE '✅ profiles table already exists';
+        
+        -- Check if KYC columns exist and add them if missing
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'kyc_level1_status') THEN
+            ALTER TABLE public.profiles ADD COLUMN kyc_level1_status TEXT DEFAULT 'pending';
+            RAISE NOTICE '✅ Added kyc_level1_status column to existing profiles table';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'kyc_level2_status') THEN
+            ALTER TABLE public.profiles ADD COLUMN kyc_level2_status TEXT DEFAULT 'pending';
+            RAISE NOTICE '✅ Added kyc_level2_status column to existing profiles table';
+        END IF;
     END IF;
 
     -- Create user_roles table if it doesn't exist

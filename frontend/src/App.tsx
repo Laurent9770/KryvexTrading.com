@@ -44,6 +44,7 @@ const TradingHistoryPage = safeLazyLoad(() => import('@/pages/TradingHistoryPage
 const WalletPage = safeLazyLoad(() => import('@/pages/WalletPage'));
 const DepositGuidePage = safeLazyLoad(() => import('@/pages/DepositGuidePage'));
 const AuthCallback = safeLazyLoad(() => import('@/pages/AuthCallback'));
+const LogoutTest = safeLazyLoad(() => import('@/components/LogoutTest'));
 
 // Loading Spinner Component
 const LoadingSpinner = ({ size = "default" }: { size?: "sm" | "default" | "lg" }) => {
@@ -226,6 +227,11 @@ function App() {
                       <Route path="/deposit-guide" element={
                         <SafeRoute>
                           <DepositGuidePage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/logout-test" element={
+                        <SafeRoute>
+                          <LogoutTest />
                         </SafeRoute>
                       } />
                     </Route>
