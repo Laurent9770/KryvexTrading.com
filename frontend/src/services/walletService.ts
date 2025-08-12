@@ -685,7 +685,10 @@ export async function fundUserWallet(
         })
         .eq('id', existingWallet.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating wallet:', updateError);
+        throw new Error(`Failed to update wallet: ${updateError.message}`);
+      }
     } else {
       // Create new wallet entry
       const { error: insertError } = await supabase
@@ -697,7 +700,10 @@ export async function fundUserWallet(
           balance: numericAmount
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Error inserting wallet:', insertError);
+        throw new Error(`Failed to create wallet: ${insertError.message}`);
+      }
     }
 
     // Update user profile account balance
