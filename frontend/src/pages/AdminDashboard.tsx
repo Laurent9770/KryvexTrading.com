@@ -163,6 +163,8 @@ export default function AdminDashboard() {
 
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
+  // ALL useEffect HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  
   // Simplified admin access check - only redirect if definitely not admin
   useEffect(() => {
     // Only check if we have user data and they're authenticated
@@ -185,6 +187,82 @@ export default function AdminDashboard() {
       console.log('✅ Admin dashboard access granted for:', user?.email);
     }
   }, [user, isAuthenticated, isAdmin, navigate, toast]);
+
+  // WebSocket and data fetching useEffect - MUST BE CALLED BEFORE CONDITIONAL RETURNS
+  useEffect(() => {
+    // Only run this effect if user is authenticated and is admin
+    if (!isAuthenticated || !isAdmin || !user) {
+      return;
+    }
+
+    // Initial data fetch
+    fetchDashboardData();
+
+    // Set up periodic refresh
+    const interval = setInterval(fetchDashboardData, 30000); // Refresh every 30 seconds
+
+    // Cleanup function
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isAuthenticated, isAdmin, user]); // Dependencies for this effect
+
+  // Third useEffect for WebSocket subscriptions - MUST BE CALLED BEFORE CONDITIONAL RETURNS
+  useEffect(() => {
+    // Only run this effect if user is authenticated and is admin
+    if (!isAuthenticated || !isAdmin || !user) {
+      return;
+    }
+
+    const handleWalletUpdate = (data: any) => {
+      console.log('AdminDashboard: Wallet updated:', data);
+      // Update user balance in the list
+      setUsers(prev => prev.map(u => 
+        u.id === data.userId 
+          ? { ...u, account_balance: data.newBalance }
+          : u
+      ));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalBalance: prev.totalBalance + (data.newBalance - (data.oldBalance || 0))
+      }));
+      
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'wallet_update',
+        description: `Wallet updated for user ${data.userId}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        userEmail: data.userEmail
+      }, ...prev.slice(0, 9)]);
+    };
+
+    const handleWithdrawalRequest = (data: any) => {
+      console.log('AdminDashboard: Withdrawal request:', data);
+      // Add to recent activity
+      setRecentActivity(prev => [{
+        id: `activity-${Date.now()}`,
+        type: 'withdrawal_request',
+        description: `Withdrawal request of ${data.amount} ${data.currency || 'USDT'}`,
+        timestamp: new Date().toISOString(),
+        userId: data.userId,
+        userEmail: data.userEmail
+      }, ...prev.slice(0, 9)]);
+    };
+
+    // Subscribe to WebSocket events
+    const walletSubscription = subscribeToTransactions(handleWalletUpdate);
+    const withdrawalSubscription = subscribeToWithdrawalRequests(handleWithdrawalRequest);
+
+    // Cleanup function
+    return () => {
+      walletSubscription();
+      withdrawalSubscription();
+    };
+  }, [isAuthenticated, isAdmin, user]); // Dependencies for this effect
 
   // NOW WE CAN HAVE CONDITIONAL RETURNS AFTER ALL HOOKS ARE CALLED
 
@@ -222,142 +300,7 @@ export default function AdminDashboard() {
         </div>
       </div>
     );
-  }
-  
-  useEffect(() => {
-    // Subscribe to WebSocket events for real-time updates
-    const handleNewUserRegistration = (data: any) => {
-      console.log('AdminDashboard: New user registered:', data);
-      // Add new user to users list
-      const newUser = {
-        id: data.userId || `user-${Date.now()}`,
-        full_name: data.fullName || `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-        email: data.email,
-        kyc_status: data.kycStatus || 'pending',
-        account_balance: data.accountBalance || 0,
-        is_verified: data.isVerified || false,
-        created_at: new Date().toISOString()
-      };
-      
-      setUsers(prev => [newUser, ...prev]);
-      
-      // Update stats
-      setStats(prev => ({
-        ...prev,
-        totalUsers: prev.totalUsers + 1,
-        newUsersToday: prev.newUsersToday + 1
-      }));
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'user_registered',
-        description: `New user ${newUser.full_name} registered`,
-        timestamp: new Date().toISOString(),
-        userId: newUser.id,
-        userEmail: newUser.email
-      }, ...prev.slice(0, 9)]);
-      
-      toast({
-        title: "New User Registered",
-        description: `${newUser.full_name} (${newUser.email}) has joined the platform`,
-        duration: 5000
-      });
-    };
 
-    const handleWalletUpdate = (data: any) => {
-      console.log('AdminDashboard: Wallet updated:', data);
-      
-      // Check if data is valid
-      if (!data || !data.userId) {
-        console.warn('AdminDashboard: Invalid wallet update data:', data);
-        return;
-      }
-      
-      // Update user wallet balance
-      setUsers(prev => prev.map(user => 
-        user.id === data.userId 
-          ? { ...user, account_balance: data.newBalance || user.account_balance }
-          : user
-      ));
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'wallet_updated',
-        description: `Wallet updated for user ${data.userId}`,
-        timestamp: new Date().toISOString(),
-        userId: data.userId,
-        amount: data.amount,
-        operation: data.operation
-      }, ...prev.slice(0, 9)]);
-    };
-
-    const handleTradeCompleted = (data: any) => {
-      console.log('AdminDashboard: Trade completed:', data);
-      
-      // Check if data is valid
-      if (!data || !data.userId) {
-        console.warn('AdminDashboard: Invalid trade completed data:', data);
-        return;
-      }
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'trade_completed',
-        description: `Trade ${data.tradeId} completed - ${data.result} (${data.profitLoss})`,
-        timestamp: new Date().toISOString(),
-        userId: data.userId,
-        tradeId: data.tradeId,
-        result: data.result,
-        profitLoss: data.profitLoss
-      }, ...prev.slice(0, 9)]);
-      
-      // Update trading stats
-      fetchDashboardData();
-    };
-
-    const handleKYCStatusUpdate = (data: any) => {
-      console.log('AdminDashboard: KYC status updated:', data);
-      
-      // Check if data is valid
-      if (!data || !data.userId) {
-        console.warn('AdminDashboard: Invalid KYC status update data:', data);
-        return;
-      }
-      
-      // Update user KYC status
-      setUsers(prev => prev.map(user => 
-        user.id === data.userId 
-          ? { ...user, kyc_status: data.status }
-          : user
-      ));
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'kyc_status_updated',
-        description: `KYC status updated for user ${data.userId} to ${data.status}`,
-        timestamp: new Date().toISOString(),
-        userId: data.userId,
-        status: data.status
-      }, ...prev.slice(0, 9)]);
-    };
-
-    const handleKYCSubmissionCreated = (data: any) => {
-      console.log('AdminDashboard: KYC submission created:', data);
-      
-      // Check if data is valid
-      if (!data || !data.userId) {
-        console.warn('AdminDashboard: Invalid KYC submission data:', data);
-        return;
-      }
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'kyc_submission_created',
         description: `New KYC submission from user ${data.userId}`,
         timestamp: new Date().toISOString(),
         userId: data.userId,
