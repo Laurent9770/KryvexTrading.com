@@ -30,10 +30,10 @@ DO $$
 DECLARE
     col_name TEXT;
     col_type TEXT;
-    is_nullable TEXT;
+    nullable_status TEXT;
 BEGIN
     RAISE NOTICE '=== TRADES TABLE STRUCTURE ===';
-    FOR col_name, col_type, is_nullable IN 
+    FOR col_name, col_type, nullable_status IN 
         SELECT column_name, data_type, is_nullable
         FROM information_schema.columns 
         WHERE table_schema = 'public' 
@@ -41,7 +41,7 @@ BEGIN
         ORDER BY ordinal_position
     LOOP
         RAISE NOTICE '- % (%) %', col_name, col_type, 
-            CASE WHEN is_nullable = 'YES' THEN 'NULL' ELSE 'NOT NULL' END;
+            CASE WHEN nullable_status = 'YES' THEN 'NULL' ELSE 'NOT NULL' END;
     END LOOP;
 END $$;
 
