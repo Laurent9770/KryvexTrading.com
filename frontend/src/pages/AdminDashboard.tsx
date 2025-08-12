@@ -163,6 +163,152 @@ export default function AdminDashboard() {
 
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
+  // Define fetchDashboardData function before useEffect hooks
+  const fetchDashboardData = async () => {
+    try {
+      // Get real user data from Supabase admin service
+      let allUsers: any[] = [];
+      try {
+        allUsers = await supabaseAdminDataService.getAllUsers();
+      } catch (error) {
+        console.warn('Error loading users from Supabase:', error);
+      }
+      
+      // Get registered users from localStorage
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      
+      // Combine all users and remove duplicates
+      const allUserData = [...allUsers, ...registeredUsers];
+      const uniqueUsers = allUserData.filter((user, index, self) => 
+        index === self.findIndex(u => u.id === user.id)
+      );
+
+      // Get real trade data from Supabase - don't pass 'all' as userId
+      const tradeHistoryResponse = await supabaseTradingService.getTradeHistory('', 1, 100);
+      const tradeStatsResponse = await supabaseTradingService.getTradingStats();
+      const spotTradesResponse = await supabaseTradingService.getTrades();
+      
+      const tradeHistory = tradeHistoryResponse.success ? tradeHistoryResponse.data || [] : [];
+      const tradeStats = tradeStatsResponse.success ? tradeStatsResponse.stats : null;
+      const spotTrades = spotTradesResponse.success ? spotTradesResponse.data || [] : [];
+      
+      // Get real wallet data
+      let allUserWallets: any[] = [];
+      let withdrawalStats: any = { totalRequests: 0, pending: 0, approved: 0, rejected: 0, totalAmount: 0 };
+      try {
+        allUserWallets = await getAllUsers();
+        withdrawalStats = await getWithdrawalStats();
+      } catch (error) {
+        console.warn('Error loading wallet data from Supabase:', error);
+      }
+      
+      // Get real deposit data (from wallet transactions)
+      let walletTransactions: any[] = [];
+      try {
+        walletTransactions = await getWalletTransactions();
+      } catch (error) {
+        console.warn('Error loading wallet transactions from Supabase:', error);
+      }
+      
+      const depositTransactions = walletTransactions.filter(tx => 
+        tx.action === 'admin_fund' || tx.action === 'fund'
+      );
+
+      // Convert users to the expected format
+      const realUsers = uniqueUsers
+        .filter(user => user && user.id) // Filter out undefined/null users
+        .map(user => ({
+          id: user.id,
+          full_name: user.username || user.firstName + ' ' + user.lastName || user.email,
+          email: user.email,
+          kyc_status: user.kycLevel2?.status || user.kycStatus || 'unverified',
+          account_balance: allUserWallets.find(w => w.userId === user.id)?.fundingWallet?.USDT || 0,
+          is_verified: user.kycLevel1?.status === 'verified' || user.kycStatus === 'verified',
+          created_at: user.createdAt || new Date().toISOString()
+        }));
+
+      // Convert deposit transactions to the expected format
+      const realDeposits = depositTransactions
+        .filter(tx => tx && tx.userId) // Filter out undefined/null transactions
+        .map(tx => ({
+          id: tx.id,
+          amount: tx.amount,
+          currency: tx.asset,
+          status: tx.status,
+          created_at: tx.timestamp,
+          user_id: tx.userId,
+          profiles: { 
+            full_name: tx.username, 
+            email: allUserWallets.find(w => w.userId === tx.userId)?.email || 'unknown@example.com' 
+          }
+        }));
+
+      // Convert trade history to the expected format
+      const realTrades = tradeHistory
+        .filter(trade => trade && trade.id) // Filter out undefined/null trades
+        .slice(0, 10)
+        .map(trade => ({
+          id: trade.id,
+          amount: trade.amount,
+          trade_type: trade.tradeType,
+          status: trade.status,
+          result: trade.result,
+          profit_loss: trade.profitLoss || 0,
+          created_at: trade.createdAt,
+          user_id: trade.userId,
+          profiles: { full_name: 'User', email: 'user@example.com' }
+        }));
+
+      // Calculate real statistics
+      const verifiedUsers = realUsers.filter(u => u.is_verified).length;
+      const pendingKyc = realUsers.filter(u => 
+        u.kyc_status === 'pending' || u.kyc_status === 'unverified'
+      ).length;
+      const totalBalance = realUsers.reduce((sum, u) => sum + u.account_balance, 0);
+      const totalDeposits = realDeposits.reduce((sum, d) => sum + Number(d.amount), 0);
+      const pendingDeposits = realDeposits.filter(d => d.status === 'pending').length;
+      const totalVolume = tradeHistory.reduce((sum, t) => sum + Number(t.amount), 0);
+
+      // Calculate average win rate from trades
+      const completedTrades = tradeHistory.filter(t => t.status === 'closed');
+      const avgWinRate = completedTrades.length > 0 
+        ? (completedTrades.filter(t => t.result === 'win').length / completedTrades.length) * 100
+        : 0;
+
+      setUsers(realUsers);
+      setDeposits(realDeposits);
+      setTrades(realTrades);
+      setSpotTrades([]); // TODO: Convert spotTrades to proper format
+      
+      setStats({
+        totalUsers: realUsers.length,
+        pendingKyc: pendingKyc,
+        activeUsers: verifiedUsers,
+        totalDeposits: totalDeposits,
+        pendingDeposits: pendingDeposits,
+        totalTrades: tradeStats?.totalTrades || 0,
+        totalVolume: totalVolume,
+        totalBalance: totalBalance,
+        avgWinRate: avgWinRate,
+        newUsersToday: 0, // TODO: Calculate from user creation dates
+        withdrawalStats: {
+          totalRequests: withdrawalStats.totalRequests,
+          pendingRequests: withdrawalStats.pending,
+          approvedRequests: withdrawalStats.approved,
+          rejectedRequests: withdrawalStats.rejected,
+          totalAmount: withdrawalStats.totalAmount
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      });
+    }
+  };
+
   // ALL useEffect HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   
   // Simplified admin access check - only redirect if definitely not admin
@@ -300,94 +446,6 @@ export default function AdminDashboard() {
         </div>
       </div>
     );
-
-        description: `New KYC submission from user ${data.userId}`,
-        timestamp: new Date().toISOString(),
-        userId: data.userId,
-        submissionId: data.submissionId
-      }, ...prev.slice(0, 9)]);
-      
-      toast({
-        title: "New KYC Submission",
-        description: `User ${data.userId} has submitted KYC documents for review`,
-        duration: 5000
-      });
-    };
-
-    const handleDepositRequest = (data: any) => {
-      console.log('AdminDashboard: Deposit request received:', data);
-      
-      // Check if data is valid
-      if (!data || !data.userId) {
-        console.warn('AdminDashboard: Invalid deposit request data:', data);
-        return;
-      }
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'deposit_request',
-        description: `New deposit request: ${data.amount} ${data.currency}`,
-        timestamp: new Date().toISOString(),
-        userId: data.userId,
-        amount: data.amount,
-        currency: data.currency
-      }, ...prev.slice(0, 9)]);
-      
-      toast({
-        title: "New Deposit Request",
-        description: `User ${data.userId} has requested deposit of ${data.amount} ${data.currency}`,
-        duration: 5000
-      });
-    };
-
-    const handleWithdrawalRequest = (data: any) => {
-      console.log('AdminDashboard: Withdrawal request received:', data);
-      
-      // Check if data is valid
-      if (!data || !data.userId) {
-        console.warn('AdminDashboard: Invalid withdrawal request data:', data);
-        return;
-      }
-      
-      // Add to recent activity
-      setRecentActivity(prev => [{
-        id: `activity-${Date.now()}`,
-        type: 'withdrawal_request',
-        description: `New withdrawal request: ${data.amount} ${data.currency}`,
-        timestamp: new Date().toISOString(),
-        userId: data.userId,
-        amount: data.amount,
-        currency: data.currency
-      }, ...prev.slice(0, 9)]);
-      
-      toast({
-        title: "New Withdrawal Request",
-        description: `User ${data.userId} has requested withdrawal of ${data.amount} ${data.currency}`,
-        duration: 5000
-      });
-    };
-
-    // Subscribe to Supabase real-time events
-    const walletSubscription = subscribeToTransactions(handleWalletUpdate);
-    const withdrawalSubscription = subscribeToWithdrawalRequests(handleWithdrawalRequest);
-
-    // Initial data fetch
-    fetchDashboardData();
-
-    // Set up periodic refresh
-    const interval = setInterval(fetchDashboardData, 30000); // Refresh every 30 seconds
-
-    return () => {
-      // Cleanup Supabase subscriptions
-      if (walletSubscription) walletSubscription();
-      if (withdrawalSubscription) withdrawalSubscription();
-      
-      clearInterval(interval);
-    };
-  }, []);
-
-  const fetchDashboardData = async () => {
     try {
       // Get real user data from Supabase admin service
       let allUsers: any[] = [];
