@@ -2,15 +2,6 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 
-// Global function to open Smartsupp chat
-declare global {
-  interface Window {
-    smartsupp: any;
-    _smartsupp: any;
-    openSmartsuppChat: () => void;
-  }
-}
-
 const LiveChatWidget = () => {
   const [showFallback, setShowFallback] = useState(false);
 
@@ -37,41 +28,13 @@ const LiveChatWidget = () => {
           window.smartsupp('open');
         } catch (error) {
           console.error('❌ Error opening Smartsupp chat:', error);
-          setShowFallback(true);
+          openDirectChat();
         }
       } else {
-        console.log('⚠️ Smartsupp not loaded, showing fallback');
-        setShowFallback(true);
+        console.log('⚠️ Smartsupp not loaded, opening direct chat');
+        openDirectChat();
       }
     };
-    
-    // Check if widget appears after a delay
-    const checkWidget = () => {
-      const widgetElements = document.querySelectorAll('[data-smartsupp], iframe[src*="smartsupp"], .smartsupp-widget, #smartsupp-widget, [id*="smartsupp"]');
-      console.log('🔍 Smartsupp elements found:', widgetElements.length);
-      
-      if (widgetElements.length > 0) {
-        console.log('✅ Smartsupp widget found!');
-        setShowFallback(false);
-        return true;
-      } else {
-        console.log('⚠️ No Smartsupp widget found');
-        return false;
-      }
-    };
-    
-    // Check after delays to allow widget to load
-    setTimeout(() => {
-      if (!checkWidget()) {
-        setTimeout(() => {
-          if (!checkWidget()) {
-            setTimeout(() => {
-              checkWidget();
-            }, 3000);
-          }
-        }, 2000);
-      }
-    }, 1000);
     
     // Cleanup
     return () => {
@@ -80,22 +43,34 @@ const LiveChatWidget = () => {
     };
   }, []);
 
+  const openDirectChat = () => {
+    const smartsuppUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
+    console.log('🔄 Opening direct Smartsupp widget page:', smartsuppUrl);
+    window.open(smartsuppUrl, '_blank', 'width=400,height=600');
+  };
+
   const handleFallbackClick = () => {
-    console.log('🔄 Fallback chat button clicked');
-    // Try to open Smartsupp chat widget
-    if (window.openSmartsuppChat) {
-      window.openSmartsuppChat();
-    } else {
-      // Fallback: open direct Smartsupp widget page
-      const smartsuppUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
-      console.log('🔄 Opening direct Smartsupp widget page:', smartsuppUrl);
-      window.open(smartsuppUrl, '_blank', 'width=400,height=600');
+    console.log('🔄 Chat button clicked');
+    
+    // Try embedded chat first
+    if (window.smartsupp) {
+      console.log('🔄 Trying embedded chat...');
+      try {
+        window.smartsupp('open');
+        return;
+      } catch (error) {
+        console.error('❌ Embedded chat failed:', error);
+      }
     }
+    
+    // Fallback to direct URL
+    console.log('🔄 Using direct chat fallback');
+    openDirectChat();
   };
 
   return (
     <>
-      {/* Fallback Chat Button - Always show for now */}
+      {/* Chat Button - Always show */}
       <Button
         onClick={handleFallbackClick}
         className="fixed bottom-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg"
@@ -107,5 +82,14 @@ const LiveChatWidget = () => {
     </>
   );
 };
+
+// Add TypeScript declarations
+declare global {
+  interface Window {
+    smartsupp: any;
+    _smartsupp: any;
+    openSmartsuppChat: () => void;
+  }
+}
 
 export default LiveChatWidget;

@@ -30,14 +30,19 @@ const DepositGuidePage = () => {
   };
 
   const openSmartsuppChat = () => {
-    // Open Smartsupp chat widget
-    if (window.openSmartsuppChat) {
-      window.openSmartsuppChat();
-    } else {
-      // Fallback: open direct Smartsupp widget page
-      const smartsuppUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
-      window.open(smartsuppUrl, '_blank', 'width=400,height=600');
+    // Try embedded chat first
+    if (window.smartsupp) {
+      try {
+        window.smartsupp('open');
+        return;
+      } catch (error) {
+        console.error('❌ Embedded chat failed:', error);
+      }
     }
+    
+    // Fallback to direct URL
+    const smartsuppUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
+    window.open(smartsuppUrl, '_blank', 'width=400,height=600');
   };
 
   const copyToClipboard = (text: string) => {
