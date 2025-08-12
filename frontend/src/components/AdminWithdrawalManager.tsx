@@ -179,11 +179,17 @@ const AdminWithdrawalManager: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch (error) {
+      return 'Invalid Date';
+    }
   };
 
-  const formatAmount = (amount: number, asset: string) => {
+  const formatAmount = (amount: number | undefined, asset: string) => {
+    if (amount === undefined || amount === null) return `0 ${asset}`;
     return `${amount.toLocaleString()} ${asset}`;
   };
 

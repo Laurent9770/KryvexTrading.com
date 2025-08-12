@@ -434,10 +434,7 @@ class SupabaseAdminDataService {
           status,
           requested_at,
           processed_at,
-          remarks,
-          wallet_address,
-          blockchain,
-          tx_hash
+          remarks
         `)
         .order('requested_at', { ascending: false });
 
@@ -471,13 +468,13 @@ class SupabaseAdminDataService {
           username: username,
           amount: withdrawal.amount,
           asset: withdrawal.currency || 'USDT',
-          blockchain: withdrawal.blockchain || 'TRC20',
-          walletAddress: withdrawal.wallet_address || 'N/A',
+          blockchain: 'TRC20', // Default blockchain
+          walletAddress: 'N/A', // Default wallet address
           status: withdrawal.status || 'pending',
           requestDate: withdrawal.requested_at,
           processedAt: withdrawal.processed_at,
           remarks: withdrawal.remarks,
-          txHash: withdrawal.tx_hash
+          txHash: undefined // No tx_hash column in table
         };
       });
 

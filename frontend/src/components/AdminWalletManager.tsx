@@ -130,7 +130,7 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-              const success = await fundUserWallet(
+              const result = await fundUserWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,
@@ -140,7 +140,7 @@ const AdminWalletManager: React.FC = () => {
         fundForm.remarks
       );
 
-      if (success) {
+      if (result.success) {
         toast({
           title: "Wallet Funded",
           description: `Successfully added ${amount} ${fundForm.asset} to ${userWallet.username}'s ${fundForm.walletType} wallet`
@@ -187,7 +187,7 @@ const AdminWalletManager: React.FC = () => {
 
     setIsProcessing(true);
     try {
-              const success = await deductFromWallet(
+              const result = await deductFromWallet(
         userWallet.userId,
         userWallet.username,
         fundForm.walletType,
@@ -197,7 +197,7 @@ const AdminWalletManager: React.FC = () => {
         fundForm.remarks
       );
 
-      if (success) {
+      if (result.success) {
         toast({
           title: "Amount Deducted",
           description: `Successfully deducted ${amount} ${fundForm.asset} from ${userWallet.username}'s ${fundForm.walletType} wallet`
