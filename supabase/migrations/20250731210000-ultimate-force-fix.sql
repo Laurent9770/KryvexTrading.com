@@ -441,7 +441,7 @@ AND tablename IN ('profiles', 'user_wallets', 'deposit_requests', 'withdrawal_re
 GROUP BY tablename
 ORDER BY tablename;
 
--- Test has_role function for admin
+-- Test has_role function for admin and provide final status
 DO $$
 DECLARE
     admin_id UUID;
@@ -454,6 +454,6 @@ BEGIN
     ELSE
         RAISE NOTICE 'Admin user kryvextrading@gmail.com not found in auth.users.';
     END IF;
+    
+    RAISE NOTICE 'Ultimate force fix migration completed. Please check the output above for verification.';
 END $$;
-
-RAISE NOTICE 'Ultimate force fix migration completed. Please check the output above for verification.';
