@@ -359,7 +359,7 @@ class SupabaseAdminDataService {
       console.log('🔄 Fetching deposit requests...');
       
       const { data, error } = await supabase
-        .from('deposits')
+        .from('deposit_requests')
         .select(`
           id,
           user_id,
@@ -367,11 +367,11 @@ class SupabaseAdminDataService {
           currency,
           status,
           proof_file,
-          created_at,
+          requested_at,
           processed_at,
           remarks
         `)
-        .order('created_at', { ascending: false });
+        .order('requested_at', { ascending: false });
 
       if (error) {
         console.error('❌ Error fetching deposit requests:', error);
@@ -400,13 +400,13 @@ class SupabaseAdminDataService {
         currency: deposit.currency || 'USDT',
         status: deposit.status || 'pending',
         proofFile: deposit.proof_file,
-        requestedAt: deposit.created_at,
+        requestedAt: deposit.requested_at,
         processedAt: deposit.processed_at,
         remarks: deposit.remarks,
         network: 'TRC20', // Default network
         transactionHash: deposit.proof_file, // Use proof_file as transaction hash for now
         notes: deposit.remarks,
-        createdAt: deposit.created_at,
+        createdAt: deposit.requested_at,
         processedBy: deposit.processed_by || undefined,
         proofPreview: deposit.proof_file ? `https://example.com/proof/${deposit.proof_file}` : undefined
       }));

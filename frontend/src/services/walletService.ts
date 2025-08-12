@@ -98,9 +98,9 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 export async function getWithdrawals(): Promise<Withdrawal[]> {
   try {
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('requested_at', { ascending: false });
     
     if (error) throw error;
     return data || [];
@@ -150,7 +150,7 @@ export async function getTradingPairs(): Promise<TradingPair[]> {
 export async function getWithdrawalStats() {
   try {
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .select('*');
     
     if (error) throw error;
@@ -361,16 +361,14 @@ export async function createWithdrawalRequest(withdrawalData: {
     if (!user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .insert({
         user_id: user.id,
         amount: withdrawalData.amount,
         currency: withdrawalData.currency,
-        wallet_address: withdrawalData.wallet_address,
-        blockchain: withdrawalData.blockchain || 'ETH',
         status: 'pending',
         remarks: withdrawalData.remarks || '',
-        created_at: new Date().toISOString()
+        requested_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -399,10 +397,10 @@ export async function getWithdrawalRequests() {
     if (!user) return [];
     
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('requested_at', { ascending: false });
     
     if (error) throw error;
     return data || [];
@@ -419,9 +417,9 @@ export async function getAllWithdrawalRequests() {
     if (!isAdmin) throw new Error('Unauthorized');
     
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('requested_at', { ascending: false });
     
     if (error) throw error;
     return data || [];
@@ -462,13 +460,13 @@ export function subscribeToTransactions(callback: (payload: any) => void) {
 export function subscribeToWithdrawals(callback: (payload: any) => void) {
   try {
     const subscription = supabase
-      .channel('withdrawals')
+      .channel('withdrawal_requests')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'withdrawals'
+          table: 'withdrawal_requests'
         },
         (payload) => {
           callback(payload);
@@ -523,12 +521,11 @@ export async function approveWithdrawal(withdrawalId: string, adminNotes?: strin
 
     // Update withdrawal status to approved
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .update({
         status: 'approved',
-        processed_by: user.id,
-        processed_date: new Date().toISOString(),
-        admin_notes: adminNotes || 'Approved by admin'
+        processed_at: new Date().toISOString(),
+        remarks: adminNotes || 'Approved by admin'
       })
       .eq('id', withdrawalId)
       .select()
@@ -577,12 +574,11 @@ export async function rejectWithdrawal(withdrawalId: string, adminNotes?: string
 
     // Update withdrawal status to rejected
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .update({
         status: 'rejected',
-        processed_by: user.id,
-        processed_date: new Date().toISOString(),
-        admin_notes: adminNotes || 'Rejected by admin'
+        processed_at: new Date().toISOString(),
+        remarks: adminNotes || 'Rejected by admin'
       })
       .eq('id', withdrawalId)
       .select()
@@ -616,13 +612,11 @@ export async function completeWithdrawal(withdrawalId: string, txHash: string, a
 
     // Update withdrawal status to completed
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .update({
         status: 'completed',
-        processed_by: user.id,
-        processed_date: new Date().toISOString(),
-        tx_hash: txHash,
-        admin_notes: adminNotes || 'Completed by admin'
+        processed_at: new Date().toISOString(),
+        remarks: adminNotes || 'Completed by admin'
       })
       .eq('id', withdrawalId)
       .select()
