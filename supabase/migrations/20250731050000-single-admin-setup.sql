@@ -2,24 +2,51 @@
 -- This migration creates everything needed for admin functionality
 
 -- 0. Drop existing policies and functions to avoid conflicts
-DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
-DROP POLICY IF EXISTS "Admins can update trades" ON public.trades;
-DROP POLICY IF EXISTS "Admins can view all wallets" ON public.user_wallets;
-DROP POLICY IF EXISTS "Admins can manage all withdrawal requests" ON public.withdrawal_requests;
-DROP POLICY IF EXISTS "Admins can manage all deposits" ON public.deposits;
-DROP POLICY IF EXISTS "Admins can view admin actions" ON public.admin_actions;
-DROP POLICY IF EXISTS "Admins can create admin actions" ON public.admin_actions;
-DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can view own trades" ON public.trades;
-DROP POLICY IF EXISTS "Users can create trades" ON public.trades;
-DROP POLICY IF EXISTS "Users can view their own wallet" ON public.user_wallets;
-DROP POLICY IF EXISTS "Users can view their own withdrawal requests" ON public.withdrawal_requests;
-DROP POLICY IF EXISTS "Users can create withdrawal requests" ON public.withdrawal_requests;
-DROP POLICY IF EXISTS "Users can view their own deposits" ON public.deposits;
-DROP POLICY IF EXISTS "Users can create deposits" ON public.deposits;
+-- Drop policies only if tables exist
+DO $$
+BEGIN
+    -- Drop policies for profiles table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles') THEN
+        DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+        DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
+        DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+        DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+    END IF;
+    
+    -- Drop policies for trades table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'trades') THEN
+        DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
+        DROP POLICY IF EXISTS "Admins can update trades" ON public.trades;
+        DROP POLICY IF EXISTS "Users can view own trades" ON public.trades;
+        DROP POLICY IF EXISTS "Users can create trades" ON public.trades;
+    END IF;
+    
+    -- Drop policies for user_wallets table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_wallets') THEN
+        DROP POLICY IF EXISTS "Admins can view all wallets" ON public.user_wallets;
+        DROP POLICY IF EXISTS "Users can view their own wallet" ON public.user_wallets;
+    END IF;
+    
+    -- Drop policies for withdrawal_requests table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'withdrawal_requests') THEN
+        DROP POLICY IF EXISTS "Admins can manage all withdrawal requests" ON public.withdrawal_requests;
+        DROP POLICY IF EXISTS "Users can view their own withdrawal requests" ON public.withdrawal_requests;
+        DROP POLICY IF EXISTS "Users can create withdrawal requests" ON public.withdrawal_requests;
+    END IF;
+    
+    -- Drop policies for deposits table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'deposits') THEN
+        DROP POLICY IF EXISTS "Admins can manage all deposits" ON public.deposits;
+        DROP POLICY IF EXISTS "Users can view their own deposits" ON public.deposits;
+        DROP POLICY IF EXISTS "Users can create deposits" ON public.deposits;
+    END IF;
+    
+    -- Drop policies for admin_actions table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'admin_actions') THEN
+        DROP POLICY IF EXISTS "Admins can view admin actions" ON public.admin_actions;
+        DROP POLICY IF EXISTS "Admins can create admin actions" ON public.admin_actions;
+    END IF;
+END $$;
 
 -- 1. Create profiles table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.profiles (
