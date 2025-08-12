@@ -50,12 +50,16 @@ export interface AdminWithdrawalRequest {
   id: string;
   userId: string;
   userEmail: string;
+  username: string;
   amount: number;
-  currency: string;
+  asset: string;
+  blockchain: string;
+  walletAddress: string;
   status: 'pending' | 'approved' | 'rejected';
-  requestedAt: string;
+  requestDate: string;
   processedAt?: string;
   remarks?: string;
+  txHash?: string;
 }
 
 export interface AdminDepositRequest {
@@ -73,6 +77,8 @@ export interface AdminDepositRequest {
   transactionHash?: string;
   notes?: string;
   createdAt?: string;
+  processedBy?: string;
+  proofPreview?: string;
 }
 
 export interface AdminKYCUser {
@@ -400,7 +406,9 @@ class SupabaseAdminDataService {
         network: 'TRC20', // Default network
         transactionHash: deposit.proof_file, // Use proof_file as transaction hash for now
         notes: deposit.remarks,
-        createdAt: deposit.created_at
+        createdAt: deposit.created_at,
+        processedBy: deposit.processed_by || undefined,
+        proofPreview: deposit.proof_file ? `https://example.com/proof/${deposit.proof_file}` : undefined
       }));
 
       console.log('✅ Deposit requests loaded:', depositRequests.length);
@@ -426,7 +434,10 @@ class SupabaseAdminDataService {
           status,
           requested_at,
           processed_at,
-          remarks
+          remarks,
+          wallet_address,
+          blockchain,
+          tx_hash
         `)
         .order('requested_at', { ascending: false });
 
@@ -439,27 +450,36 @@ class SupabaseAdminDataService {
       const userIds = [...new Set((data || []).map((withdrawal: any) => withdrawal.user_id))];
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, email')
+        .select('user_id, email, full_name')
         .in('user_id', userIds);
 
       if (profilesError) {
         console.warn('⚠️ Error fetching user profiles for withdrawals:', profilesError);
       }
 
-      const profilesMap = new Map((profiles || []).map((p: any) => [p.user_id, p.email]));
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.user_id, { email: p.email, full_name: p.full_name }]));
 
       // Map to AdminWithdrawalRequest interface
-      const withdrawalRequests: AdminWithdrawalRequest[] = (data || []).map((withdrawal: any) => ({
-        id: withdrawal.id,
-        userId: withdrawal.user_id,
-        userEmail: profilesMap.get(withdrawal.user_id) || 'Unknown User',
-        amount: withdrawal.amount,
-        currency: withdrawal.currency || 'USDT',
-        status: withdrawal.status || 'pending',
-        requestedAt: withdrawal.requested_at,
-        processedAt: withdrawal.processed_at,
-        remarks: withdrawal.remarks
-      }));
+      const withdrawalRequests: AdminWithdrawalRequest[] = (data || []).map((withdrawal: any) => {
+        const profile = profilesMap.get(withdrawal.user_id) as { email: string; full_name: string } | undefined;
+        const username = profile?.full_name || profile?.email?.split('@')[0] || 'Unknown User';
+        
+        return {
+          id: withdrawal.id,
+          userId: withdrawal.user_id,
+          userEmail: profile?.email || 'Unknown User',
+          username: username,
+          amount: withdrawal.amount,
+          asset: withdrawal.currency || 'USDT',
+          blockchain: withdrawal.blockchain || 'TRC20',
+          walletAddress: withdrawal.wallet_address || 'N/A',
+          status: withdrawal.status || 'pending',
+          requestDate: withdrawal.requested_at,
+          processedAt: withdrawal.processed_at,
+          remarks: withdrawal.remarks,
+          txHash: withdrawal.tx_hash
+        };
+      });
 
       console.log('✅ Withdrawal requests loaded:', withdrawalRequests.length);
       return withdrawalRequests;
