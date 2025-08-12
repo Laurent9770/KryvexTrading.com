@@ -120,6 +120,7 @@ interface TradeRequest {
 }
 
 export default function AdminDashboard() {
+  // Admin Dashboard Component - Fixed build issues
   const { user, isAuthenticated, isAdmin, checkAdminAccess, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
