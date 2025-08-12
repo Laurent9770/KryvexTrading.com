@@ -386,8 +386,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 INSERT INTO public.profiles (user_id, email, full_name, role, kyc_status, account_balance, is_verified)
 VALUES 
     ('00000000-0000-0000-0000-000000000001', 'admin@kryvex.com', 'Admin User', 'admin', 'approved', 10000, true)
-ON CONFLICT (user_id) DO UPDATE SET
-    email = EXCLUDED.email,
+ON CONFLICT (email) DO UPDATE SET
+    user_id = EXCLUDED.user_id,
     full_name = EXCLUDED.full_name,
     role = EXCLUDED.role,
     kyc_status = EXCLUDED.kyc_status,
