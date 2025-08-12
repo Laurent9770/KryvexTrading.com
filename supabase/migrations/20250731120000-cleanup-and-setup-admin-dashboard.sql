@@ -382,18 +382,36 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Step 10: Insert sample data for testing (optional)
-INSERT INTO public.profiles (user_id, email, full_name, role, kyc_status, account_balance, is_verified)
-VALUES 
-    ('00000000-0000-0000-0000-000000000001', 'admin@kryvex.com', 'Admin User', 'admin', 'approved', 10000, true)
-ON CONFLICT (email) DO UPDATE SET
-    user_id = EXCLUDED.user_id,
-    full_name = EXCLUDED.full_name,
-    role = EXCLUDED.role,
-    kyc_status = EXCLUDED.kyc_status,
-    account_balance = EXCLUDED.account_balance,
-    is_verified = EXCLUDED.is_verified,
-    updated_at = NOW();
+-- Step 10: Create admin user function (for manual admin creation)
+CREATE OR REPLACE FUNCTION create_admin_user(admin_email TEXT, admin_full_name TEXT DEFAULT 'Admin User')
+RETURNS BOOLEAN AS $$
+DECLARE
+    admin_user_id UUID;
+BEGIN
+    -- Check if user exists in auth.users
+    SELECT id INTO admin_user_id 
+    FROM auth.users 
+    WHERE email = admin_email;
+    
+    IF admin_user_id IS NULL THEN
+        RAISE EXCEPTION 'User with email % does not exist in auth.users table', admin_email;
+    END IF;
+    
+    -- Insert or update profile with admin role
+    INSERT INTO public.profiles (user_id, email, full_name, role, kyc_status, account_balance, is_verified)
+    VALUES (admin_user_id, admin_email, admin_full_name, 'admin', 'approved', 10000, true)
+    ON CONFLICT (user_id) DO UPDATE SET
+        email = EXCLUDED.email,
+        full_name = EXCLUDED.full_name,
+        role = EXCLUDED.role,
+        kyc_status = EXCLUDED.kyc_status,
+        account_balance = EXCLUDED.account_balance,
+        is_verified = EXCLUDED.is_verified,
+        updated_at = NOW();
+    
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Step 11: Create views for admin dashboard
 CREATE OR REPLACE VIEW admin_dashboard_stats AS
