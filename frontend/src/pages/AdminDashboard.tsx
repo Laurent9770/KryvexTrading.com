@@ -28,7 +28,7 @@ const AdminDashboard = () => {
       setUsers(usersData);
       
       // Load trading stats
-      const stats = await supabaseTradingService.getTradingStats('all users');
+      const stats = await supabaseTradingService.getTradingStats();
       setTradingStats(stats);
       
     } catch (error) {

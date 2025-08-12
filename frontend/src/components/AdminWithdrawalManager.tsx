@@ -208,8 +208,25 @@ const AdminWithdrawalManager: React.FC = () => {
 
   useEffect(() => {
     const loadStats = async () => {
-              const statsData = await getWithdrawalStats();
-      setStats(statsData);
+      try {
+        const statsData = await getWithdrawalStats();
+        setStats({
+          totalRequests: statsData.total || 0,
+          pendingRequests: statsData.pending || 0,
+          approvedRequests: statsData.approved || 0,
+          rejectedRequests: statsData.rejected || 0,
+          totalAmount: 0 // We'll calculate this from withdrawal requests
+        });
+      } catch (error) {
+        console.error('Error loading withdrawal stats:', error);
+        setStats({
+          totalRequests: 0,
+          pendingRequests: 0,
+          approvedRequests: 0,
+          rejectedRequests: 0,
+          totalAmount: 0
+        });
+      }
     };
     loadStats();
   }, [withdrawalRequests]);
@@ -257,7 +274,7 @@ const AdminWithdrawalManager: React.FC = () => {
               <DollarSign className="w-5 h-5 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-2xl font-bold">${stats.totalAmount.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${(stats.totalAmount || 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
