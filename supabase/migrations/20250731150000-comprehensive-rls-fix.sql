@@ -11,32 +11,45 @@ ALTER TABLE public.user_trading_modes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_documents DISABLE ROW LEVEL SECURITY;
 
 -- Step 2: Drop ALL existing policies to start fresh
+-- Drop all policies for user_wallets
 DROP POLICY IF EXISTS "Users can view own wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Users can insert own wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Users can update own wallets" ON public.user_wallets;
 DROP POLICY IF EXISTS "Admins can view all wallets" ON public.user_wallets;
 DROP POLICY IF EXISTS "Admins can insert wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Admins can insert any wallet" ON public.user_wallets;
 DROP POLICY IF EXISTS "Admins can update all wallets" ON public.user_wallets;
 DROP POLICY IF EXISTS "Admins can delete wallets" ON public.user_wallets;
 
+-- Drop all policies for deposit_requests
 DROP POLICY IF EXISTS "Users can view own deposit requests" ON public.deposit_requests;
 DROP POLICY IF EXISTS "Users can insert own deposit requests" ON public.deposit_requests;
 DROP POLICY IF EXISTS "Admins can view all deposit requests" ON public.deposit_requests;
 DROP POLICY IF EXISTS "Admins can update all deposit requests" ON public.deposit_requests;
 
+-- Drop all policies for withdrawal_requests
 DROP POLICY IF EXISTS "Users can view own withdrawal requests" ON public.withdrawal_requests;
 DROP POLICY IF EXISTS "Users can insert own withdrawal requests" ON public.withdrawal_requests;
 DROP POLICY IF EXISTS "Admins can view all withdrawal requests" ON public.withdrawal_requests;
 DROP POLICY IF EXISTS "Admins can update all withdrawal requests" ON public.withdrawal_requests;
 
+-- Drop all policies for admin_actions
 DROP POLICY IF EXISTS "Admins can view all admin actions" ON public.admin_actions;
 DROP POLICY IF EXISTS "Admins can insert admin actions" ON public.admin_actions;
 
+-- Drop all policies for user_trading_modes
 DROP POLICY IF EXISTS "Users can view own trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Users can insert own trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Users can update own trading modes" ON public.user_trading_modes;
 DROP POLICY IF EXISTS "Admins can view all trading modes" ON public.user_trading_modes;
 DROP POLICY IF EXISTS "Admins can insert trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Admins can insert any trading modes" ON public.user_trading_modes;
 DROP POLICY IF EXISTS "Admins can update all trading modes" ON public.user_trading_modes;
 DROP POLICY IF EXISTS "Admins can delete trading modes" ON public.user_trading_modes;
 
+-- Drop all policies for kyc_documents
 DROP POLICY IF EXISTS "Users can view own KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Users can insert own KYC documents" ON public.kyc_documents;
 DROP POLICY IF EXISTS "Admins can view all KYC documents" ON public.kyc_documents;
 DROP POLICY IF EXISTS "Admins can update all KYC documents" ON public.kyc_documents;
 
