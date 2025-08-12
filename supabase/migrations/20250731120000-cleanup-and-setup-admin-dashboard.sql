@@ -219,6 +219,45 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Step 8: Create RLS policies
 
+-- Drop existing policies first
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
+
+DROP POLICY IF EXISTS "Users can view own wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Admins can view all wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Admins can update all wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Admins can insert wallets" ON public.user_wallets;
+
+DROP POLICY IF EXISTS "Users can view own trades" ON public.trades;
+DROP POLICY IF EXISTS "Users can insert own trades" ON public.trades;
+DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
+DROP POLICY IF EXISTS "Admins can update all trades" ON public.trades;
+
+DROP POLICY IF EXISTS "Users can view own withdrawal requests" ON public.withdrawal_requests;
+DROP POLICY IF EXISTS "Users can insert own withdrawal requests" ON public.withdrawal_requests;
+DROP POLICY IF EXISTS "Admins can view all withdrawal requests" ON public.withdrawal_requests;
+DROP POLICY IF EXISTS "Admins can update all withdrawal requests" ON public.withdrawal_requests;
+
+DROP POLICY IF EXISTS "Users can view own deposit requests" ON public.deposit_requests;
+DROP POLICY IF EXISTS "Users can insert own deposit requests" ON public.deposit_requests;
+DROP POLICY IF EXISTS "Admins can view all deposit requests" ON public.deposit_requests;
+DROP POLICY IF EXISTS "Admins can update all deposit requests" ON public.deposit_requests;
+
+DROP POLICY IF EXISTS "Admins can view all admin actions" ON public.admin_actions;
+DROP POLICY IF EXISTS "Admins can insert admin actions" ON public.admin_actions;
+
+DROP POLICY IF EXISTS "Admins can view all trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Admins can insert trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Admins can update trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Admins can delete trading modes" ON public.user_trading_modes;
+
+DROP POLICY IF EXISTS "Users can view own KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Users can insert own KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Admins can view all KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Admins can update all KYC documents" ON public.kyc_documents;
+
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON public.profiles
     FOR SELECT USING (auth.uid() = user_id);
