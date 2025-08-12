@@ -3,6 +3,8 @@
 
 -- Check if is_admin column exists and add it if missing
 DO $$
+DECLARE
+    col record;
 BEGIN
     -- Check if is_admin column exists
     IF NOT EXISTS (
