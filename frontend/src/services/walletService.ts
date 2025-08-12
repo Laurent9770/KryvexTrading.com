@@ -726,24 +726,29 @@ export async function fundUserWallet(
     if (profileUpdateError) throw profileUpdateError;
 
     // Log admin action for audit trail
-    const { error: actionError } = await supabase
-      .from('admin_actions')
-      .insert({
-        admin_email: adminEmail,
-        action_type: 'wallet_fund',
-        target_user_id: userId,
-        details: {
-          wallet_type: walletType,
-          amount: numericAmount,
-          currency: currency,
-          new_balance: newBalance,
-          remarks: remarks || `Funded by admin (${walletType} wallet)`,
-          username: username
-        }
-      });
+    try {
+      const { error: actionError } = await supabase
+        .from('admin_actions')
+        .insert({
+          admin_email: adminEmail,
+          action_type: 'wallet_fund',
+          target_user_id: userId,
+          details: {
+            wallet_type: walletType,
+            amount: numericAmount,
+            currency: currency,
+            new_balance: newBalance,
+            remarks: remarks || `Funded by admin (${walletType} wallet)`,
+            username: username
+          }
+        });
 
-    if (actionError) {
-      console.warn('Failed to log admin action:', actionError);
+      if (actionError) {
+        console.warn('Failed to log admin action:', actionError);
+        // Don't throw error here as the main operation succeeded
+      }
+    } catch (actionLogError) {
+      console.warn('Failed to log admin action (caught exception):', actionLogError);
       // Don't throw error here as the main operation succeeded
     }
 
@@ -835,24 +840,29 @@ export async function deductFromWallet(
     if (profileUpdateError) throw profileUpdateError;
 
     // Log admin action for audit trail
-    const { error: actionError } = await supabase
-      .from('admin_actions')
-      .insert({
-        admin_email: adminEmail,
-        action_type: 'wallet_deduct',
-        target_user_id: userId,
-        details: {
-          wallet_type: walletType,
-          amount: numericAmount,
-          currency: currency,
-          new_balance: newBalance,
-          remarks: remarks || `Deducted by admin (${walletType} wallet)`,
-          username: username
-        }
-      });
+    try {
+      const { error: actionError } = await supabase
+        .from('admin_actions')
+        .insert({
+          admin_email: adminEmail,
+          action_type: 'wallet_deduct',
+          target_user_id: userId,
+          details: {
+            wallet_type: walletType,
+            amount: numericAmount,
+            currency: currency,
+            new_balance: newBalance,
+            remarks: remarks || `Deducted by admin (${walletType} wallet)`,
+            username: username
+          }
+        });
 
-    if (actionError) {
-      console.warn('Failed to log admin action:', actionError);
+      if (actionError) {
+        console.warn('Failed to log admin action:', actionError);
+        // Don't throw error here as the main operation succeeded
+      }
+    } catch (actionLogError) {
+      console.warn('Failed to log admin action (caught exception):', actionLogError);
       // Don't throw error here as the main operation succeeded
     }
 
