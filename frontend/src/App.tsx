@@ -9,6 +9,7 @@ import SupabaseErrorBoundary from '@/components/SupabaseErrorBoundary';
 import SafeComponent from '@/components/SafeComponent';
 import NavbarLayout from '@/layouts/NavbarLayout';
 import NoNavbarLayout from '@/layouts/NoNavbarLayout';
+import { setupGlobalErrorHandler } from '@/utils/errorHandler';
 
 // Safe lazy loading wrapper with error handling
 const safeLazyLoad = (importFunc: () => Promise<any>) => {
@@ -92,6 +93,9 @@ function App() {
 
   useEffect(() => {
     try {
+      // Setup global error handler to catch DevTools extension errors
+      setupGlobalErrorHandler();
+      
       // Log environment status
       logEnvironmentStatus();
       

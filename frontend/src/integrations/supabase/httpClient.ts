@@ -19,10 +19,47 @@ const getHeaders = (authToken?: string) => {
   
   return {
     'Content-Type': 'application/json',
+    'Accept': 'application/json, text/plain, */*',
     'apikey': supabaseAnonKey,
     'Authorization': `Bearer ${authToken || supabaseAnonKey}`,
-    'Prefer': 'return=representation'
+    'Prefer': 'return=representation',
+    'X-Client-Info': 'supabase-js/2.0.0'
   };
+};
+
+// Retry logic for failed requests
+const retryRequest = async (requestFn: () => Promise<Response>, maxRetries = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await requestFn();
+      
+      // If successful, return immediately
+      if (response.ok) {
+        return response;
+      }
+      
+      // Don't retry on client errors (4xx) except 429 (rate limit)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response;
+      }
+      
+      // Retry on server errors (5xx) and rate limits (429)
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff
+        console.log(`🔄 Retrying request (attempt ${attempt + 1}/${maxRetries}) in ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`🔄 Retrying request after error (attempt ${attempt + 1}/${maxRetries}) in ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw new Error(`Request failed after ${maxRetries} attempts`);
 };
 
 // HTTP-based authentication methods
@@ -31,7 +68,6 @@ export const httpAuth = {
   async signUp(email: string, password: string, userData?: any) {
     try {
       console.log('🔐 HTTP Sign up for:', email);
-      console.log('🔐 User data:', userData);
       
       const { supabaseUrl } = getSupabaseConfig();
       
@@ -77,13 +113,14 @@ export const httpAuth = {
       }
 
       console.log('🔐 Signup request body:', { ...requestBody, password: '[HIDDEN]' });
-      console.log('🔐 Full request body (for debugging):', JSON.stringify(requestBody, null, 2));
       
-      const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(requestBody)
-      });
+      const response = await retryRequest(() => 
+        fetch(`${supabaseUrl}/auth/v1/signup`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(requestBody)
+        })
+      );
 
       console.log('🔐 Signup response status:', response.status);
       const result = await response.json();
@@ -91,7 +128,6 @@ export const httpAuth = {
       
       if (!response.ok) {
         console.error('❌ HTTP signup error:', response.status, result);
-        console.error('❌ Full error details:', JSON.stringify(result, null, 2));
         
         // Handle specific error cases with better parsing
         let errorMessage = 'Registration failed';
@@ -172,14 +208,16 @@ export const httpAuth = {
       
       const { supabaseUrl } = getSupabaseConfig();
       
-      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password
+      const response = await retryRequest(() =>
+        fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            password
+          })
         })
-      });
+      );
 
       const result = await response.json();
       
@@ -218,10 +256,12 @@ export const httpAuth = {
     try {
       const { supabaseUrl } = getSupabaseConfig();
       
-      const response = await fetch(`${supabaseUrl}/auth/v1/logout`, {
-        method: 'POST',
-        headers: getHeaders()
-      });
+      const response = await retryRequest(() =>
+        fetch(`${supabaseUrl}/auth/v1/logout`, {
+          method: 'POST',
+          headers: getHeaders()
+        })
+      );
 
       console.log('✅ HTTP signout successful');
       return { error: null };
@@ -291,14 +331,16 @@ export const httpAuth = {
       
       const { supabaseUrl } = getSupabaseConfig();
       
-      const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          ...options
+      const response = await retryRequest(() =>
+        fetch(`${supabaseUrl}/auth/v1/recover`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            ...options
+          })
         })
-      });
+      );
 
       const result = await response.json();
       
@@ -341,11 +383,13 @@ export const httpAuth = {
         };
       }
       
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        method: 'PUT',
-        headers: getHeaders(session.data.session.access_token),
-        body: JSON.stringify(updates)
-      });
+      const response = await retryRequest(() =>
+        fetch(`${supabaseUrl}/auth/v1/user`, {
+          method: 'PUT',
+          headers: getHeaders(session.data.session.access_token),
+          body: JSON.stringify(updates)
+        })
+      );
 
       const result = await response.json();
       
@@ -395,10 +439,12 @@ export const httpDb = {
       
       console.log('🔍 HTTP select URL:', url);
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: getHeaders()
-      });
+      const response = await retryRequest(() =>
+        fetch(url, {
+          method: 'GET',
+          headers: getHeaders()
+        })
+      );
 
       const result = await response.json();
       
@@ -433,11 +479,13 @@ export const httpDb = {
       // Ensure table name has proper schema prefix
       const tableName = table.includes('.') ? table : `public.${table}`;
       
-      const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(data)
-      });
+      const response = await retryRequest(() =>
+        fetch(`${supabaseUrl}/rest/v1/${tableName}`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(data)
+        })
+      );
 
       const result = await response.json();
       
@@ -481,11 +529,13 @@ export const httpDb = {
         url += `?${params.toString()}`;
       }
       
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: getHeaders(),
-        body: JSON.stringify(data)
-      });
+      const response = await retryRequest(() =>
+        fetch(url, {
+          method: 'PATCH',
+          headers: getHeaders(),
+          body: JSON.stringify(data)
+        })
+      );
 
       const result = await response.json();
       
@@ -529,10 +579,12 @@ export const httpDb = {
         url += `?${params.toString()}`;
       }
       
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
+      const response = await retryRequest(() =>
+        fetch(url, {
+          method: 'DELETE',
+          headers: getHeaders()
+        })
+      );
 
       const result = await response.json();
       
@@ -561,4 +613,4 @@ export const httpDb = {
 };
 
 // Only log when the module is actually used, not during import
-console.log('🚀 HTTP-based Supabase client ready (lazy-loaded)');
+console.log('🚀 Enhanced HTTP-based Supabase client ready (lazy-loaded)');
