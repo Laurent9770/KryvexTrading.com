@@ -4829,9 +4829,8 @@ const TradingPage = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Total Entrusted</p>
-                          {/* TODO: Replace with real API call to get user's total entrusted funds */}
-                          <p className="text-2xl font-bold text-foreground">$0.00</p>
-                          <p className="text-xs text-muted-foreground">≈ 0.00 BTC</p>
+                          <p className="text-2xl font-bold text-foreground">${formatCurrency(parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0'))}</p>
+                          <p className="text-xs text-muted-foreground">≈ {formatCurrency(parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0') / (getPrice('BTC') || 1))} BTC</p>
                         </div>
                         <DollarSign className="w-8 h-8 text-green-500" />
                       </div>
@@ -6361,8 +6360,8 @@ const TradingPage = () => {
                 <Card className="border-0 p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Total Staked</p>
-                      <p className="text-2xl font-bold text-foreground">$0.00</p>
+                      <p className="text-sm text-muted-foreground mb-1">Available to Stake</p>
+                      <p className="text-2xl font-bold text-foreground">${formatCurrency(parseFloat(tradingAccount.USDT?.available.replace(/,/g, '') || '0'))}</p>
                     </div>
                     <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
                       <Coins className="w-6 h-6 text-blue-500" />
