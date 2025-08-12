@@ -12,7 +12,7 @@ export interface Trade {
   fee: number;
   profitLoss: number;
   result: 'pending' | 'win' | 'loss' | 'draw';
-  status: 'open' | 'closed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled';
   createdAt: string;
   closedAt?: string;
 }
@@ -49,7 +49,7 @@ export interface CreateTradeData {
 
 export interface UpdateTradeData {
   result?: 'win' | 'loss' | 'draw';
-  status?: 'open' | 'closed' | 'cancelled';
+  status?: 'pending' | 'completed' | 'cancelled';
   profitLoss?: number;
 }
 
@@ -255,8 +255,8 @@ class SupabaseTradingService {
       if (updates.status) updateData.status = updates.status;
       if (updates.profitLoss !== undefined) updateData.profit_loss = updates.profitLoss;
       
-      if (updates.status === 'closed') {
-        updateData.closed_at = new Date().toISOString();
+      if (updates.status === 'completed') {
+        updateData.completed_at = new Date().toISOString();
       }
 
       const { data, error } = await supabase
@@ -595,13 +595,13 @@ class SupabaseTradingService {
       if (!userId) {
         // For admin dashboard, get stats for all users
         const { data: allTrades, error } = await supabase
-          .from('spot_trades')
+          .from('trades')
           .select(`
             user_id,
             status,
-            outcome,
+            result,
             amount,
-            payout,
+            profit_loss,
             created_at
           `)
           .order('created_at', { ascending: false });
@@ -614,15 +614,10 @@ class SupabaseTradingService {
         // Calculate overall stats
         const totalTrades = allTrades?.length || 0;
         const completedTrades = allTrades?.filter(trade => trade.status === 'completed').length || 0;
-        const winningTrades = allTrades?.filter(trade => trade.outcome === 'win').length || 0;
+        const winningTrades = allTrades?.filter(trade => trade.result === 'win').length || 0;
         const totalVolume = allTrades?.reduce((sum, trade) => sum + (trade.amount || 0), 0) || 0;
         const totalProfit = allTrades?.reduce((sum, trade) => {
-          if (trade.outcome === 'win' && trade.payout) {
-            return sum + (trade.payout - trade.amount);
-          } else if (trade.outcome === 'lose') {
-            return sum - trade.amount;
-          }
-          return sum;
+          return sum + (trade.profit_loss || 0);
         }, 0) || 0;
 
         const stats = {
@@ -700,7 +695,7 @@ class SupabaseTradingService {
       // Calculate profit from trades
       if (tradesResult.success && tradesResult.data) {
         portfolio.totalProfit = tradesResult.data.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
-        portfolio.activeTrades = tradesResult.data.filter(trade => trade.status === 'open').length;
+        portfolio.activeTrades = tradesResult.data.filter(trade => trade.status === 'pending').length;
       }
 
       return { success: true, portfolio };
@@ -742,7 +737,7 @@ class SupabaseTradingService {
       console.log('📊 Admin: Fetching active trades...');
       
       const { data, error } = await supabase
-        .from('spot_trades')
+        .from('trades')
         .select(`
           *,
           profiles:user_id (
@@ -750,8 +745,8 @@ class SupabaseTradingService {
             email
           )
         `)
-        .in('status', ['running'])
-        .order('start_time', { ascending: false });
+        .in('status', ['pending'])
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ Error fetching active trades:', error);
@@ -843,7 +838,7 @@ class SupabaseTradingService {
       
       // Get the trade first
       const { data: trade, error: fetchError } = await supabase
-        .from('spot_trades')
+        .from('trades')
         .select('*')
         .eq('id', tradeId)
         .single();
@@ -853,18 +848,17 @@ class SupabaseTradingService {
         return { success: false, error: 'Trade not found' };
       }
 
-      // Calculate payout based on outcome
-      const payout = outcome === 'win' ? trade.amount * (1 + trade.profit_percentage / 100) : 0;
+      // Calculate profit based on outcome
+      const profitLoss = outcome === 'win' ? trade.amount * 0.1 : -trade.amount * 0.1; // 10% profit/loss
 
       // Update the trade
       const { data: updatedTrade, error: updateError } = await supabase
-        .from('spot_trades')
+        .from('trades')
         .update({
           status: 'completed',
-          outcome: 'admin_override',
-          admin_override: outcome,
-          payout: payout,
-          end_time: new Date().toISOString()
+          result: outcome,
+          profit_loss: profitLoss,
+          completed_at: new Date().toISOString()
         })
         .eq('id', tradeId)
         .select()
@@ -879,11 +873,11 @@ class SupabaseTradingService {
       await this.logAdminAction({
         admin_email: adminEmail,
         action_type: 'force_trade_outcome',
-        target_table: 'spot_trades',
+        target_table: 'trades',
         target_id: tradeId,
         description: `Admin ${adminEmail} forced trade ${tradeId} outcome to ${outcome}`,
-        old_values: { outcome: trade.outcome, status: trade.status },
-        new_values: { outcome: 'admin_override', status: 'completed', admin_override: outcome }
+        old_values: { result: trade.result, status: trade.status },
+        new_values: { result: outcome, status: 'completed' }
       });
 
       console.log('✅ Trade outcome forced successfully');
