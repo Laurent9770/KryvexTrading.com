@@ -135,6 +135,8 @@ CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON public.deposit_reques
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_status ON public.deposit_requests(status);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_admin_email ON public.admin_actions(admin_email);
 CREATE INDEX IF NOT EXISTS idx_user_trading_modes_user_id ON public.user_trading_modes(user_id);
+CREATE INDEX IF NOT EXISTS idx_kyc_documents_user_id ON public.kyc_documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_kyc_documents_status ON public.kyc_documents(status);
 
 -- Step 5: Create triggers for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -145,6 +147,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing triggers if they exist
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
+DROP TRIGGER IF EXISTS update_user_wallets_updated_at ON public.user_wallets;
+DROP TRIGGER IF EXISTS update_trades_updated_at ON public.trades;
+DROP TRIGGER IF EXISTS update_user_trading_modes_updated_at ON public.user_trading_modes;
+
+-- Create triggers
 CREATE TRIGGER update_profiles_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -161,7 +170,29 @@ CREATE TRIGGER update_user_trading_modes_updated_at
     BEFORE UPDATE ON public.user_trading_modes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Step 6: Enable RLS on all tables
+-- Step 6: Create KYC table
+CREATE TABLE IF NOT EXISTS public.kyc_documents (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    document_type TEXT NOT NULL CHECK (document_type IN ('passport', 'national_id', 'drivers_license', 'utility_bill')),
+    document_number TEXT,
+    document_file TEXT NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    reviewed_by UUID REFERENCES auth.users(id),
+    rejection_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create trigger for KYC documents
+DROP TRIGGER IF EXISTS update_kyc_documents_updated_at ON public.kyc_documents;
+CREATE TRIGGER update_kyc_documents_updated_at
+    BEFORE UPDATE ON public.kyc_documents
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Step 7: Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
@@ -169,6 +200,7 @@ ALTER TABLE public.withdrawal_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deposit_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_trading_modes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
 
 -- Step 7: Create admin helper function
 CREATE OR REPLACE FUNCTION has_role(user_id UUID, required_role TEXT)
@@ -269,6 +301,19 @@ CREATE POLICY "Admins can update trading modes" ON public.user_trading_modes
 CREATE POLICY "Admins can delete trading modes" ON public.user_trading_modes
     FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- KYC documents policies
+CREATE POLICY "Users can view own KYC documents" ON public.kyc_documents
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own KYC documents" ON public.kyc_documents
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all KYC documents" ON public.kyc_documents
+    FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins can update all KYC documents" ON public.kyc_documents
+    FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
 -- Step 9: Create admin promotion/demotion functions
 CREATE OR REPLACE FUNCTION promote_to_admin(target_user_id UUID)
 RETURNS BOOLEAN AS $$
@@ -317,6 +362,7 @@ GRANT ALL ON public.withdrawal_requests TO authenticated;
 GRANT ALL ON public.deposit_requests TO authenticated;
 GRANT ALL ON public.admin_actions TO authenticated;
 GRANT ALL ON public.user_trading_modes TO authenticated;
+GRANT ALL ON public.kyc_documents TO authenticated;
 
 -- Grant usage on sequences
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;

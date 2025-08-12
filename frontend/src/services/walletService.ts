@@ -662,81 +662,95 @@ export async function fundUserWallet(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Get current user profile
+    // Ensure amount is a number
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new Error('Invalid amount provided');
+    }
+
+    // Check if user wallet exists, if not create it
+    const { data: existingWallet, error: walletError } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('wallet_type', walletType)
+      .eq('asset', currency)
+      .single();
+
+    let newBalance = numericAmount;
+    
+    if (existingWallet) {
+      // Update existing wallet
+      newBalance = existingWallet.balance + numericAmount;
+      
+      const { error: updateError } = await supabase
+        .from('user_wallets')
+        .update({ 
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingWallet.id);
+
+      if (updateError) throw updateError;
+    } else {
+      // Create new wallet entry
+      const { error: insertError } = await supabase
+        .from('user_wallets')
+        .insert({
+          user_id: userId,
+          wallet_type: walletType,
+          asset: currency,
+          balance: numericAmount
+        });
+
+      if (insertError) throw insertError;
+    }
+
+    // Update user profile account balance
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('account_balance')
       .eq('user_id', userId)
       .single();
 
     if (profileError) throw profileError;
 
-    // Update the appropriate wallet based on walletType
-    const currentWallet = walletType === 'funding' 
-      ? (profile.funding_wallet || {})
-      : (profile.trading_wallet || {});
-    
-    const currentBalance = currentWallet[currency] || 0;
-    const newBalance = currentBalance + amount;
-
-    const updatedWallet = {
-      ...currentWallet,
-      [currency]: newBalance
-    };
-
-    // Prepare update object based on wallet type
-    const updateData: any = {
-      account_balance: profile.account_balance + amount
-    };
-
-    if (walletType === 'funding') {
-      updateData.funding_wallet = updatedWallet;
-    } else {
-      updateData.trading_wallet = updatedWallet;
-    }
-
-    // Update profile with new balance
-    const { error: updateError } = await supabase
+    const { error: profileUpdateError } = await supabase
       .from('profiles')
-      .update(updateData)
+      .update({ 
+        account_balance: (profile.account_balance || 0) + numericAmount,
+        updated_at: new Date().toISOString()
+      })
       .eq('user_id', userId);
 
-    if (updateError) throw updateError;
-
-    // Create wallet transaction record
-    const { error: transactionError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        user_id: userId,
-        action: 'admin_fund',
-        wallet_type: walletType,
-        amount: amount,
-        asset: currency,
-        status: 'completed',
-        remarks: remarks || `Funded by admin (${walletType} wallet)`,
-        admin_email: adminEmail,
-        balance: newBalance,
-        created_at: new Date().toISOString()
-      });
-
-    if (transactionError) throw transactionError;
+    if (profileUpdateError) throw profileUpdateError;
 
     // Log admin action for audit trail
-    await logAdminAction({
-      admin_id: user.id,
-      action_type: 'wallet_fund',
-      target_user_id: userId,
-      target_table: 'profiles',
-      description: `Admin ${adminEmail} funded ${amount} ${currency} to ${username}'s ${walletType} wallet`,
-      old_values: { [walletType]: currentWallet },
-      new_values: { [walletType]: updatedWallet },
-      ip_address: 'admin-panel'
-    });
+    const { error: actionError } = await supabase
+      .from('admin_actions')
+      .insert({
+        admin_email: adminEmail,
+        action_type: 'wallet_fund',
+        target_user_id: userId,
+        details: {
+          wallet_type: walletType,
+          amount: numericAmount,
+          currency: currency,
+          new_balance: newBalance,
+          remarks: remarks || `Funded by admin (${walletType} wallet)`,
+          username: username
+        }
+      });
+
+    if (actionError) {
+      console.warn('Failed to log admin action:', actionError);
+      // Don't throw error here as the main operation succeeded
+    }
 
     return {
       success: true,
       newBalance: newBalance,
-      message: `Successfully funded ${amount} ${currency} to user's ${walletType} wallet`
+      message: `Successfully funded ${numericAmount} ${currency} to user's ${walletType} wallet`
     };
   } catch (error) {
     console.error('Error funding user wallet:', error);
@@ -765,86 +779,87 @@ export async function deductFromWallet(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Get current user profile
+    // Ensure amount is a number
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new Error('Invalid amount provided');
+    }
+
+    // Check if user wallet exists and has sufficient balance
+    const { data: existingWallet, error: walletError } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('wallet_type', walletType)
+      .eq('asset', currency)
+      .single();
+
+    if (walletError || !existingWallet) {
+      throw new Error(`No ${walletType} wallet found for ${currency}`);
+    }
+
+    if (existingWallet.balance < numericAmount) {
+      throw new Error(`Insufficient balance in ${walletType} wallet. Current: ${existingWallet.balance} ${currency}, Required: ${numericAmount} ${currency}`);
+    }
+
+    const newBalance = existingWallet.balance - numericAmount;
+    
+    // Update wallet balance
+    const { error: updateError } = await supabase
+      .from('user_wallets')
+      .update({ 
+        balance: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existingWallet.id);
+
+    if (updateError) throw updateError;
+
+    // Update user profile account balance
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('account_balance')
       .eq('user_id', userId)
       .single();
 
     if (profileError) throw profileError;
 
-    // Check if user has sufficient balance in the appropriate wallet
-    const currentWallet = walletType === 'funding' 
-      ? (profile.funding_wallet || {})
-      : (profile.trading_wallet || {});
-    
-    const currentBalance = currentWallet[currency] || 0;
-
-    if (currentBalance < amount) {
-      throw new Error(`Insufficient balance in ${walletType} wallet. Current: ${currentBalance} ${currency}, Required: ${amount} ${currency}`);
-    }
-
-    const newBalance = currentBalance - amount;
-
-    const updatedWallet = {
-      ...currentWallet,
-      [currency]: newBalance
-    };
-
-    // Prepare update object based on wallet type
-    const updateData: any = {
-      account_balance: profile.account_balance - amount
-    };
-
-    if (walletType === 'funding') {
-      updateData.funding_wallet = updatedWallet;
-    } else {
-      updateData.trading_wallet = updatedWallet;
-    }
-
-    // Update profile with new balance
-    const { error: updateError } = await supabase
+    const { error: profileUpdateError } = await supabase
       .from('profiles')
-      .update(updateData)
+      .update({ 
+        account_balance: Math.max(0, (profile.account_balance || 0) - numericAmount),
+        updated_at: new Date().toISOString()
+      })
       .eq('user_id', userId);
 
-    if (updateError) throw updateError;
-
-    // Create wallet transaction record
-    const { error: transactionError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        user_id: userId,
-        action: 'admin_deduct',
-        wallet_type: walletType,
-        amount: amount,
-        asset: currency,
-        status: 'completed',
-        remarks: remarks || `Deducted by admin (${walletType} wallet)`,
-        admin_email: adminEmail,
-        balance: newBalance,
-        created_at: new Date().toISOString()
-      });
-
-    if (transactionError) throw transactionError;
+    if (profileUpdateError) throw profileUpdateError;
 
     // Log admin action for audit trail
-    await logAdminAction({
-      admin_id: user.id,
-      action_type: 'wallet_deduct',
-      target_user_id: userId,
-      target_table: 'profiles',
-      description: `Admin ${adminEmail} deducted ${amount} ${currency} from ${username}'s ${walletType} wallet`,
-      old_values: { [walletType]: currentWallet },
-      new_values: { [walletType]: updatedWallet },
-      ip_address: 'admin-panel'
-    });
+    const { error: actionError } = await supabase
+      .from('admin_actions')
+      .insert({
+        admin_email: adminEmail,
+        action_type: 'wallet_deduct',
+        target_user_id: userId,
+        details: {
+          wallet_type: walletType,
+          amount: numericAmount,
+          currency: currency,
+          new_balance: newBalance,
+          remarks: remarks || `Deducted by admin (${walletType} wallet)`,
+          username: username
+        }
+      });
+
+    if (actionError) {
+      console.warn('Failed to log admin action:', actionError);
+      // Don't throw error here as the main operation succeeded
+    }
 
     return {
       success: true,
       newBalance: newBalance,
-      message: `Successfully deducted ${amount} ${currency} from user's ${walletType} wallet`
+      message: `Successfully deducted ${numericAmount} ${currency} from user's ${walletType} wallet`
     };
   } catch (error) {
     console.error('Error deducting from user wallet:', error);
