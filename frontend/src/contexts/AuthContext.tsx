@@ -292,7 +292,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('🔄 Auth state check - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading, 'user:', user?.email);
     
-    if (isAuthenticated && !isLoading && user) {
+    // Don't redirect while still loading
+    if (isLoading) {
+      console.log('⏳ Still loading auth state, skipping redirect logic');
+      return;
+    }
+    
+    if (isAuthenticated && user) {
       console.log('🔄 Auth state changed - user is authenticated, checking current location...');
       console.log('🔍 User is admin:', isAdmin);
       console.log('🔍 Current user email:', user?.email);
@@ -302,26 +308,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (window.location.pathname === '/auth' || window.location.pathname === '/') {
         console.log('📍 Currently on auth page, redirecting...');
         
-        // Use a small delay to ensure the auth state is fully processed
+        // Use a longer delay to ensure the auth state is fully processed
         setTimeout(() => {
           try {
             // Redirect admin users to admin dashboard, regular users to regular dashboard
             const targetPath = isAdmin ? '/admin' : '/dashboard';
             console.log('🎯 Redirecting to:', targetPath);
             console.log('🎯 User email:', user?.email, 'Admin status:', isAdmin);
-            window.location.href = targetPath;
+            
+            // Only redirect if we're still on the same page (to avoid loops)
+            if (window.location.pathname === '/auth' || window.location.pathname === '/') {
+              window.location.href = targetPath;
+            }
           } catch (error) {
             console.warn('Auto-redirect failed:', error);
           }
-        }, 200);
+        }, 500); // Increased delay to 500ms
       }
-    } else if (!isAuthenticated && !isLoading) {
-      console.log('🔄 User is not authenticated, redirecting to auth page');
+    } else if (!isAuthenticated) {
+      console.log('🔄 User is not authenticated, checking if redirect needed...');
       
-      // Redirect unauthenticated users to auth page
-      if (window.location.pathname !== '/auth' && 
-          window.location.pathname !== '/' && 
-          !window.location.pathname.startsWith('/public')) {
+      // Only redirect if we're on a protected route
+      const protectedRoutes = ['/dashboard', '/admin', '/trading', '/wallet', '/settings', '/kyc'];
+      const isOnProtectedRoute = protectedRoutes.some(route => 
+        window.location.pathname.startsWith(route)
+      );
+      
+      if (isOnProtectedRoute) {
         console.log('🚫 Unauthenticated user accessing protected route, redirecting to /auth');
         window.location.href = '/auth';
       }

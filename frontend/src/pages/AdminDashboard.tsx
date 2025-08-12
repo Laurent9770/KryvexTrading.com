@@ -120,55 +120,68 @@ interface TradeRequest {
 }
 
 export default function AdminDashboard() {
-  const { user, isAuthenticated, isAdmin, checkAdminAccess } = useAuth();
+  const { user, isAuthenticated, isAdmin, checkAdminAccess, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Additional security check - redirect if not admin
+  // Simplified admin access check - only redirect if definitely not admin
   useEffect(() => {
-    // Add a small delay to ensure auth state is fully loaded
-    const checkAccess = () => {
+    // Only check if we have user data and they're authenticated
+    if (user && isAuthenticated && !isLoading) {
       console.log('🔍 Admin access check - User:', user?.email, 'isAdmin:', isAdmin, 'isAuthenticated:', isAuthenticated);
       
-      const hasAdminAccess = checkAdminAccess();
-      console.log('🔍 checkAdminAccess() result:', hasAdminAccess);
-      
-      if (!hasAdminAccess) {
-        console.warn('❌ Unauthorized access attempt to admin dashboard by:', user?.email);
-        console.warn('❌ Auth state - isAdmin:', isAdmin, 'isAuthenticated:', isAuthenticated);
+      // Only redirect if we're certain the user is not an admin
+      if (isAuthenticated && !isAdmin) {
+        console.warn('❌ Non-admin user attempting to access admin dashboard:', user?.email);
         
         toast({
           title: "Access Denied",
           description: "You don't have permission to access the admin dashboard.",
           variant: "destructive"
         });
-        navigate('/');
+        navigate('/dashboard');
         return;
       }
       
       console.log('✅ Admin dashboard access granted for:', user?.email);
-    };
-
-    // Check immediately if we have the data
-    if (user && isAuthenticated) {
-      checkAccess();
-    } else {
-      // Wait a bit for auth state to load
-      const timer = setTimeout(checkAccess, 500);
-      return () => clearTimeout(timer);
     }
-  }, [user, isAuthenticated, isAdmin, checkAdminAccess, navigate, toast]);
+  }, [user, isAuthenticated, isAdmin, navigate, toast]);
 
-  // Don't render anything if not admin - but add better logging
+  // Show loading while auth state is being determined
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only redirect if definitely not authenticated
   if (!isAuthenticated) {
-    console.log('❌ Not authenticated, redirecting to home');
-    return <Navigate to="/" replace />;
+    console.log('❌ Not authenticated, redirecting to auth');
+    return <Navigate to="/auth" replace />;
   }
   
-  if (!isAdmin) {
-    console.log('❌ Not admin, redirecting to home. User:', user?.email, 'isAdmin:', isAdmin);
-    return <Navigate to="/" replace />;
+  // Only redirect if definitely not admin (and we have user data)
+  if (user && !isAdmin) {
+    console.log('❌ Not admin, redirecting to dashboard. User:', user?.email, 'isAdmin:', isAdmin);
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // Show loading while we're still determining admin status
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading user data...</p>
+        </div>
+      </div>
+    );
   }
   
   // Determine active tab based on URL
