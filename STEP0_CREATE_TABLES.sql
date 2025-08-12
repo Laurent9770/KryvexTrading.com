@@ -42,6 +42,12 @@ BEGIN
         RAISE NOTICE '✅ Created user_roles table';
     ELSE
         RAISE NOTICE '✅ user_roles table already exists';
+        
+        -- Check if created_at column exists and add it if missing
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'user_roles' AND column_name = 'created_at') THEN
+            ALTER TABLE public.user_roles ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+            RAISE NOTICE '✅ Added created_at column to existing user_roles table';
+        END IF;
     END IF;
 
     -- Create user_wallets table if it doesn't exist

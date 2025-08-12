@@ -1,10 +1,11 @@
 -- STEP 3: Make kryvextrading@gmail.com an admin user
--- Run this AFTER STEP1_ADD_ADMIN_COLUMN.sql and STEP2_CHECK_USER.sql
+-- Run this AFTER STEP0_CREATE_TABLES.sql and STEP1_ADD_ADMIN_COLUMN.sql
 
 DO $$
 DECLARE
     _user_id uuid;
     _is_admin_column_exists boolean;
+    _user_roles_created_at_exists boolean;
 BEGIN
     -- Get the user ID for kryvextrading@gmail.com
     SELECT id INTO _user_id 
@@ -25,6 +26,14 @@ BEGIN
         AND table_name = 'profiles' 
         AND column_name = 'is_admin'
     ) INTO _is_admin_column_exists;
+
+    -- Check if created_at column exists in user_roles table
+    SELECT EXISTS(
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_roles' 
+        AND column_name = 'created_at'
+    ) INTO _user_roles_created_at_exists;
 
     -- Step 1: Create/Update profile (using table alias to avoid ambiguity)
     INSERT INTO public.profiles (user_id, email, first_name, last_name, kyc_level1_status, kyc_level2_status, created_at, updated_at)
@@ -59,9 +68,15 @@ BEGIN
     END IF;
 
     -- Step 3: Assign 'admin' role in user_roles table (using table alias)
-    INSERT INTO public.user_roles (user_id, role, created_at)
-    VALUES (_user_id, 'admin', NOW())
-    ON CONFLICT (user_id, role) DO NOTHING;
+    IF _user_roles_created_at_exists THEN
+        INSERT INTO public.user_roles (user_id, role, created_at)
+        VALUES (_user_id, 'admin', NOW())
+        ON CONFLICT (user_id, role) DO NOTHING;
+    ELSE
+        INSERT INTO public.user_roles (user_id, role)
+        VALUES (_user_id, 'admin')
+        ON CONFLICT (user_id, role) DO NOTHING;
+    END IF;
     
     RAISE NOTICE '✅ Admin role assigned to user %', _user_id;
 
