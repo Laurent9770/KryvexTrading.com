@@ -392,7 +392,7 @@ CREATE POLICY "Admins can view all trades" ON public.trades
 CREATE POLICY "Admins can update trades" ON public.trades
   FOR UPDATE USING (public.is_admin());
 
--- 13. Create admin dashboard view
+-- 13. Create admin dashboard view (with error handling for missing tables)
 CREATE OR REPLACE VIEW public.admin_dashboard_view AS
 SELECT 
     p.user_id,

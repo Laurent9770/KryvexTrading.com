@@ -6,6 +6,19 @@ DO $$
 DECLARE
     column_exists BOOLEAN;
 BEGIN
+    -- Check if role column exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'role'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        ALTER TABLE public.profiles ADD COLUMN role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator'));
+        RAISE NOTICE 'Added role column to profiles table';
+    END IF;
+    
     -- Check if kyc_status column exists
     SELECT EXISTS (
         SELECT 1 FROM information_schema.columns 
