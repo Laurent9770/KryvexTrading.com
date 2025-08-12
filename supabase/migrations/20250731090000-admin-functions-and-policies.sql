@@ -1,17 +1,26 @@
 -- Admin Functions and Policies Migration
 -- This migration sets up all necessary database objects for admin functionality
 
--- 1. Drop existing functions if they exist to avoid conflicts
-DROP FUNCTION IF EXISTS public.has_role(UUID, TEXT);
-DROP FUNCTION IF EXISTS public.is_admin(UUID);
-DROP FUNCTION IF EXISTS public.get_admin_dashboard_stats();
-DROP FUNCTION IF EXISTS public.get_user_trading_stats(UUID);
-DROP FUNCTION IF EXISTS public.update_kyc_status(UUID, TEXT, TEXT);
-DROP FUNCTION IF EXISTS public.adjust_user_balance(UUID, DECIMAL, TEXT, TEXT);
-DROP FUNCTION IF EXISTS public.process_withdrawal_request(UUID, TEXT, TEXT);
-DROP FUNCTION IF EXISTS public.process_deposit(UUID, TEXT, TEXT);
+-- 1. Drop existing policies that depend on has_role function
+DROP POLICY IF EXISTS "Admins can manage trading pairs" ON public.trading_pairs;
+DROP POLICY IF EXISTS "Admins can view all KYC documents" ON public.kyc_documents;
+DROP POLICY IF EXISTS "Admins can view all admin actions" ON public.admin_actions;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
+DROP POLICY IF EXISTS "Admins can update trades" ON public.trades;
 
--- 2. Ensure profiles table has required columns
+-- 2. Drop existing functions if they exist to avoid conflicts
+DROP FUNCTION IF EXISTS public.has_role(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.is_admin(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.get_admin_dashboard_stats() CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_trading_stats(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.update_kyc_status(UUID, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.adjust_user_balance(UUID, DECIMAL, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.process_withdrawal_request(UUID, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.process_deposit(UUID, TEXT, TEXT) CASCADE;
+
+-- 3. Ensure profiles table has required columns
 DO $$
 DECLARE
     column_exists BOOLEAN;
@@ -69,7 +78,7 @@ BEGIN
     END IF;
 END $$;
 
--- 3. Create admin role management function
+-- 4. Create admin role management function
 CREATE OR REPLACE FUNCTION public.has_role(user_id UUID, role_name TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -82,7 +91,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Create function to check if user is admin
+-- 5. Create function to check if user is admin
 CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -90,7 +99,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 5. Create admin dashboard statistics function
+-- 6. Create admin dashboard statistics function
 CREATE OR REPLACE FUNCTION public.get_admin_dashboard_stats()
 RETURNS JSON AS $$
 DECLARE
@@ -112,7 +121,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. Create function to get user trading statistics
+-- 7. Create function to get user trading statistics
 CREATE OR REPLACE FUNCTION public.get_user_trading_stats(user_uuid UUID)
 RETURNS JSON AS $$
 DECLARE
@@ -137,7 +146,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7. Create function to update KYC status
+-- 8. Create function to update KYC status
 CREATE OR REPLACE FUNCTION public.update_kyc_status(
     user_uuid UUID,
     new_status TEXT,
@@ -179,7 +188,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8. Create function to adjust user balance
+-- 9. Create function to adjust user balance
 CREATE OR REPLACE FUNCTION public.adjust_user_balance(
     user_uuid UUID,
     amount DECIMAL(20, 8),
@@ -247,7 +256,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 9. Create function to approve/reject withdrawal requests
+-- 10. Create function to approve/reject withdrawal requests
 CREATE OR REPLACE FUNCTION public.process_withdrawal_request(
     request_id UUID,
     new_status TEXT,
@@ -302,7 +311,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 10. Create function to approve/reject deposits
+-- 11. Create function to approve/reject deposits
 CREATE OR REPLACE FUNCTION public.process_deposit(
     deposit_id UUID,
     new_status TEXT,
@@ -367,27 +376,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 11. Enhanced RLS policies for admin access
+-- 12. Enhanced RLS policies for admin access
 
 -- Profiles policies
-DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 CREATE POLICY "Admins can view all profiles" ON public.profiles
   FOR SELECT USING (public.is_admin());
 
-DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
 CREATE POLICY "Admins can update profiles" ON public.profiles
   FOR UPDATE USING (public.is_admin());
 
 -- Trades policies
-DROP POLICY IF EXISTS "Admins can view all trades" ON public.trades;
 CREATE POLICY "Admins can view all trades" ON public.trades
   FOR SELECT USING (public.is_admin());
 
-DROP POLICY IF EXISTS "Admins can update trades" ON public.trades;
 CREATE POLICY "Admins can update trades" ON public.trades
   FOR UPDATE USING (public.is_admin());
 
--- 12. Create admin dashboard view
+-- 13. Create admin dashboard view
 CREATE OR REPLACE VIEW public.admin_dashboard_view AS
 SELECT 
     p.user_id,
@@ -440,7 +445,7 @@ LEFT JOIN (
     GROUP BY user_id
 ) d ON p.user_id = d.user_id;
 
--- 13. Grant permissions for admin functions
+-- 14. Grant permissions for admin functions
 GRANT EXECUTE ON FUNCTION public.has_role(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_stats() TO authenticated;
@@ -453,7 +458,7 @@ GRANT EXECUTE ON FUNCTION public.process_deposit(UUID, TEXT, TEXT) TO authentica
 -- Grant permissions for admin dashboard view
 GRANT SELECT ON public.admin_dashboard_view TO authenticated;
 
--- 14. Create indexes for better performance
+-- 15. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 CREATE INDEX IF NOT EXISTS idx_profiles_kyc_status ON public.profiles(kyc_status);
 CREATE INDEX IF NOT EXISTS idx_profiles_is_verified ON public.profiles(is_verified);
@@ -463,7 +468,7 @@ CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status_created ON public.with
 CREATE INDEX IF NOT EXISTS idx_deposits_status_created ON public.deposits(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_action_type ON public.admin_actions(action_type);
 
--- 15. Verify the setup
+-- 16. Verify the setup
 DO $$
 DECLARE
     admin_count INTEGER;
