@@ -3,83 +3,75 @@ import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 
 const LiveChatWidget = () => {
-  const [showFallback, setShowFallback] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    console.log('🔄 Initializing Smartsupp Live Chat...');
-    console.log('🔍 Checking for Smartsupp script...');
-
-    // Check if Smartsupp script is loaded
-    const smartsuppScript = document.querySelector('script[src*="smartsuppchat.com"]');
-    console.log('📜 Smartsupp script found:', !!smartsuppScript);
-
-    // Check if _smartsupp is configured
-    console.log('🔧 _smartsupp configured:', !!window._smartsupp);
-    console.log('🔑 Smartsupp key:', window._smartsupp?.key);
-
-    // Create global function to open chat
-    window.openSmartsuppChat = () => {
-      console.log('🔄 Attempting to open Smartsupp chat...');
-      console.log('📱 window.smartsupp available:', !!window.smartsupp);
-      
-      if (window.smartsupp) {
-        console.log('🔄 Opening Smartsupp chat widget...');
-        try {
-          window.smartsupp('open');
-        } catch (error) {
-          console.error('❌ Error opening Smartsupp chat:', error);
-          openDirectChat();
-        }
-      } else {
-        console.log('⚠️ Smartsupp not loaded, opening direct chat');
-        openDirectChat();
-      }
-    };
-    
-    // Cleanup
-    return () => {
-      // Remove global function
-      delete window.openSmartsuppChat;
-    };
-  }, []);
-
-  const openDirectChat = () => {
-    const smartsuppUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
-    console.log('🔄 Opening direct Smartsupp widget page:', smartsuppUrl);
-    window.open(smartsuppUrl, '_blank', 'width=400,height=600');
-  };
-
-  const handleFallbackClick = () => {
+  const openChat = () => {
     console.log('🔄 Chat button clicked');
+    setIsLoading(true);
     
-    // Try embedded chat first
+    // Method 1: Try to open Smartsupp widget directly
     if (window.smartsupp) {
-      console.log('🔄 Trying embedded chat...');
+      console.log('🔄 Trying Smartsupp widget...');
       try {
         window.smartsupp('open');
+        setIsLoading(false);
         return;
       } catch (error) {
-        console.error('❌ Embedded chat failed:', error);
+        console.log('❌ Smartsupp widget failed:', error);
       }
     }
     
-    // Fallback to direct URL
-    console.log('🔄 Using direct chat fallback');
-    openDirectChat();
+    // Method 2: Try global function
+    if (window.openSmartsuppChat) {
+      console.log('🔄 Trying global function...');
+      try {
+        window.openSmartsuppChat();
+        setIsLoading(false);
+        return;
+      } catch (error) {
+        console.log('❌ Global function failed:', error);
+      }
+    }
+    
+    // Method 3: Open direct URL
+    console.log('🔄 Opening direct chat URL...');
+    const chatUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
+    window.open(chatUrl, '_blank', 'width=400,height=600,scrollbars=yes,resizable=yes');
+    setIsLoading(false);
   };
 
+  useEffect(() => {
+    // Check if Smartsupp is available
+    const checkSmartsupp = () => {
+      console.log('🔍 Checking Smartsupp availability...');
+      console.log('📱 window.smartsupp:', !!window.smartsupp);
+      console.log('🔧 window.openSmartsuppChat:', !!window.openSmartsuppChat);
+      console.log('🔑 _smartsupp key:', window._smartsupp?.key);
+    };
+
+    // Check immediately
+    checkSmartsupp();
+    
+    // Check again after a delay to allow script to load
+    const timer = setTimeout(checkSmartsupp, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <>
-      {/* Chat Button - Always show */}
-      <Button
-        onClick={handleFallbackClick}
-        className="fixed bottom-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg"
-        size="lg"
-        title="Open Live Chat"
-      >
+    <Button
+      onClick={openChat}
+      disabled={isLoading}
+      className="fixed bottom-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transition-all duration-200"
+      size="lg"
+      title="Open Live Chat"
+    >
+      {isLoading ? (
+        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      ) : (
         <MessageCircle className="w-6 h-6" />
-      </Button>
-    </>
+      )}
+    </Button>
   );
 };
 
