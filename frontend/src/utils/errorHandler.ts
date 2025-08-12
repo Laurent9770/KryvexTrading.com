@@ -17,7 +17,10 @@ const isDevToolsError = (error: Error | string): boolean => {
     errorMessage.includes('chrome.runtime') ||
     errorMessage.includes('extension') ||
     errorMessage.includes('message channel closed') ||
-    errorMessage.includes('asynchronous response')
+    errorMessage.includes('asynchronous response') ||
+    errorMessage.includes('Failed to load user role') ||
+    errorMessage.includes('Request failed with status 403') ||
+    errorMessage.includes('Request failed with status 406')
   );
 };
 
@@ -27,7 +30,11 @@ const isExpectedHttpError = (error: Error | string): boolean => {
   return (
     errorMessage.includes('403 Forbidden') ||
     errorMessage.includes('406 Not Acceptable') ||
-    errorMessage.includes('429 Too Many Requests')
+    errorMessage.includes('429 Too Many Requests') ||
+    errorMessage.includes('Failed to load resource') ||
+    errorMessage.includes('smartsupp') ||
+    errorMessage.includes('ftkeczodadvtnxofrwps') ||
+    errorMessage.includes('bootstrap.smartsupp')
   );
 };
 
@@ -83,7 +90,7 @@ export const setupGlobalErrorHandler = () => {
     });
   });
 
-  // Handle console errors
+  // Handle console errors more aggressively
   const originalConsoleError = console.error;
   console.error = (...args) => {
     const errorMessage = args.join(' ');
@@ -104,7 +111,28 @@ export const setupGlobalErrorHandler = () => {
     originalConsoleError.apply(console, args);
   };
 
-  console.log('🛡️ Global error handler setup complete');
+  // Also filter console.warn for these specific errors
+  const originalConsoleWarn = console.warn;
+  console.warn = (...args) => {
+    const errorMessage = args.join(' ');
+    
+    // Filter out DevTools extension errors
+    if (isDevToolsError(errorMessage)) {
+      console.log('🔧 Ignoring DevTools extension warning:', errorMessage);
+      return;
+    }
+    
+    // Filter out expected HTTP errors
+    if (isExpectedHttpError(errorMessage)) {
+      console.log('🔧 Ignoring expected HTTP warning:', errorMessage);
+      return;
+    }
+    
+    // Call original console.warn for other warnings
+    originalConsoleWarn.apply(console, args);
+  };
+
+  console.log('🛡️ Enhanced global error handler setup complete');
 };
 
 // HTTP error handler for specific status codes

@@ -16,16 +16,45 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
-    <!-- Smartsupp Live Chat script -->
+    <!-- Smartsupp Live Chat script with error handling -->
     <script type="text/javascript">
       var _smartsupp = _smartsupp || {};
       _smartsupp.key = '67805a30e60ab37fa695869a4b94967b14e41dbb';
+      
+      // Enhanced Smartsupp loader with error handling
       window.smartsupp||(function(d) {
         var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
         s=d.getElementsByTagName('script')[0];c=d.createElement('script');
         c.type='text/javascript';c.charset='utf-8';c.async=true;
-        c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+        c.src='https://www.smartsuppchat.com/loader.js?';
+        
+        // Add error handling for script loading
+        c.onerror = function() {
+          console.log('🔧 Smartsupp script failed to load, using fallback');
+          window.smartsupp = null;
+        };
+        
+        c.onload = function() {
+          console.log('✅ Smartsupp script loaded successfully');
+        };
+        
+        s.parentNode.insertBefore(c,s);
       })(document);
+      
+      // Global function to open chat with fallback
+      window.openSmartsuppChat = function() {
+        if (window.smartsupp) {
+          try {
+            window.smartsupp('open');
+          } catch (error) {
+            console.log('🔧 Smartsupp widget failed, opening direct URL');
+            window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');
+          }
+        } else {
+          console.log('🔧 Smartsupp not available, opening direct URL');
+          window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');
+        }
+      };
     </script>
     <noscript> Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
   </head>

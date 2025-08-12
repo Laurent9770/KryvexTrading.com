@@ -36,52 +36,37 @@ const getSupabaseConfig = () => {
 let supabase: any = null;
 
 try {
-  console.log('🔐 Initializing Supabase client...');
+  console.log('🔐 Initializing Enhanced Supabase client...');
   
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
   
-  // Create client with minimal configuration
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true
+    },
+    global: {
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+        'X-Client-Info': 'supabase-js/2.0.0'
+      }
     }
   });
   
-  console.log('✅ Supabase client initialized successfully');
+  console.log('✅ Enhanced Supabase client initialized successfully');
   
 } catch (error) {
-  console.error('❌ Failed to create Supabase client:', error);
+  console.error('❌ Failed to create Enhanced Supabase client:', error);
   
-  // Create a fallback client
   supabase = {
     from: (table: string) => {
       console.error(`❌ Supabase client not initialized. Cannot query table: ${table}`);
       return {
-        select: () => ({ 
-          data: null, 
-          error: { 
-            message: `Supabase client not initialized. Cannot query table: ${table}.` 
-          } 
-        }),
-        insert: () => ({ 
-          data: null, 
-          error: { 
-            message: `Supabase client not initialized. Cannot insert into table: ${table}.` 
-          } 
-        }),
-        update: () => ({ 
-          data: null, 
-          error: { 
-            message: `Supabase client not initialized. Cannot update table: ${table}.` 
-          } 
-        }),
-        delete: () => ({ 
-          data: null, 
-          error: { 
-            message: `Supabase client not initialized. Cannot delete from table: ${table}.` 
-          } 
-        })
+        select: () => ({ data: null, error: { message: `Supabase client not initialized. Cannot query table: ${table}.` } }),
+        insert: () => ({ data: null, error: { message: `Supabase client not initialized. Cannot insert into table: ${table}.` } }),
+        update: () => ({ data: null, error: { message: `Supabase client not initialized. Cannot update table: ${table}.` } }),
+        delete: () => ({ data: null, error: { message: `Supabase client not initialized. Cannot delete from table: ${table}.` } })
       };
     },
     auth: {
@@ -98,10 +83,6 @@ try {
       onAuthStateChange: () => ({ data: { subscription: null }, unsubscribe: () => {} }),
       getUser: () => Promise.resolve({ data: { user: null }, error: null })
     },
-    channel: () => ({
-      on: () => ({ subscribe: () => Promise.resolve({ error: null }) }),
-      subscribe: () => Promise.resolve({ error: null })
-    })
   };
 }
 
