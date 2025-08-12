@@ -1,82 +1,38 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  TrendingUp,
-  Wallet,
-  BarChart3,
-  History,
-  Settings,
   LogOut,
   Menu,
-  X,
-  Shield
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import KryvexLogo from "@/components/KryvexLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
-interface NavItem {
-  title: string;
-  href: string;
-  icon: React.ComponentType<any>;
-  badge?: string;
-}
-
-export function MobileNav() {
+export function AdminMobileNav() {
   const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
-  const { t } = useLanguage();
 
-  // If user is admin, don't show the mobile nav - they should use AdminLayout
-  if (isAdmin) {
+  // Only show for admin users
+  if (!isAdmin) {
     return null;
   }
-
-  const navItems: NavItem[] = [
-    {
-      title: t('dashboard'),
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      badge: "New"
-    },
-    {
-      title: t('trading'),
-      href: "/trading",
-      icon: TrendingUp
-    },
-    {
-      title: t('wallet'),
-      href: "/wallet",
-      icon: Wallet
-    },
-    {
-      title: "Trading History",
-      href: "/trading-history",
-      icon: History
-    },
-    {
-      title: t('settings'),
-      href: "/settings",
-      icon: Settings
-    }
-  ];
-
-  const isActive = (href: string) => location.pathname === href;
 
   const handleNavigation = (href: string) => {
     navigate(href);
     setIsOpen(false);
   };
 
-  if (!user) return null;
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+    setIsOpen(false);
+  };
 
   return (
     <div className="md:hidden">
@@ -91,8 +47,8 @@ export function MobileNav() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-80 p-0">
-          <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
-          <SheetDescription className="sr-only">Navigation menu for mobile devices</SheetDescription>
+          <SheetTitle className="sr-only">Admin Mobile Navigation</SheetTitle>
+          <SheetDescription className="sr-only">Admin navigation menu for mobile devices</SheetDescription>
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="p-4 border-b border-border/50">
@@ -100,8 +56,8 @@ export function MobileNav() {
                 <div className="flex items-center gap-3">
                   <KryvexLogo className="h-8 w-8" />
                   <div>
-                    <h2 className="font-semibold text-foreground">Kryvex</h2>
-                    <p className="text-xs text-muted-foreground">Trading Platform</p>
+                    <h2 className="font-semibold text-foreground">Kryvex Admin</h2>
+                    <p className="text-xs text-muted-foreground">Administration Panel</p>
                   </div>
                 </div>
                 <Button
@@ -115,56 +71,40 @@ export function MobileNav() {
               </div>
             </div>
 
-            {/* User Info */}
+            {/* Admin User Info */}
             <div className="p-4 border-b border-border/50">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user?.avatar} alt={user?.firstName || "User"} />
+                  <AvatarImage src={user?.avatar} alt={user?.firstName || "Admin"} />
                   <AvatarFallback>
-                    {user?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                    {user?.firstName?.charAt(0) || user?.email?.charAt(0) || "A"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">
                     {user?.firstName && user?.lastName 
                       ? `${user.firstName} ${user.lastName}` 
-                      : user?.email || "User"
+                      : user?.email || "Admin"
                     }
                   </p>
                   <p className="text-sm text-muted-foreground truncate">
-                    User
+                    Administrator
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Navigation */}
+            {/* Admin Navigation */}
             <div className="flex-1 overflow-auto">
               <div className="p-4 space-y-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  
-                  return (
-                    <Button
-                      key={item.href}
-                      variant={active ? "default" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-3 h-12",
-                        active && "bg-primary text-primary-foreground"
-                      )}
-                      onClick={() => handleNavigation(item.href)}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="font-medium">{item.title}</span>
-                      {item.badge && (
-                        <Badge className="ml-auto bg-accent text-accent-foreground">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </Button>
-                  );
-                })}
+                <Button
+                  variant="default"
+                  className="w-full justify-start gap-3 h-12"
+                  onClick={() => handleNavigation('/admin')}
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                  <span className="font-medium">Admin Dashboard</span>
+                </Button>
               </div>
             </div>
 
@@ -173,10 +113,7 @@ export function MobileNav() {
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-3 h-12 text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => {
-                  logout();
-                  setIsOpen(false);
-                }}
+                onClick={handleLogout}
               >
                 <LogOut className="h-5 w-5" />
                 <span className="font-medium">Logout</span>
@@ -187,4 +124,4 @@ export function MobileNav() {
       </Sheet>
     </div>
   );
-} 
+}

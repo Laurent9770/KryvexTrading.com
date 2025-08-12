@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import SupabaseErrorBoundary from '@/components/SupabaseErrorBoundary';
 import SafeComponent from '@/components/SafeComponent';
 import NavbarLayout from '@/layouts/NavbarLayout';
+import AdminLayout from '@/layouts/AdminLayout';
 import NoNavbarLayout from '@/layouts/NoNavbarLayout';
 import { setupGlobalErrorHandler } from '@/utils/errorHandler';
 
@@ -88,6 +89,38 @@ const SafeRoute = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Protected route component for regular users
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  // Redirect admins to admin dashboard
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Admin route component
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  // Redirect non-admins to user dashboard
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -165,19 +198,34 @@ function App() {
                       </SafeRoute>
                     } />
                     
-                    {/* Authenticated routes with navbar */}
-                    <Route path="/" element={<NavbarLayout />}>
+                    {/* Admin routes with admin layout */}
+                    <Route path="/admin" element={
+                      <SafeRoute>
+                        <AdminRoute>
+                          <AdminLayout />
+                        </AdminRoute>
+                      </SafeRoute>
+                    }>
+                      <Route index element={
+                        <SafeRoute>
+                          <AdminDashboard />
+                        </SafeRoute>
+                      } />
+                    </Route>
+                    
+                    {/* User routes with navbar layout */}
+                    <Route path="/" element={
+                      <SafeRoute>
+                        <ProtectedRoute>
+                          <NavbarLayout />
+                        </ProtectedRoute>
+                      </SafeRoute>
+                    }>
                       <Route path="/dashboard" element={
                         <SafeRoute>
                           <Dashboard />
                         </SafeRoute>
                       } />
-                      <Route path="/admin" element={
-                        <SafeRoute>
-                          <AdminDashboard />
-                        </SafeRoute>
-                      } />
-
                       <Route path="/trading" element={
                         <SafeRoute>
                           <TradingPage />
@@ -198,18 +246,17 @@ function App() {
                           <WithdrawalRequestPage />
                         </SafeRoute>
                       } />
-                                              <Route path="/settings" element={
-                          <SafeRoute>
-                            <SettingsPage />
-                          </SafeRoute>
-                        } />
-                        <Route path="/kyc" element={
-                          <SafeRoute>
-                            <KYCPage />
-                          </SafeRoute>
-                        } />
-                        
-                        <Route path="/support" element={
+                      <Route path="/settings" element={
+                        <SafeRoute>
+                          <SettingsPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/kyc" element={
+                        <SafeRoute>
+                          <KYCPage />
+                        </SafeRoute>
+                      } />
+                      <Route path="/support" element={
                         <SafeRoute>
                           <SupportPage />
                         </SafeRoute>

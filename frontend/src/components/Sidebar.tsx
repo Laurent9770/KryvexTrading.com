@@ -56,6 +56,11 @@ export function Sidebar() {
   // Debug authentication state
   console.log('🔍 Sidebar - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'user:', user?.email);
   
+  // If user is admin, don't show the regular sidebar - they should use AdminLayout
+  if (isAdmin) {
+    return null;
+  }
+  
   // Navigation items - show all options for authenticated users
   const mainNavItems: NavItem[] = [
     {
@@ -127,18 +132,6 @@ export function Sidebar() {
       requiresAuth: true
     }
   ];
-
-  // Add admin-specific items if user is admin
-  if (isAdmin) {
-    mainNavItems.unshift({
-      title: "Admin Dashboard",
-      href: "/admin",
-      icon: LayoutDashboard,
-      badge: "Admin",
-      shortcut: "A",
-      description: "Admin dashboard and user management"
-    });
-  }
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -244,7 +237,7 @@ export function Sidebar() {
               }
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {isAdmin ? "Administrator" : "User"}
+              User
             </p>
           </div>
         )}
