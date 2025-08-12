@@ -16,12 +16,29 @@ const LiveChatWidget = () => {
 
   useEffect(() => {
     console.log('🔄 Initializing Smartsupp Live Chat...');
+    console.log('🔍 Checking for Smartsupp script...');
+
+    // Check if Smartsupp script is loaded
+    const smartsuppScript = document.querySelector('script[src*="smartsuppchat.com"]');
+    console.log('📜 Smartsupp script found:', !!smartsuppScript);
+
+    // Check if _smartsupp is configured
+    console.log('🔧 _smartsupp configured:', !!window._smartsupp);
+    console.log('🔑 Smartsupp key:', window._smartsupp?.key);
 
     // Create global function to open chat
     window.openSmartsuppChat = () => {
+      console.log('🔄 Attempting to open Smartsupp chat...');
+      console.log('📱 window.smartsupp available:', !!window.smartsupp);
+      
       if (window.smartsupp) {
         console.log('🔄 Opening Smartsupp chat widget...');
-        window.smartsupp('open');
+        try {
+          window.smartsupp('open');
+        } catch (error) {
+          console.error('❌ Error opening Smartsupp chat:', error);
+          setShowFallback(true);
+        }
       } else {
         console.log('⚠️ Smartsupp not loaded, showing fallback');
         setShowFallback(true);
@@ -30,22 +47,31 @@ const LiveChatWidget = () => {
     
     // Check if widget appears after a delay
     const checkWidget = () => {
-      const widgetElements = document.querySelectorAll('[data-smartsupp], iframe[src*="smartsupp"], .smartsupp-widget, #smartsupp-widget');
+      const widgetElements = document.querySelectorAll('[data-smartsupp], iframe[src*="smartsupp"], .smartsupp-widget, #smartsupp-widget, [id*="smartsupp"]');
       console.log('🔍 Smartsupp elements found:', widgetElements.length);
       
-      if (widgetElements.length === 0) {
-        console.log('⚠️ No Smartsupp widget found, showing fallback');
-        setShowFallback(true);
-      } else {
+      if (widgetElements.length > 0) {
         console.log('✅ Smartsupp widget found!');
         setShowFallback(false);
+        return true;
+      } else {
+        console.log('⚠️ No Smartsupp widget found');
+        return false;
       }
     };
     
     // Check after delays to allow widget to load
-    setTimeout(checkWidget, 3000);
-    setTimeout(checkWidget, 5000);
-    setTimeout(checkWidget, 8000);
+    setTimeout(() => {
+      if (!checkWidget()) {
+        setTimeout(() => {
+          if (!checkWidget()) {
+            setTimeout(() => {
+              checkWidget();
+            }, 3000);
+          }
+        }, 2000);
+      }
+    }, 1000);
     
     // Cleanup
     return () => {
@@ -55,6 +81,7 @@ const LiveChatWidget = () => {
   }, []);
 
   const handleFallbackClick = () => {
+    console.log('🔄 Fallback chat button clicked');
     // Try to open Smartsupp chat widget
     if (window.openSmartsuppChat) {
       window.openSmartsuppChat();
