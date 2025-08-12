@@ -45,7 +45,6 @@ import AdminUserManagement from '@/components/AdminUserManagement';
 import AdminKYCVerification from '@/components/AdminKYCVerification';
 import AdminAuditTrail from '@/components/AdminAuditTrail';
 import AdminDepositManager from '@/components/AdminDepositManager';
-
 import AdminTradeControl from '@/components/AdminTradeControl';
 import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
 import AdminWalletManager from '@/components/AdminWalletManager';
@@ -120,7 +119,6 @@ interface TradeRequest {
 }
 
 export default function AdminDashboard() {
-  // Admin Dashboard Component - Fixed build issues
   const { user, isAuthenticated, isAdmin, checkAdminAccess, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -452,22 +450,6 @@ export default function AdminDashboard() {
   const handleDepositStatus = async (depositId: string, status: string) => {
     try {
       // TODO: Implement real API call to update deposit status
-      // const response = await fetch(`/api/deposits/${depositId}/status`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ status })
-      // });
-      // 
-      // if (!response.ok) throw new Error('Failed to update deposit status');
-      // 
-      // const updatedDeposit = await response.json();
-      // 
-      // // Update local state with the response from server
-      // const updatedDeposits = deposits.map(deposit => 
-      //   deposit.id === depositId ? updatedDeposit : deposit
-      // );
-      // setDeposits(updatedDeposits);
-
       // For now, update local state until real API is implemented
       const updatedDeposits = deposits.map(deposit => 
         deposit.id === depositId 
@@ -494,22 +476,6 @@ export default function AdminDashboard() {
   const handleKycStatus = async (userId: string, status: string) => {
     try {
       // TODO: Implement real API call to update KYC status
-      // const response = await fetch(`/api/users/${userId}/kyc-status`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ kyc_status: status })
-      // });
-      // 
-      // if (!response.ok) throw new Error('Failed to update KYC status');
-      // 
-      // const updatedUser = await response.json();
-      // 
-      // // Update local state with the response from server
-      // const updatedUsers = users.map(user => 
-      //   user.id === userId ? updatedUser : user
-      // );
-      // setUsers(updatedUsers);
-
       // For now, update local state until real API is implemented
       const updatedUsers = users.map(user => 
         user.id === userId 
@@ -923,8 +889,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-
-
         {/* Admin Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-1">
@@ -999,9 +963,9 @@ export default function AdminDashboard() {
             <AdminUserManagement />
           </TabsContent>
 
-                        <TabsContent value="trading-control">
-                <AdminTradeControl />
-              </TabsContent>
+          <TabsContent value="trading-control">
+            <AdminTradeControl />
+          </TabsContent>
 
           <TabsContent value="rooms">
             <AdminRoomManagement />
@@ -1010,7 +974,6 @@ export default function AdminDashboard() {
           <TabsContent value="deposits">
             <AdminDepositManager />
           </TabsContent>
-
 
           <TabsContent value="kyc">
             <AdminKYCVerification />
@@ -1031,10 +994,6 @@ export default function AdminDashboard() {
           <TabsContent value="binance">
             <AdminBinanceControl />
           </TabsContent>
-
-
-
-
         </Tabs>
       </div>
     </div>
