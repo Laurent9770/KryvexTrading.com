@@ -1,7 +1,75 @@
 -- Admin Functions and Policies Migration
 -- This migration sets up all necessary database objects for admin functionality
 
--- 1. Create admin role management function
+-- 1. Drop existing functions if they exist to avoid conflicts
+DROP FUNCTION IF EXISTS public.has_role(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.is_admin(UUID);
+DROP FUNCTION IF EXISTS public.get_admin_dashboard_stats();
+DROP FUNCTION IF EXISTS public.get_user_trading_stats(UUID);
+DROP FUNCTION IF EXISTS public.update_kyc_status(UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.adjust_user_balance(UUID, DECIMAL, TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.process_withdrawal_request(UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.process_deposit(UUID, TEXT, TEXT);
+
+-- 2. Ensure profiles table has required columns
+DO $$
+DECLARE
+    column_exists BOOLEAN;
+BEGIN
+    -- Check if role column exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'role'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        ALTER TABLE public.profiles ADD COLUMN role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator'));
+        RAISE NOTICE 'Added role column to profiles table';
+    END IF;
+    
+    -- Check if kyc_status column exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'kyc_status'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        ALTER TABLE public.profiles ADD COLUMN kyc_status TEXT DEFAULT 'pending' CHECK (kyc_status IN ('pending', 'approved', 'rejected'));
+        RAISE NOTICE 'Added kyc_status column to profiles table';
+    END IF;
+    
+    -- Check if account_balance column exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'account_balance'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        ALTER TABLE public.profiles ADD COLUMN account_balance DECIMAL(20, 8) DEFAULT 0;
+        RAISE NOTICE 'Added account_balance column to profiles table';
+    END IF;
+    
+    -- Check if is_verified column exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'is_verified'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        ALTER TABLE public.profiles ADD COLUMN is_verified BOOLEAN DEFAULT false;
+        RAISE NOTICE 'Added is_verified column to profiles table';
+    END IF;
+END $$;
+
+-- 3. Create admin role management function
 CREATE OR REPLACE FUNCTION public.has_role(user_id UUID, role_name TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -14,7 +82,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Create function to check if user is admin
+-- 4. Create function to check if user is admin
 CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -22,25 +90,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Ensure profiles table has role column
-DO $$
-DECLARE
-    column_exists BOOLEAN;
-BEGIN
-    SELECT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'profiles' 
-        AND column_name = 'role'
-    ) INTO column_exists;
-    
-    IF NOT column_exists THEN
-        ALTER TABLE public.profiles ADD COLUMN role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator'));
-        RAISE NOTICE 'Added role column to profiles table';
-    END IF;
-END $$;
-
--- 4. Create admin dashboard statistics function
+-- 5. Create admin dashboard statistics function
 CREATE OR REPLACE FUNCTION public.get_admin_dashboard_stats()
 RETURNS JSON AS $$
 DECLARE
@@ -62,7 +112,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 5. Create function to get user trading statistics
+-- 6. Create function to get user trading statistics
 CREATE OR REPLACE FUNCTION public.get_user_trading_stats(user_uuid UUID)
 RETURNS JSON AS $$
 DECLARE
@@ -87,7 +137,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. Create function to update KYC status
+-- 7. Create function to update KYC status
 CREATE OR REPLACE FUNCTION public.update_kyc_status(
     user_uuid UUID,
     new_status TEXT,
@@ -103,28 +153,33 @@ BEGIN
         updated_at = now()
     WHERE user_id = user_uuid;
     
-    -- Log admin action
-    INSERT INTO public.admin_actions (
-        admin_email,
-        action_type,
-        target_table,
-        target_id,
-        description,
-        new_values
-    ) VALUES (
-        (SELECT email FROM auth.users WHERE id = auth.uid()),
-        'kyc_status_update',
-        'profiles',
-        user_uuid::text,
-        'KYC status updated to ' || new_status,
-        json_build_object('kyc_status', new_status, 'admin_notes', admin_notes)
-    );
+    -- Log admin action (only if admin_actions table exists)
+    BEGIN
+        INSERT INTO public.admin_actions (
+            admin_email,
+            action_type,
+            target_table,
+            target_id,
+            description,
+            new_values
+        ) VALUES (
+            (SELECT email FROM auth.users WHERE id = auth.uid()),
+            'kyc_status_update',
+            'profiles',
+            user_uuid::text,
+            'KYC status updated to ' || new_status,
+            json_build_object('kyc_status', new_status, 'admin_notes', admin_notes)
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Table might not exist, just continue
+        NULL;
+    END;
     
     RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7. Create function to adjust user balance
+-- 8. Create function to adjust user balance
 CREATE OR REPLACE FUNCTION public.adjust_user_balance(
     user_uuid UUID,
     amount DECIMAL(20, 8),
@@ -164,30 +219,35 @@ BEGIN
         updated_at = now()
     WHERE user_id = user_uuid;
     
-    -- Log admin action
-    INSERT INTO public.admin_actions (
-        admin_email,
-        action_type,
-        target_table,
-        target_id,
-        description,
-        old_values,
-        new_values
-    ) VALUES (
-        (SELECT email FROM auth.users WHERE id = auth.uid()),
-        'balance_adjustment',
-        'profiles',
-        user_uuid::text,
-        'Balance adjusted: ' || operation || ' ' || amount,
-        json_build_object('old_balance', current_balance),
-        json_build_object('new_balance', new_balance, 'operation', operation, 'amount', amount, 'reason', reason)
-    );
+    -- Log admin action (only if admin_actions table exists)
+    BEGIN
+        INSERT INTO public.admin_actions (
+            admin_email,
+            action_type,
+            target_table,
+            target_id,
+            description,
+            old_values,
+            new_values
+        ) VALUES (
+            (SELECT email FROM auth.users WHERE id = auth.uid()),
+            'balance_adjustment',
+            'profiles',
+            user_uuid::text,
+            'Balance adjusted: ' || operation || ' ' || amount,
+            json_build_object('old_balance', current_balance),
+            json_build_object('new_balance', new_balance, 'operation', operation, 'amount', amount, 'reason', reason)
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Table might not exist, just continue
+        NULL;
+    END;
     
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8. Create function to approve/reject withdrawal requests
+-- 9. Create function to approve/reject withdrawal requests
 CREATE OR REPLACE FUNCTION public.process_withdrawal_request(
     request_id UUID,
     new_status TEXT,
@@ -214,30 +274,35 @@ BEGIN
         remarks = COALESCE(admin_notes, remarks)
     WHERE id = request_id;
     
-    -- Log admin action
-    INSERT INTO public.admin_actions (
-        admin_email,
-        action_type,
-        target_table,
-        target_id,
-        description,
-        old_values,
-        new_values
-    ) VALUES (
-        (SELECT email FROM auth.users WHERE id = auth.uid()),
-        'withdrawal_processed',
-        'withdrawal_requests',
-        request_id::text,
-        'Withdrawal request ' || new_status,
-        json_build_object('old_status', request_record.status),
-        json_build_object('new_status', new_status, 'admin_notes', admin_notes)
-    );
+    -- Log admin action (only if admin_actions table exists)
+    BEGIN
+        INSERT INTO public.admin_actions (
+            admin_email,
+            action_type,
+            target_table,
+            target_id,
+            description,
+            old_values,
+            new_values
+        ) VALUES (
+            (SELECT email FROM auth.users WHERE id = auth.uid()),
+            'withdrawal_processed',
+            'withdrawal_requests',
+            request_id::text,
+            'Withdrawal request ' || new_status,
+            json_build_object('old_status', request_record.status),
+            json_build_object('new_status', new_status, 'admin_notes', admin_notes)
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Table might not exist, just continue
+        NULL;
+    END;
     
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 9. Create function to approve/reject deposits
+-- 10. Create function to approve/reject deposits
 CREATE OR REPLACE FUNCTION public.process_deposit(
     deposit_id UUID,
     new_status TEXT,
@@ -274,30 +339,35 @@ BEGIN
         );
     END IF;
     
-    -- Log admin action
-    INSERT INTO public.admin_actions (
-        admin_email,
-        action_type,
-        target_table,
-        target_id,
-        description,
-        old_values,
-        new_values
-    ) VALUES (
-        (SELECT email FROM auth.users WHERE id = auth.uid()),
-        'deposit_processed',
-        'deposits',
-        deposit_id::text,
-        'Deposit ' || new_status,
-        json_build_object('old_status', deposit_record.status),
-        json_build_object('new_status', new_status, 'admin_notes', admin_notes)
-    );
+    -- Log admin action (only if admin_actions table exists)
+    BEGIN
+        INSERT INTO public.admin_actions (
+            admin_email,
+            action_type,
+            target_table,
+            target_id,
+            description,
+            old_values,
+            new_values
+        ) VALUES (
+            (SELECT email FROM auth.users WHERE id = auth.uid()),
+            'deposit_processed',
+            'deposits',
+            deposit_id::text,
+            'Deposit ' || new_status,
+            json_build_object('old_status', deposit_record.status),
+            json_build_object('new_status', new_status, 'admin_notes', admin_notes)
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Table might not exist, just continue
+        NULL;
+    END;
     
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 10. Enhanced RLS policies for admin access
+-- 11. Enhanced RLS policies for admin access
 
 -- Profiles policies
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
@@ -317,7 +387,7 @@ DROP POLICY IF EXISTS "Admins can update trades" ON public.trades;
 CREATE POLICY "Admins can update trades" ON public.trades
   FOR UPDATE USING (public.is_admin());
 
--- 11. Create admin dashboard view
+-- 12. Create admin dashboard view
 CREATE OR REPLACE VIEW public.admin_dashboard_view AS
 SELECT 
     p.user_id,
@@ -370,7 +440,7 @@ LEFT JOIN (
     GROUP BY user_id
 ) d ON p.user_id = d.user_id;
 
--- 12. Grant permissions for admin functions
+-- 13. Grant permissions for admin functions
 GRANT EXECUTE ON FUNCTION public.has_role(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_stats() TO authenticated;
@@ -382,21 +452,6 @@ GRANT EXECUTE ON FUNCTION public.process_deposit(UUID, TEXT, TEXT) TO authentica
 
 -- Grant permissions for admin dashboard view
 GRANT SELECT ON public.admin_dashboard_view TO authenticated;
-
--- 13. Create admin role for testing (optional - remove in production)
--- INSERT INTO public.profiles (user_id, email, full_name, role, is_verified, kyc_status)
--- VALUES (
---     '00000000-0000-0000-0000-000000000000', -- Replace with actual admin user ID
---     'admin@kryvex.com',
---     'Admin User',
---     'admin',
---     true,
---     'approved'
--- )
--- ON CONFLICT (user_id) DO UPDATE SET
---     role = 'admin',
---     is_verified = true,
---     kyc_status = 'approved';
 
 -- 14. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);

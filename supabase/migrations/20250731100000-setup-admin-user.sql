@@ -1,7 +1,11 @@
 -- Setup Admin User Migration
 -- Run this after creating the admin user in Supabase Auth
 
--- 1. Function to promote a user to admin
+-- 1. Drop existing functions if they exist to avoid conflicts
+DROP FUNCTION IF EXISTS public.promote_to_admin(TEXT);
+DROP FUNCTION IF EXISTS public.demote_from_admin(TEXT);
+
+-- 2. Function to promote a user to admin
 CREATE OR REPLACE FUNCTION public.promote_to_admin(user_email TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -24,7 +28,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Function to demote an admin to regular user
+-- 3. Function to demote an admin to regular user
 CREATE OR REPLACE FUNCTION public.demote_from_admin(user_email TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -45,14 +49,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Grant permissions for admin management functions
+-- 4. Grant permissions for admin management functions
 GRANT EXECUTE ON FUNCTION public.promote_to_admin(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.demote_from_admin(TEXT) TO authenticated;
 
--- 4. Example: Promote a specific user to admin (replace with actual email)
+-- 5. Example: Promote a specific user to admin (replace with actual email)
 -- SELECT public.promote_to_admin('your-admin-email@example.com');
 
--- 5. Create a view to see all admin users
+-- 6. Create a view to see all admin users
 CREATE OR REPLACE VIEW public.admin_users_view AS
 SELECT 
     user_id,
@@ -67,10 +71,10 @@ FROM public.profiles
 WHERE role = 'admin'
 ORDER BY created_at DESC;
 
--- 6. Grant permissions for admin users view
+-- 7. Grant permissions for admin users view
 GRANT SELECT ON public.admin_users_view TO authenticated;
 
--- 7. Verification query
+-- 8. Verification query
 DO $$
 DECLARE
     admin_count INTEGER;
