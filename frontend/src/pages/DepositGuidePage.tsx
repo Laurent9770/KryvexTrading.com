@@ -34,7 +34,9 @@ const DepositGuidePage = () => {
     if (window.openSmartsuppChat) {
       window.openSmartsuppChat();
     } else {
-      alert('Chat support is currently unavailable. Please try again later.');
+      // Fallback: open direct Smartsupp widget page
+      const smartsuppUrl = 'https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb';
+      window.open(smartsuppUrl, '_blank', 'width=400,height=600');
     }
   };
 
