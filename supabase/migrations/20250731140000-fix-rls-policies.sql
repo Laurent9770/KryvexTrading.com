@@ -27,6 +27,7 @@ CREATE POLICY "Admins can delete wallets" ON public.user_wallets
 
 -- Fix deposit_requests policies
 DROP POLICY IF EXISTS "Users can view own deposit requests" ON public.deposit_requests;
+DROP POLICY IF EXISTS "Users can insert own deposit requests" ON public.deposit_requests;
 DROP POLICY IF EXISTS "Admins can view all deposit requests" ON public.deposit_requests;
 DROP POLICY IF EXISTS "Admins can update all deposit requests" ON public.deposit_requests;
 
@@ -44,6 +45,7 @@ CREATE POLICY "Admins can update all deposit requests" ON public.deposit_request
 
 -- Fix withdrawal_requests policies
 DROP POLICY IF EXISTS "Users can view own withdrawal requests" ON public.withdrawal_requests;
+DROP POLICY IF EXISTS "Users can insert own withdrawal requests" ON public.withdrawal_requests;
 DROP POLICY IF EXISTS "Admins can view all withdrawal requests" ON public.withdrawal_requests;
 DROP POLICY IF EXISTS "Admins can update all withdrawal requests" ON public.withdrawal_requests;
 
@@ -72,7 +74,9 @@ CREATE POLICY "Admins can insert admin actions" ON public.admin_actions
 -- Fix user_trading_modes policies
 DROP POLICY IF EXISTS "Users can view own trading modes" ON public.user_trading_modes;
 DROP POLICY IF EXISTS "Admins can view all trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Admins can insert trading modes" ON public.user_trading_modes;
 DROP POLICY IF EXISTS "Admins can update all trading modes" ON public.user_trading_modes;
+DROP POLICY IF EXISTS "Admins can delete trading modes" ON public.user_trading_modes;
 
 CREATE POLICY "Users can view own trading modes" ON public.user_trading_modes
     FOR SELECT USING (auth.uid() = user_id);
