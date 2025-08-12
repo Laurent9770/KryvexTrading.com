@@ -56,19 +56,8 @@ export function Sidebar() {
   // Debug authentication state
   console.log('🔍 Sidebar - isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin, 'user:', user?.email);
   
-  // Navigation items - only authenticated users and admins
-  const mainNavItems: NavItem[] = isAdmin ? [
-    // Admin navigation - simplified and focused on admin tasks
-    {
-      title: "Admin Dashboard",
-      href: "/admin",
-      icon: LayoutDashboard,
-      badge: "Admin",
-      shortcut: "D",
-      description: "Admin dashboard and user management"
-    }
-  ] : [
-    // Authenticated user navigation (default for all users)
+  // Navigation items - show all options for authenticated users
+  const mainNavItems: NavItem[] = [
     {
       title: "Dashboard",
       href: "/dashboard",
@@ -104,15 +93,7 @@ export function Sidebar() {
     }
   ];
 
-  const bottomNavItems: NavItem[] = isAdmin ? [
-    {
-      title: "Settings",
-      href: "/settings",
-      icon: Settings,
-      shortcut: "S",
-      description: "Admin settings and preferences"
-    }
-  ] : [
+  const bottomNavItems: NavItem[] = [
     {
       title: "Deposit",
       href: "/deposit",
@@ -129,14 +110,14 @@ export function Sidebar() {
       description: "Withdraw funds from your account",
       requiresAuth: true
     },
-                    {
-                  title: "KYC Verification",
-                  href: "/kyc",
-                  icon: Shield,
-                  shortcut: "K",
-                  description: "Complete identity verification",
-                  requiresAuth: true
-                },
+    {
+      title: "KYC Verification",
+      href: "/kyc",
+      icon: Shield,
+      shortcut: "K",
+      description: "Complete identity verification",
+      requiresAuth: true
+    },
     {
       title: "Settings",
       href: "/settings",
@@ -146,6 +127,18 @@ export function Sidebar() {
       requiresAuth: true
     }
   ];
+
+  // Add admin-specific items if user is admin
+  if (isAdmin) {
+    mainNavItems.unshift({
+      title: "Admin Dashboard",
+      href: "/admin",
+      icon: LayoutDashboard,
+      badge: "Admin",
+      shortcut: "A",
+      description: "Admin dashboard and user management"
+    });
+  }
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -181,7 +174,6 @@ export function Sidebar() {
                     {item.badge}
                   </Badge>
                 )}
-
               </>
             )}
           </Button>
@@ -201,110 +193,94 @@ export function Sidebar() {
     );
   };
 
+  // Always show sidebar for authenticated users
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className={cn(
-      "flex h-full flex-col border-r bg-background transition-all duration-300",
+      "flex flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
       isCollapsed ? "w-16" : "w-64"
     )}>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b">
-        <div className="flex items-center gap-2">
-          <Zap className="h-8 w-8 text-primary" />
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">Trading</span>
-              <span className="text-xs text-muted-foreground">Platform</span>
+      <div className="flex h-16 items-center justify-between border-b px-4">
+        {!isCollapsed && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Zap className="h-6 w-6 text-primary" />
+              <span className="font-bold text-lg">Kryvex</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="h-8 w-8 p-0"
         >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
         </Button>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4">
-        {/* Main Navigation */}
-        <div className="px-3">
-          <div className="mb-4">
-            {!isCollapsed && (
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                {isAdmin ? "ADMIN" : "TRADING"}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {mainNavItems.map((item) => (
-                <NavButton key={item.href} item={item} />
-              ))}
-            </div>
+      {/* User Info */}
+      <div className="flex items-center gap-3 border-b p-4">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={user?.avatar} alt={user?.firstName || "User"} />
+          <AvatarFallback>
+            {user?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
+          </AvatarFallback>
+        </Avatar>
+        {!isCollapsed && (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">
+              {user?.firstName && user?.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user?.email || "User"
+              }
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {isAdmin ? "Administrator" : "User"}
+            </p>
           </div>
+        )}
+      </div>
 
-          {/* Bottom Navigation */}
-          <div className="mt-6">
-            {!isCollapsed && (
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                {isAdmin ? "ADMIN" : "ACCOUNT"}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {bottomNavItems.map((item) => (
-                <NavButton key={item.href} item={item} />
-              ))}
-            </div>
+      {/* Navigation */}
+      <div className="flex-1 overflow-auto">
+        <div className="space-y-2 p-2">
+          <div className="space-y-1">
+            {mainNavItems.map((item) => (
+              <NavButton key={item.href} item={item} />
+            ))}
           </div>
         </div>
       </div>
 
-      {/* User Profile */}
-      {user && (
-        <div className="border-t p-3">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar} alt={user.firstName || user.email} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
-                {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user.firstName && user.lastName 
-                    ? `${user.firstName} ${user.lastName}` 
-                    : user.firstName 
-                    ? user.firstName 
-                    : user.email?.split('@')[0] || 'User'
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {user.kycStatus === 'verified' ? '✅ Verified' : '⏳ Unverified'}
-                </p>
-              </div>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={logout}
-                  className="h-8 w-8 p-0"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium">Sign Out</span>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+      {/* Bottom Navigation */}
+      <div className="border-t p-2">
+        <div className="space-y-1">
+          {bottomNavItems.map((item) => (
+            <NavButton key={item.href} item={item} />
+          ))}
         </div>
-      )}
+        
+        {/* Logout Button */}
+        <div className="mt-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-11 text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={logout}
+          >
+            <LogOut className="h-5 w-5" />
+            {!isCollapsed && <span>Logout</span>}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
