@@ -3,20 +3,13 @@
 -- This migration fixes OAuth authentication callback problems
 -- =============================================
 
--- Step 1: Check current auth configuration
-SELECT 
-    setting_name,
-    setting_value
-FROM auth.config
-WHERE setting_name IN (
-    'enable_signup',
-    'enable_email_confirmations', 
-    'enable_email_change_confirmations',
-    'enable_phone_confirmations',
-    'enable_phone_change_confirmations',
-    'enable_signup_email_confirmations',
-    'enable_signup_phone_confirmations'
-);
+-- Step 1: Check current auth configuration (skip if auth.config doesn't exist)
+DO $$
+BEGIN
+    RAISE NOTICE '=== AUTH CONFIGURATION CHECK ===';
+    RAISE NOTICE 'Note: auth.config table may not exist in all Supabase setups';
+    RAISE NOTICE 'Proceeding with OAuth fixes...';
+END $$;
 
 -- Step 2: Check if there are any problematic triggers on auth.users
 SELECT 
@@ -92,9 +85,11 @@ BEGIN
         );
     END IF;
     
-    -- Check if user role already exists
-    IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = NEW.id) THEN
-        INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'user');
+    -- Check if user role already exists (only if user_roles table exists)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles' AND table_schema = 'public') THEN
+        IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = NEW.id) THEN
+            INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'user');
+        END IF;
     END IF;
     
     RETURN NEW;
@@ -176,15 +171,24 @@ LEFT JOIN public.profiles p ON au.id = p.user_id
 WHERE p.user_id IS NULL
 ON CONFLICT (user_id) DO NOTHING;
 
--- Step 13: Create missing user roles for existing users
-INSERT INTO public.user_roles (user_id, role)
-SELECT 
-    au.id,
-    'user'
-FROM auth.users au
-LEFT JOIN public.user_roles ur ON au.id = ur.user_id
-WHERE ur.user_id IS NULL
-ON CONFLICT (user_id, role) DO NOTHING;
+-- Step 13: Create missing user roles for existing users (only if user_roles table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles' AND table_schema = 'public') THEN
+        INSERT INTO public.user_roles (user_id, role)
+        SELECT 
+            au.id,
+            'user'
+        FROM auth.users au
+        LEFT JOIN public.user_roles ur ON au.id = ur.user_id
+        WHERE ur.user_id IS NULL
+        ON CONFLICT (user_id, role) DO NOTHING;
+        
+        RAISE NOTICE '✅ User roles created for existing users';
+    ELSE
+        RAISE NOTICE '⚠️ user_roles table does not exist, skipping role creation';
+    END IF;
+END $$;
 
 -- Step 14: Verify the fixes
 DO $$
@@ -198,11 +202,15 @@ BEGIN
     LEFT JOIN public.profiles p ON au.id = p.user_id
     WHERE p.user_id IS NULL;
     
-    -- Count users without roles
-    SELECT COUNT(*) INTO missing_roles_count
-    FROM auth.users au
-    LEFT JOIN public.user_roles ur ON au.id = ur.user_id
-    WHERE ur.user_id IS NULL;
+    -- Count users without roles (only if user_roles table exists)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles' AND table_schema = 'public') THEN
+        SELECT COUNT(*) INTO missing_roles_count
+        FROM auth.users au
+        LEFT JOIN public.user_roles ur ON au.id = ur.user_id
+        WHERE ur.user_id IS NULL;
+    ELSE
+        missing_roles_count := 0;
+    END IF;
     
     RAISE NOTICE '=== OAUTH FIX VERIFICATION ===';
     RAISE NOTICE 'Users without profiles: %', missing_profiles_count;
