@@ -69,6 +69,14 @@ BEGIN
         ELSE
             RAISE NOTICE 'ℹ️ symbol column already exists in trades table';
         END IF;
+        
+        -- Add trade_category column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trades' AND column_name = 'trade_category' AND table_schema = 'public') THEN
+            ALTER TABLE public.trades ADD COLUMN trade_category TEXT DEFAULT 'spot';
+            RAISE NOTICE '✅ Added trade_category column to trades table';
+        ELSE
+            RAISE NOTICE 'ℹ️ trade_category column already exists in trades table';
+        END IF;
     ELSE
         -- Create trades table if it doesn't exist
         CREATE TABLE public.trades (
@@ -170,23 +178,43 @@ BEGIN
     SELECT COUNT(*) INTO trades_count FROM public.trades;
     
     IF sample_user_id IS NOT NULL AND sample_pair_id IS NOT NULL AND trades_count = 0 THEN
-        -- Insert sample trades
-        INSERT INTO public.trades (
-            user_id,
-            trading_pair_id,
-            symbol,
-            trade_type,
-            trade_category,
-            amount,
-            price,
-            total_value,
-            status,
-            result,
-            profit_loss
-        ) VALUES
-            (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 'spot', 0.001, 50000, 50, 'closed', 'win', 5),
-            (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 'futures', 0.002, 51000, 102, 'closed', 'loss', -2),
-            (sample_user_id, sample_pair_id, 'ETHUSDT', 'buy', 'options', 0.01, 3000, 30, 'open', 'pending', 0);
+        -- Check if trade_category column exists
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trades' AND column_name = 'trade_category' AND table_schema = 'public') THEN
+            -- Insert sample trades with trade_category
+            INSERT INTO public.trades (
+                user_id,
+                trading_pair_id,
+                symbol,
+                trade_type,
+                trade_category,
+                amount,
+                price,
+                total_value,
+                status,
+                result,
+                profit_loss
+            ) VALUES
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 'spot', 0.001, 50000, 50, 'closed', 'win', 5),
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 'futures', 0.002, 51000, 102, 'closed', 'loss', -2),
+                (sample_user_id, sample_pair_id, 'ETHUSDT', 'buy', 'options', 0.01, 3000, 30, 'open', 'pending', 0);
+        ELSE
+            -- Insert sample trades without trade_category
+            INSERT INTO public.trades (
+                user_id,
+                trading_pair_id,
+                symbol,
+                trade_type,
+                amount,
+                price,
+                total_value,
+                status,
+                result,
+                profit_loss
+            ) VALUES
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 0.001, 50000, 50, 'closed', 'win', 5),
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 0.002, 51000, 102, 'closed', 'loss', -2),
+                (sample_user_id, sample_pair_id, 'ETHUSDT', 'buy', 0.01, 3000, 30, 'open', 'pending', 0);
+        END IF;
             
         RAISE NOTICE '✅ Inserted sample trades for testing';
     ELSE
