@@ -272,29 +272,57 @@ class SupabaseAdminDataService {
           user_id,
           email,
           full_name,
-          account_balance
-        `);
+          account_balance,
+          created_at,
+          updated_at,
+          auto_generated
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ Error fetching wallet data:', error);
         throw error;
       }
 
+      console.log('📊 Raw wallet data profiles:', data);
+      console.log('📊 Number of wallet profiles found:', data?.length || 0);
+      
+      // Debug each profile
+      if (data && data.length > 0) {
+        console.log('🔍 Wallet profile details:');
+        data.forEach((profile, index) => {
+          console.log(`  Wallet Profile ${index + 1}:`, {
+            user_id: profile.user_id,
+            email: profile.email,
+            full_name: profile.full_name,
+            account_balance: profile.account_balance,
+            auto_generated: profile.auto_generated,
+            created_at: profile.created_at
+          });
+        });
+      }
+
       // Map to AdminWalletData interface
-      const walletData: AdminWalletData[] = (data || []).map((profile: any) => ({
-        userId: profile.user_id,
-        userEmail: profile.email,
-        username: profile.full_name || profile.email.split('@')[0],
-        fundingWallet: 0, // Not implemented yet
-        tradingWallet: profile.account_balance || 0,
-        balance: profile.account_balance || 0,
-        totalDeposits: 0, // Will be calculated from deposits table
-        totalWithdrawals: 0, // Will be calculated from withdrawal_requests table
-        pendingWithdrawals: 0, // Will be calculated from withdrawal_requests table
-        lastTransaction: profile.updated_at || profile.created_at
-      }));
+      const walletData: AdminWalletData[] = (data || []).map((profile: any) => {
+        const wallet = {
+          userId: profile.user_id,
+          userEmail: profile.email,
+          username: profile.full_name || profile.email.split('@')[0],
+          fundingWallet: 0, // Not implemented yet
+          tradingWallet: profile.account_balance || 0,
+          balance: profile.account_balance || 0,
+          totalDeposits: 0, // Will be calculated from deposits table
+          totalWithdrawals: 0, // Will be calculated from withdrawal_requests table
+          pendingWithdrawals: 0, // Will be calculated from withdrawal_requests table
+          lastTransaction: profile.updated_at || profile.created_at
+        };
+        
+        console.log(`✅ Mapped wallet: ${wallet.userEmail} (${wallet.username}) - Balance: ${wallet.balance}`);
+        return wallet;
+      });
 
       console.log('✅ Wallet data loaded:', walletData.length);
+      console.log('📋 First few wallet entries:', walletData.slice(0, 3));
       return walletData;
     } catch (error) {
       console.error('❌ Error in getWalletData:', error);
