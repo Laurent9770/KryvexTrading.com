@@ -18,7 +18,10 @@ DROP POLICY IF EXISTS "Users can create trades" ON public.trades;
 -- - "Admins can view all trades" (SELECT)
 -- - "Admins can manage all trades" (ALL)
 
-RAISE NOTICE '✅ Cleaned up duplicate RLS policies on trades table';
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Cleaned up duplicate RLS policies on trades table';
+END $$;
 
 -- Verify the cleanup
 SELECT 
