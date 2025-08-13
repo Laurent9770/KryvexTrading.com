@@ -97,26 +97,9 @@ class SupabaseAdminDataService {
   // Get all users with admin data
   async getAllUsers(): Promise<AdminUser[]> {
     try {
-      console.log('🔄 Fetching all users from auth.users and profiles...');
+      console.log('🔄 Fetching all users from profiles...');
       
-      // First, get all users from auth.users to ensure we don't miss any
-      const { data: authUsers, error: authError } = await supabase
-        .from('auth.users')
-        .select(`
-          id,
-          email,
-          created_at,
-          updated_at,
-          email_confirmed_at
-        `)
-        .order('created_at', { ascending: false });
-
-      if (authError) {
-        console.error('❌ Error fetching auth users:', authError);
-        throw authError;
-      }
-
-      // Then get profiles data
+      // Get all profiles data which includes user information
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -128,37 +111,31 @@ class SupabaseAdminDataService {
           is_verified,
           created_at,
           updated_at
-        `);
+        `)
+        .order('created_at', { ascending: false });
 
       if (profilesError) {
         console.error('❌ Error fetching profiles:', profilesError);
         throw profilesError;
       }
 
-      // Create a map of profiles by user_id for quick lookup
-      const profilesMap = new Map();
-      (profiles || []).forEach((profile: any) => {
-        profilesMap.set(profile.user_id, profile);
-      });
-
-      // Map the data to AdminUser interface, ensuring all auth users are included
-      const users: AdminUser[] = (authUsers || []).map((authUser: any) => {
-        const profile = profilesMap.get(authUser.id);
-        const [firstName, ...lastNameParts] = (profile?.full_name || authUser.email || '').split(' ');
+      // Map the data to AdminUser interface
+      const users: AdminUser[] = (profiles || []).map((profile: any) => {
+        const [firstName, ...lastNameParts] = (profile.full_name || profile.email || '').split(' ');
         const lastName = lastNameParts.join(' ') || '';
         
         return {
-          id: authUser.id,
-          email: authUser.email,
+          id: profile.user_id,
+          email: profile.email,
           firstName: firstName || '',
           lastName: lastName,
-          username: authUser.email?.split('@')[0] || '',
-          kycStatus: profile?.kyc_status || 'pending',
-          kycLevel: profile?.kyc_status === 'verified' ? 3 : profile?.kyc_status === 'pending' ? 1 : 0,
-          status: profile?.is_verified || authUser.email_confirmed_at ? 'active' : 'suspended',
-          createdAt: authUser.created_at,
-          lastLogin: authUser.updated_at || authUser.created_at,
-          tradingBalance: profile?.account_balance || 0,
+          username: profile.email?.split('@')[0] || '',
+          kycStatus: profile.kyc_status || 'pending',
+          kycLevel: profile.kyc_status === 'verified' ? 3 : profile.kyc_status === 'pending' ? 1 : 0,
+          status: profile.is_verified ? 'active' : 'suspended',
+          createdAt: profile.created_at,
+          lastLogin: profile.updated_at || profile.created_at,
+          tradingBalance: profile.account_balance || 0,
           totalTrades: 0, // Will be calculated separately
           totalVolume: 0  // Will be calculated separately
         };
