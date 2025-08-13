@@ -816,12 +816,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setWalletError(null);
 
     try {
-      // Only initialize wallet for authenticated users
-      if (!user?.id) {
-        console.warn('⚠️ Cannot initialize wallet: No authenticated user');
+      // First, check for an authenticated session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user?.id) {
+        console.warn('⚠️ No authenticated session found');
         setWalletLoading(false);
         return;
       }
+
+      // Verify user is still authenticated
+      if (!user?.id || user.id !== session.user.id) {
+        console.warn('⚠️ User session mismatch, waiting for auth state to sync');
+        setWalletLoading(false);
+        return;
+      }
+
+      console.log('✅ Authenticated user confirmed:', user.email);
 
       // Add a small delay to ensure user session is fully processed
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -873,7 +884,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setWalletLoading(false);
     }
-  }, [user?.id, loadWalletFromStorage, saveWalletToStorage, loadActivityFeedFromStorage, loadTradingHistoryFromStorage]);
+  }, [user?.id, user?.email, loadWalletFromStorage, saveWalletToStorage, loadActivityFeedFromStorage, loadTradingHistoryFromStorage]);
 
   const updateTradingBalance = useCallback((asset: string, amount: number, operation: 'add' | 'subtract') => {
     setTradingAccount(prev => {
@@ -988,6 +999,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }));
   }, []);
 
+  // Debug function to troubleshoot authentication and wallet issues
+  const debugAuthAndWallet = useCallback(async () => {
+    try {
+      console.log('🔍 === AUTH & WALLET DEBUG ===');
+      
+      // Check auth state
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('📊 Current Session:', session);
+      
+      // Check user details
+      const currentUser = session?.user;
+      console.log('👤 Current User:', currentUser);
+      
+      // Check context user state
+      console.log('🎭 Context User State:', {
+        user: user,
+        isAuthenticated,
+        isAdmin,
+        isLoading
+      });
+      
+      // Check user wallets if authenticated
+      if (currentUser?.id) {
+        const { data: wallets, error } = await supabase
+          .from('user_wallets')
+          .select('*')
+          .eq('user_id', currentUser.id);
+        
+        console.log('💰 User Wallets:', wallets);
+        if (error) console.error('❌ Wallet fetch error:', error);
+      }
+      
+      // Check localStorage wallet data
+      const storedWallet = localStorage.getItem('tradingAccount');
+      const storedFunding = localStorage.getItem('fundingAccount');
+      console.log('💾 Stored Wallet Data:', {
+        trading: storedWallet ? JSON.parse(storedWallet) : null,
+        funding: storedFunding ? JSON.parse(storedFunding) : null
+      });
+      
+      console.log('🔍 === END DEBUG ===');
+    } catch (error) {
+      console.error('❌ Debug function error:', error);
+    }
+  }, [user, isAuthenticated, isAdmin, isLoading]);
+
   const contextValue = useMemo(() => ({
     user,
     isAuthenticated,
@@ -1020,7 +1077,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     addActivity,
     addTrade,
     updatePortfolioStats,
-    updateRealTimePrice
+    updateRealTimePrice,
+    debugAuthAndWallet, // Add debug function to context
   }), [
     user,
     isAuthenticated,
@@ -1053,7 +1111,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     addActivity,
     addTrade,
     updatePortfolioStats,
-    updateRealTimePrice
+    updateRealTimePrice,
+    debugAuthAndWallet, // Add debug function to dependencies
   ]);
 
   return (
