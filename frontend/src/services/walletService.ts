@@ -639,7 +639,7 @@ export async function completeWithdrawal(withdrawalId: string, txHash: string, a
   }
 }
 
-// Fund User Wallet (admin function)
+// Fund User Wallet (admin function) - Simplified version
 export async function fundUserWallet(
   userId: string, 
   username: string, 
@@ -650,6 +650,8 @@ export async function fundUserWallet(
   remarks?: string
 ) {
   try {
+    console.log(`🔄 Funding wallet: ${userId}, ${walletType}, ${amount} ${currency}`);
+    
     const isAdmin = await checkIfAdmin();
     if (!isAdmin) throw new Error('Unauthorized: Admin access required');
 
@@ -662,70 +664,64 @@ export async function fundUserWallet(
       throw new Error('Invalid amount provided');
     }
 
-    // Check if user wallet exists, if not create it
-    const { data: existingWallet, error: walletError } = await supabase
-      .from('user_wallets')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('wallet_type', walletType)
-      .eq('asset', currency)
-      .single();
+    console.log(`✅ Admin check passed, proceeding with funding...`);
 
-    let newBalance = numericAmount;
-    
-    if (existingWallet) {
-      // Update existing wallet
-      newBalance = existingWallet.balance + numericAmount;
-      
-      const { error: updateError } = await supabase
-        .from('user_wallets')
-        .update({ 
-          balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingWallet.id);
-
-      if (updateError) {
-        console.error('Error updating wallet:', updateError);
-        throw new Error(`Failed to update wallet: ${updateError.message}`);
-      }
-    } else {
-      // Create new wallet entry
-      const { error: insertError } = await supabase
-        .from('user_wallets')
-        .insert({
-          user_id: userId,
-          wallet_type: walletType,
-          asset: currency,
-          balance: numericAmount
-        });
-
-      if (insertError) {
-        console.error('Error inserting wallet:', insertError);
-        throw new Error(`Failed to create wallet: ${insertError.message}`);
-      }
-    }
-
-    // Update user profile account balance
+    // Simplified: Just update the profile account_balance directly
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('account_balance')
       .eq('user_id', userId)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('❌ Error fetching profile:', profileError);
+      throw new Error(`Failed to fetch user profile: ${profileError.message}`);
+    }
 
+    const currentBalance = profile.account_balance || 0;
+    const newBalance = currentBalance + numericAmount;
+
+    console.log(`💰 Current balance: ${currentBalance}, New balance: ${newBalance}`);
+
+    // Update profile with new balance
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({ 
-        account_balance: (profile.account_balance || 0) + numericAmount,
+        account_balance: newBalance,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId);
 
-    if (profileUpdateError) throw profileUpdateError;
+    if (profileUpdateError) {
+      console.error('❌ Error updating profile:', profileUpdateError);
+      throw new Error(`Failed to update profile: ${profileUpdateError.message}`);
+    }
 
-    // Log admin action for audit trail
+    console.log(`✅ Profile updated successfully`);
+
+    // Create wallet transaction record
+    const { error: transactionError } = await supabase
+      .from('wallet_transactions')
+      .insert({
+        user_id: userId,
+        transaction_type: 'deposit',
+        amount: numericAmount,
+        currency: currency,
+        status: 'completed',
+        wallet_type: walletType,
+        description: `Admin funding: ${remarks || 'Funded by admin'}`,
+        admin_id: user.id,
+        processed_at: new Date().toISOString()
+      });
+
+    if (transactionError) {
+      console.error('❌ Error creating transaction record:', transactionError);
+      // Don't throw error here, funding was successful
+    }
+
+    console.log(`✅ Transaction record created`);
+
+    // Log admin action (simplified)
     try {
       const { error: actionError } = await supabase
         .from('admin_actions')
@@ -737,32 +733,38 @@ export async function fundUserWallet(
             wallet_type: walletType,
             amount: numericAmount,
             currency: currency,
-            new_balance: newBalance,
-            remarks: remarks || `Funded by admin (${walletType} wallet)`,
-            username: username
-          }
+            remarks: remarks || 'Funded by admin',
+            previous_balance: currentBalance,
+            new_balance: newBalance
+          },
+          created_at: new Date().toISOString()
         });
 
       if (actionError) {
-        console.warn('Failed to log admin action:', actionError);
-        // Don't throw error here as the main operation succeeded
+        console.error('❌ Error logging admin action:', actionError);
+        // Don't throw error here, funding was successful
       }
-    } catch (actionLogError) {
-      console.warn('Failed to log admin action (caught exception):', actionLogError);
-      // Don't throw error here as the main operation succeeded
+    } catch (actionError) {
+      console.error('❌ Error logging admin action:', actionError);
+      // Don't throw error here, funding was successful
     }
+
+    console.log(`✅ Admin action logged`);
 
     return {
       success: true,
+      message: `Successfully funded ${username}'s ${walletType} wallet with ${numericAmount} ${currency}`,
       newBalance: newBalance,
-      message: `Successfully funded ${numericAmount} ${currency} to user's ${walletType} wallet`
+      previousBalance: currentBalance
     };
+
   } catch (error) {
-    console.error('Error funding user wallet:', error);
+    console.error('❌ Error in fundUserWallet:', error);
     return {
       success: false,
+      message: error instanceof Error ? error.message : 'Failed to fund wallet',
       newBalance: 0,
-      message: error instanceof Error ? error.message : 'Failed to fund user wallet'
+      previousBalance: 0
     };
   }
 }
