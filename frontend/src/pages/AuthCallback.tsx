@@ -13,37 +13,68 @@ const AuthCallback: React.FC = () => {
         console.log('🔗 Processing OAuth callback with real Supabase client...');
         console.log('Current URL:', window.location.href);
         
-        // Use Supabase's built-in OAuth callback handling
-        const { data, error } = await supabase.auth.getSession();
+        // Check for error parameters in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
         
         if (error) {
-          console.error('❌ OAuth callback error:', error);
+          console.error('❌ OAuth error from URL:', error, errorDescription);
           toast({
             title: "Authentication Error",
-            description: error.message || "Failed to complete authentication",
+            description: errorDescription || error || "OAuth authentication failed",
+            variant: "destructive"
+          });
+          navigate('/auth');
+          return;
+        }
+        
+        // Try to get the session from the OAuth callback
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ Session error:', sessionError);
+          toast({
+            title: "Authentication Error",
+            description: sessionError.message || "Failed to get session after authentication",
             variant: "destructive"
           });
           navigate('/auth');
           return;
         }
 
+        let refreshData: any = null;
+        
         if (!data.session) {
           console.error('❌ No session found after OAuth callback');
-          toast({
-            title: "Authentication Error",
-            description: "No valid session found after authentication",
-            variant: "destructive"
-          });
-          navigate('/auth');
-          return;
+          
+          // Try to refresh the session
+          const refreshResult = await supabase.auth.refreshSession();
+          refreshData = refreshResult.data;
+          
+          if (refreshResult.error || !refreshData?.session) {
+            console.error('❌ Session refresh failed:', refreshResult.error);
+            toast({
+              title: "Authentication Error",
+              description: "No valid session found after authentication. Please try again.",
+              variant: "destructive"
+            });
+            navigate('/auth');
+            return;
+          }
+          
+          console.log('✅ Session refreshed successfully');
         }
 
-        const user = data.session.user;
-        console.log('✅ OAuth authentication successful for:', user.email);
+        const user = data.session?.user || refreshData?.session?.user;
+        console.log('✅ OAuth authentication successful for:', user?.email);
+        
+        // Wait a moment for profile creation to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         toast({
           title: "Welcome!",
-          description: `Successfully signed in as ${user.email}`,
+          description: `Successfully signed in as ${user?.email}`,
         });
         
         // Redirect to dashboard
