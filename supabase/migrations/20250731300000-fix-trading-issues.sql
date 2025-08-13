@@ -77,6 +77,12 @@ BEGIN
         ELSE
             RAISE NOTICE 'ℹ️ trade_category column already exists in trades table';
         END IF;
+        
+        -- Fix status check constraint to include all valid statuses
+        ALTER TABLE public.trades DROP CONSTRAINT IF EXISTS trades_status_check;
+        ALTER TABLE public.trades ADD CONSTRAINT trades_status_check 
+            CHECK (status IN ('open', 'closed', 'cancelled', 'pending', 'completed'));
+        RAISE NOTICE '✅ Updated status check constraint for trades table';
     ELSE
         -- Create trades table if it doesn't exist
         CREATE TABLE public.trades (
@@ -194,8 +200,8 @@ BEGIN
                 result,
                 profit_loss
             ) VALUES
-                (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 'spot', 0.001, 50000, 50, 'closed', 'win', 5),
-                (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 'futures', 0.002, 51000, 102, 'closed', 'loss', -2),
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 'spot', 0.001, 50000, 50, 'completed', 'win', 5),
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 'futures', 0.002, 51000, 102, 'completed', 'loss', -2),
                 (sample_user_id, sample_pair_id, 'ETHUSDT', 'buy', 'options', 0.01, 3000, 30, 'open', 'pending', 0);
         ELSE
             -- Insert sample trades without trade_category
@@ -211,8 +217,8 @@ BEGIN
                 result,
                 profit_loss
             ) VALUES
-                (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 0.001, 50000, 50, 'closed', 'win', 5),
-                (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 0.002, 51000, 102, 'closed', 'loss', -2),
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'buy', 0.001, 50000, 50, 'completed', 'win', 5),
+                (sample_user_id, sample_pair_id, 'BTCUSDT', 'sell', 0.002, 51000, 102, 'completed', 'loss', -2),
                 (sample_user_id, sample_pair_id, 'ETHUSDT', 'buy', 0.01, 3000, 30, 'open', 'pending', 0);
         END IF;
             
