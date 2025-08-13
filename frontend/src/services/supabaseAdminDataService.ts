@@ -119,6 +119,9 @@ class SupabaseAdminDataService {
         throw profilesError;
       }
 
+      console.log('📊 Raw profiles data:', profiles);
+      console.log('📊 Number of profiles found:', profiles?.length || 0);
+
       // Map the data to AdminUser interface
       const users: AdminUser[] = (profiles || []).map((profile: any) => {
         const [firstName, ...lastNameParts] = (profile.full_name || profile.email || '').split(' ');
@@ -142,6 +145,7 @@ class SupabaseAdminDataService {
       });
 
       console.log('✅ Users loaded successfully:', users.length);
+      console.log('📋 First few users:', users.slice(0, 3));
       return users;
     } catch (error) {
       console.error('❌ Error in getAllUsers:', error);
