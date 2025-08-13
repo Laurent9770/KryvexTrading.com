@@ -13,6 +13,7 @@ ALTER TABLE public.user_wallets ADD COLUMN IF NOT EXISTS auto_generated BOOLEAN 
 ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS auto_generated BOOLEAN DEFAULT false;
 
 -- Update existing entries to mark them as auto-generated if they were created by our migration
+-- Only update profiles and user_wallets since they have updated_at columns
 UPDATE public.profiles 
 SET auto_generated = true 
 WHERE created_at = updated_at 
@@ -23,10 +24,10 @@ SET auto_generated = true
 WHERE created_at = updated_at 
 AND auto_generated = false;
 
+-- For user_roles, mark all existing entries as auto-generated since they were created by migration
 UPDATE public.user_roles 
 SET auto_generated = true 
-WHERE created_at = updated_at 
-AND auto_generated = false;
+WHERE auto_generated = false;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_auto_generated ON public.profiles(auto_generated);
