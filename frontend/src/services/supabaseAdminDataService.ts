@@ -110,7 +110,8 @@ class SupabaseAdminDataService {
           account_balance,
           is_verified,
           created_at,
-          updated_at
+          updated_at,
+          auto_generated
         `)
         .order('created_at', { ascending: false });
 
@@ -121,13 +122,28 @@ class SupabaseAdminDataService {
 
       console.log('📊 Raw profiles data:', profiles);
       console.log('📊 Number of profiles found:', profiles?.length || 0);
+      
+      // Debug each profile
+      if (profiles && profiles.length > 0) {
+        console.log('🔍 Profile details:');
+        profiles.forEach((profile, index) => {
+          console.log(`  Profile ${index + 1}:`, {
+            user_id: profile.user_id,
+            email: profile.email,
+            full_name: profile.full_name,
+            kyc_status: profile.kyc_status,
+            auto_generated: profile.auto_generated,
+            created_at: profile.created_at
+          });
+        });
+      }
 
       // Map the data to AdminUser interface
       const users: AdminUser[] = (profiles || []).map((profile: any) => {
         const [firstName, ...lastNameParts] = (profile.full_name || profile.email || '').split(' ');
         const lastName = lastNameParts.join(' ') || '';
         
-        return {
+        const user = {
           id: profile.user_id,
           email: profile.email,
           firstName: firstName || '',
@@ -142,6 +158,9 @@ class SupabaseAdminDataService {
           totalTrades: 0, // Will be calculated separately
           totalVolume: 0  // Will be calculated separately
         };
+        
+        console.log(`✅ Mapped user: ${user.email} (${user.firstName} ${user.lastName})`);
+        return user;
       });
 
       console.log('✅ Users loaded successfully:', users.length);
