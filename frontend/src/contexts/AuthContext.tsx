@@ -234,8 +234,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsAdmin(authState.isAdmin);
             setIsLoading(false);
 
-            // Initialize wallet after user is authenticated
-            initializeWallet();
+            // Initialize wallet after user is authenticated and data is set
+            setTimeout(() => {
+              if (userData?.id) {
+                console.log('🔄 Initializing wallet for user:', userData.email);
+                initializeWallet();
+              } else {
+                console.warn('⚠️ User data not fully loaded, skipping wallet initialization');
+              }
+            }, 200); // Small delay to ensure state is updated
           } else {
             setUser(null);
             setIsAuthenticated(false);
@@ -812,6 +819,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Only initialize wallet for authenticated users
       if (!user?.id) {
         console.warn('⚠️ Cannot initialize wallet: No authenticated user');
+        setWalletLoading(false);
+        return;
+      }
+
+      // Add a small delay to ensure user session is fully processed
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Double-check user is still authenticated after delay
+      if (!user?.id) {
+        console.warn('⚠️ User no longer authenticated after delay');
         setWalletLoading(false);
         return;
       }
