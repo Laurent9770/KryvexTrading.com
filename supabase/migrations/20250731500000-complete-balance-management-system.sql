@@ -250,15 +250,15 @@ BEGIN
 END $$;
 
 -- Step 5: Create or replace all functions
--- Drop existing functions first to handle parameter changes
-DROP FUNCTION IF EXISTS is_admin(UUID);
-DROP FUNCTION IF EXISTS is_admin();
-DROP FUNCTION IF EXISTS update_user_balance(UUID, TEXT, TEXT, DECIMAL, TEXT, TEXT);
-DROP FUNCTION IF EXISTS add_balance_to_user(UUID, TEXT, TEXT, DECIMAL, TEXT);
-DROP FUNCTION IF EXISTS remove_balance_from_user(UUID, TEXT, TEXT, DECIMAL, TEXT);
-DROP FUNCTION IF EXISTS get_user_wallet_summary(UUID);
-DROP FUNCTION IF EXISTS sync_user_wallet_from_database(UUID);
-DROP FUNCTION IF EXISTS get_system_balance_stats();
+-- Drop existing functions first to handle parameter changes (with CASCADE to handle dependencies)
+DROP FUNCTION IF EXISTS is_admin(UUID) CASCADE;
+DROP FUNCTION IF EXISTS is_admin() CASCADE;
+DROP FUNCTION IF EXISTS update_user_balance(UUID, TEXT, TEXT, DECIMAL, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS add_balance_to_user(UUID, TEXT, TEXT, DECIMAL, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS remove_balance_from_user(UUID, TEXT, TEXT, DECIMAL, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS get_user_wallet_summary(UUID) CASCADE;
+DROP FUNCTION IF EXISTS sync_user_wallet_from_database(UUID) CASCADE;
+DROP FUNCTION IF EXISTS get_system_balance_stats() CASCADE;
 
 -- Function to check if user is admin
 CREATE OR REPLACE FUNCTION is_admin(user_id_param UUID DEFAULT auth.uid())
