@@ -721,24 +721,23 @@ export async function fundUserWallet(
 
     console.log(`✅ Transaction record created`);
 
-    // Log admin action (simplified)
+    // Log admin action using the safe function
     try {
-      const { error: actionError } = await supabase
-        .from('admin_actions')
-        .insert({
-          admin_email: adminEmail,
-          action_type: 'wallet_fund',
-          target_user_id: userId,
-          details: {
-            wallet_type: walletType,
-            amount: numericAmount,
-            currency: currency,
-            remarks: remarks || 'Funded by admin',
-            previous_balance: currentBalance,
-            new_balance: newBalance
-          },
-          created_at: new Date().toISOString()
-        });
+      const { error: actionError } = await supabase.rpc('log_admin_action_safe', {
+        action_type_param: 'wallet_fund',
+        target_user_id_param: userId,
+        table_name_param: 'user_wallets',
+        record_id_param: null,
+        old_values_param: { previous_balance: currentBalance },
+        new_values_param: { 
+          wallet_type: walletType,
+          amount: numericAmount,
+          currency: currency,
+          new_balance: newBalance,
+          remarks: remarks || 'Funded by admin'
+        },
+        description_param: `Funded ${username}'s ${walletType} wallet with ${numericAmount} ${currency}`
+      });
 
       if (actionError) {
         console.error('❌ Error logging admin action:', actionError);
@@ -841,23 +840,24 @@ export async function deductFromWallet(
 
     if (profileUpdateError) throw profileUpdateError;
 
-    // Log admin action for audit trail
+    // Log admin action for audit trail using safe function
     try {
-      const { error: actionError } = await supabase
-        .from('admin_actions')
-        .insert({
-          admin_email: adminEmail,
-          action_type: 'wallet_deduct',
-          target_user_id: userId,
-          details: {
-            wallet_type: walletType,
-            amount: numericAmount,
-            currency: currency,
-            new_balance: newBalance,
-            remarks: remarks || `Deducted by admin (${walletType} wallet)`,
-            username: username
-          }
-        });
+      const { error: actionError } = await supabase.rpc('log_admin_action_safe', {
+        action_type_param: 'wallet_deduct',
+        target_user_id_param: userId,
+        table_name_param: 'user_wallets',
+        record_id_param: existingWallet.id,
+        old_values_param: { previous_balance: existingWallet.balance },
+        new_values_param: { 
+          wallet_type: walletType,
+          amount: numericAmount,
+          currency: currency,
+          new_balance: newBalance,
+          remarks: remarks || `Deducted by admin (${walletType} wallet)`,
+          username: username
+        },
+        description_param: `Deducted ${numericAmount} ${currency} from ${username}'s ${walletType} wallet`
+      });
 
       if (actionError) {
         console.warn('Failed to log admin action:', actionError);
