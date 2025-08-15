@@ -96,8 +96,8 @@ class AdminWalletService {
     try {
       const { data, error } = await supabase.rpc('get_user_wallet_balance', {
         target_user_email: target_user_email || null,
-        wallet_type: wallet_type || null,
-        currency: currency || null
+        wallet_type_param: wallet_type || null,
+        currency_param: currency || null
       });
 
       if (error) {
