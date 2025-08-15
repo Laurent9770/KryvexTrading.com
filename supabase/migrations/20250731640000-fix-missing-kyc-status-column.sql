@@ -44,6 +44,21 @@ END $$;
 -- Step 3: Add other potentially missing columns
 DO $$
 BEGIN
+    -- Add account_balance column if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'account_balance'
+    ) THEN
+        RAISE NOTICE '❌ account_balance column missing, adding it...';
+        ALTER TABLE public.profiles 
+        ADD COLUMN account_balance DECIMAL(20, 8) DEFAULT 0;
+        RAISE NOTICE '✅ account_balance column added successfully';
+    ELSE
+        RAISE NOTICE '✅ account_balance column already exists';
+    END IF;
+    
     -- Add auto_generated column if missing
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
@@ -112,6 +127,12 @@ BEGIN
     FROM public.profiles 
     WHERE kyc_status IS NOT NULL;
     RAISE NOTICE '✅ kyc_status query test successful: % profiles have kyc_status', user_count;
+    
+    -- Test account_balance query
+    SELECT COUNT(*) INTO user_count 
+    FROM public.profiles 
+    WHERE account_balance IS NOT NULL;
+    RAISE NOTICE '✅ account_balance query test successful: % profiles have account_balance', user_count;
     
     RAISE NOTICE '✅ Profiles table fix completed successfully!';
 END $$;
