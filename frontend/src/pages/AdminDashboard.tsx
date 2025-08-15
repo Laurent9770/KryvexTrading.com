@@ -9,6 +9,7 @@ import AdminWithdrawalManager from '@/components/AdminWithdrawalManager';
 import AdminWalletManager from '@/components/AdminWalletManager';
 import AdminTradingManager from '@/components/AdminTradingManager';
 import AdminKYCManager from '@/components/AdminKYCManager';
+import AdminBalanceManager from '@/components/AdminBalanceManager';
 import { 
   Users, 
   DollarSign, 
@@ -190,11 +191,12 @@ const AdminDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="withdraw" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
               <TabsTrigger value="deposit">Deposit</TabsTrigger>
               <TabsTrigger value="trading">All Trade</TabsTrigger>
               <TabsTrigger value="kyc">KYC</TabsTrigger>
+              <TabsTrigger value="balance">Balance</TabsTrigger>
             </TabsList>
             
             <TabsContent value="withdraw" className="mt-6">
@@ -211,6 +213,10 @@ const AdminDashboard: React.FC = () => {
             
             <TabsContent value="kyc" className="mt-6">
               <AdminKYCManager />
+            </TabsContent>
+            
+            <TabsContent value="balance" className="mt-6">
+              <AdminBalanceManager />
             </TabsContent>
           </Tabs>
         </CardContent>
