@@ -37,13 +37,14 @@ export interface AdminWalletData {
   userId: string;
   userEmail: string;
   username: string;
-  fundingWallet: number;
-  tradingWallet: number;
+  email: string;
+  fundingWallet: { [asset: string]: number };
+  tradingWallet: { [asset: string]: number };
   balance: number;
   totalDeposits: number;
   totalWithdrawals: number;
   pendingWithdrawals: number;
-  lastTransaction: string;
+  lastUpdated: string;
 }
 
 export interface AdminWithdrawalRequest {
@@ -264,65 +265,95 @@ class SupabaseAdminDataService {
   // Get wallet data for all users
   async getWalletData(): Promise<AdminWalletData[]> {
     try {
-      console.log('🔄 Fetching wallet data...');
+      console.log('🔄 Fetching wallet data from user_wallets table...');
       
-      const { data, error } = await supabase
+      // First, get all users with their profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select(`
           user_id,
           email,
           full_name,
-          account_balance,
           created_at,
-          updated_at,
-          auto_generated
+          updated_at
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching wallet data:', error);
-        throw error;
+      if (profilesError) {
+        console.error('❌ Error fetching profiles:', profilesError);
+        throw profilesError;
       }
 
-      console.log('📊 Raw wallet data profiles:', data);
-      console.log('📊 Number of wallet profiles found:', data?.length || 0);
+      // Then, get all wallet data
+      const { data: wallets, error: walletsError } = await supabase
+        .from('user_wallets')
+        .select(`
+          user_id,
+          wallet_type,
+          asset,
+          balance,
+          updated_at
+        `)
+        .order('updated_at', { ascending: false });
+
+      if (walletsError) {
+        console.error('❌ Error fetching wallets:', walletsError);
+        throw walletsError;
+      }
+
+      console.log('📊 Raw wallet data:', wallets);
+      console.log('📊 Number of wallet entries found:', wallets?.length || 0);
       
-      // Debug each profile
-      if (data && data.length > 0) {
-        console.log('🔍 Wallet profile details:');
-        data.forEach((profile, index) => {
-          console.log(`  Wallet Profile ${index + 1}:`, {
-            user_id: profile.user_id,
-            email: profile.email,
-            full_name: profile.full_name,
-            account_balance: profile.account_balance,
-            auto_generated: profile.auto_generated,
-            created_at: profile.created_at
-          });
-        });
-      }
+      // Group wallet data by user
+      const userWallets = new Map<string, AdminWalletData>();
 
-      // Map to AdminWalletData interface
-      const walletData: AdminWalletData[] = (data || []).map((profile: any) => {
-        const wallet = {
+      // Initialize user wallets from profiles
+      (profiles || []).forEach((profile: any) => {
+        userWallets.set(profile.user_id, {
           userId: profile.user_id,
           userEmail: profile.email,
           username: profile.full_name || profile.email.split('@')[0],
-          fundingWallet: 0, // Not implemented yet
-          tradingWallet: profile.account_balance || 0,
-          balance: profile.account_balance || 0,
-          totalDeposits: 0, // Will be calculated from deposits table
-          totalWithdrawals: 0, // Will be calculated from withdrawal_requests table
-          pendingWithdrawals: 0, // Will be calculated from withdrawal_requests table
-          lastTransaction: profile.updated_at || profile.created_at
-        };
-        
+          email: profile.email,
+          fundingWallet: {},
+          tradingWallet: {},
+          balance: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          pendingWithdrawals: 0,
+          lastUpdated: profile.updated_at || profile.created_at
+        });
+      });
+
+      // Populate wallet data
+      (wallets || []).forEach((wallet: any) => {
+        const userWallet = userWallets.get(wallet.user_id);
+        if (userWallet) {
+          if (wallet.wallet_type === 'funding') {
+            userWallet.fundingWallet[wallet.asset] = wallet.balance || 0;
+          } else if (wallet.wallet_type === 'trading') {
+            userWallet.tradingWallet[wallet.asset] = wallet.balance || 0;
+          }
+          
+          // Update last updated time
+          if (wallet.updated_at > userWallet.lastUpdated) {
+            userWallet.lastUpdated = wallet.updated_at;
+          }
+          
+          // Calculate total balance
+          userWallet.balance += wallet.balance || 0;
+        }
+      });
+
+      const walletData = Array.from(userWallets.values());
+      
+      // Debug each wallet
+      walletData.forEach((wallet, index) => {
         console.log(`✅ Mapped wallet: ${wallet.userEmail} (${wallet.username}) - Balance: ${wallet.balance}`);
-        return wallet;
+        console.log(`  Funding:`, wallet.fundingWallet);
+        console.log(`  Trading:`, wallet.tradingWallet);
       });
 
       console.log('✅ Wallet data loaded:', walletData.length);
-      console.log('📋 First few wallet entries:', walletData.slice(0, 3));
       return walletData;
     } catch (error) {
       console.error('❌ Error in getWalletData:', error);
