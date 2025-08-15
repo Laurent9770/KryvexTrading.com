@@ -251,13 +251,40 @@ export async function getRecentDeposits() {
 // Wallet Balance Summary
 export async function getWalletBalanceSummary() {
   try {
-    const profile = await getUserProfile();
-    if (!profile) return { funding: {}, trading: {}, total: 0 };
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { funding: {}, trading: {}, total: 0 };
+    
+    // Fetch wallet data from user_wallets table
+    const { data: walletData, error } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('user_id', user.id);
+    
+    if (error) {
+      console.error('Error fetching wallet data:', error);
+      return { funding: {}, trading: {}, total: 0 };
+    }
+    
+    // Group by wallet type
+    const funding: Record<string, number> = {};
+    const trading: Record<string, number> = {};
+    let total = 0;
+    
+    walletData?.forEach(wallet => {
+      const balance = parseFloat(wallet.balance) || 0;
+      total += balance;
+      
+      if (wallet.wallet_type === 'funding') {
+        funding[wallet.asset] = balance;
+      } else if (wallet.wallet_type === 'trading') {
+        trading[wallet.asset] = balance;
+      }
+    });
     
     return {
-      funding: profile.funding_wallet || {},
-      trading: profile.trading_wallet || {},
-      total: profile.account_balance || 0
+      funding,
+      trading,
+      total
     };
   } catch (error) {
     console.error('Error fetching wallet balance summary:', error);
