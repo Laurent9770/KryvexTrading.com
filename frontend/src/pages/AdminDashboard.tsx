@@ -10,12 +10,14 @@ import AdminWalletManager from '@/components/AdminWalletManager';
 import AdminTradingManager from '@/components/AdminTradingManager';
 import AdminKYCManager from '@/components/AdminKYCManager';
 import AdminBalanceManager from '@/components/AdminBalanceManager';
+import DatabaseDebugger from '@/components/DatabaseDebugger';
 import { 
   Users, 
   DollarSign, 
   TrendingUp, 
   FileText,
-  Activity
+  Activity,
+  Database
 } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
@@ -191,12 +193,13 @@ const AdminDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="withdraw" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
               <TabsTrigger value="deposit">Deposit</TabsTrigger>
               <TabsTrigger value="trading">All Trade</TabsTrigger>
               <TabsTrigger value="kyc">KYC</TabsTrigger>
               <TabsTrigger value="balance">Balance</TabsTrigger>
+              <TabsTrigger value="debug">Debug</TabsTrigger>
             </TabsList>
             
             <TabsContent value="withdraw" className="mt-6">
@@ -217,6 +220,10 @@ const AdminDashboard: React.FC = () => {
             
             <TabsContent value="balance" className="mt-6">
               <AdminBalanceManager />
+            </TabsContent>
+            
+            <TabsContent value="debug" className="mt-6">
+              <DatabaseDebugger />
             </TabsContent>
           </Tabs>
         </CardContent>
