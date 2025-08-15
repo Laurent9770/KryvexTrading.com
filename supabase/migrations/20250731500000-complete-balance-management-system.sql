@@ -260,13 +260,14 @@ DROP FUNCTION IF EXISTS get_user_wallet_summary(UUID) CASCADE;
 DROP FUNCTION IF EXISTS sync_user_wallet_from_database(UUID) CASCADE;
 DROP FUNCTION IF EXISTS get_system_balance_stats() CASCADE;
 
--- Function to check if user is admin
+-- Function to check if user is admin (simplified to avoid recursion)
 CREATE OR REPLACE FUNCTION is_admin(user_id_param UUID DEFAULT auth.uid())
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+    -- Direct check without using the function itself in policies
     RETURN EXISTS (
         SELECT 1 FROM public.user_roles 
         WHERE user_id = user_id_param AND role = 'admin'
@@ -292,8 +293,11 @@ DECLARE
     new_balance DECIMAL(20,8);
     result JSONB;
 BEGIN
-    -- Check if current user is admin
-    IF NOT is_admin() THEN
+    -- Check if current user is admin - direct query to avoid recursion
+    IF NOT EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = auth.uid() AND role = 'admin'
+    ) THEN
         RAISE EXCEPTION 'Only admins can update user balances';
     END IF;
 
@@ -408,8 +412,11 @@ AS $$
 DECLARE
     result JSONB;
 BEGIN
-    -- Check if user can access this data (own data or admin)
-    IF auth.uid() != user_id_param AND NOT is_admin() THEN
+    -- Check if user can access this data (own data or admin) - direct query to avoid recursion
+    IF auth.uid() != user_id_param AND NOT EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = auth.uid() AND role = 'admin'
+    ) THEN
         RAISE EXCEPTION 'Access denied';
     END IF;
 
@@ -492,7 +499,11 @@ AS $$
 DECLARE
     result JSONB;
 BEGIN
-    IF NOT is_admin() THEN
+    -- Check if current user is admin - direct query to avoid recursion
+    IF NOT EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = auth.uid() AND role = 'admin'
+    ) THEN
         RAISE EXCEPTION 'Only admins can view system statistics';
     END IF;
 

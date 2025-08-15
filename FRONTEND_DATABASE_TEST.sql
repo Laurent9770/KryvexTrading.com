@@ -60,6 +60,9 @@ END $$;
 
 -- Step 3: Check user data
 DO $$
+DECLARE
+    user_record RECORD;
+    wallet_record RECORD;
 BEGIN
     RAISE NOTICE '';
     RAISE NOTICE '=== CHECKING USER DATA ===';
@@ -80,16 +83,16 @@ BEGIN
     -- Check jeanlaurentkoterumutima@gmail.com
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com') THEN
         DECLARE
-            user_id UUID;
+            target_user_id UUID;
             wallet_count INTEGER;
         BEGIN
-            SELECT id INTO user_id FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com';
-            SELECT COUNT(*) INTO wallet_count FROM public.user_wallets WHERE user_id = user_id;
+            SELECT id INTO target_user_id FROM auth.users WHERE email = 'jeanlaurentkoterumutima@gmail.com';
+            SELECT COUNT(*) INTO wallet_count FROM public.user_wallets WHERE user_id = target_user_id;
             RAISE NOTICE '  jeanlaurentkoterumutima@gmail.com: % wallet entries', wallet_count;
             
             IF wallet_count > 0 THEN
                 RAISE NOTICE '    Wallet details:';
-                FOR wallet_record IN SELECT wallet_type, asset, balance FROM public.user_wallets WHERE user_id = user_id LOOP
+                FOR wallet_record IN SELECT wallet_type, asset, balance FROM public.user_wallets WHERE user_id = target_user_id LOOP
                     RAISE NOTICE '      % %: %', wallet_record.wallet_type, wallet_record.asset, wallet_record.balance;
                 END LOOP;
             END IF;
@@ -101,16 +104,16 @@ BEGIN
     -- Check shemaprince92@gmail.com
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'shemaprince92@gmail.com') THEN
         DECLARE
-            user_id UUID;
+            target_user_id UUID;
             wallet_count INTEGER;
         BEGIN
-            SELECT id INTO user_id FROM auth.users WHERE email = 'shemaprince92@gmail.com';
-            SELECT COUNT(*) INTO wallet_count FROM public.user_wallets WHERE user_id = user_id;
+            SELECT id INTO target_user_id FROM auth.users WHERE email = 'shemaprince92@gmail.com';
+            SELECT COUNT(*) INTO wallet_count FROM public.user_wallets WHERE user_id = target_user_id;
             RAISE NOTICE '  shemaprince92@gmail.com: % wallet entries', wallet_count;
             
             IF wallet_count > 0 THEN
                 RAISE NOTICE '    Wallet details:';
-                FOR wallet_record IN SELECT wallet_type, asset, balance FROM public.user_wallets WHERE user_id = user_id LOOP
+                FOR wallet_record IN SELECT wallet_type, asset, balance FROM public.user_wallets WHERE user_id = target_user_id LOOP
                     RAISE NOTICE '      % %: %', wallet_record.wallet_type, wallet_record.asset, wallet_record.balance;
                 END LOOP;
             END IF;
@@ -121,18 +124,21 @@ BEGIN
 END $$;
 
 -- Step 4: Test function calls (commented out - run manually)
-RAISE NOTICE '';
-RAISE NOTICE '=== FUNCTION TEST COMMANDS ===';
-RAISE NOTICE 'To test functions manually, run these commands:';
-RAISE NOTICE '';
-RAISE NOTICE '-- Test sync function (replace USER_ID with actual user ID):';
-RAISE NOTICE 'SELECT sync_user_wallet_from_database(''USER_ID_HERE'');';
-RAISE NOTICE '';
-RAISE NOTICE '-- Test wallet summary function (replace USER_ID with actual user ID):';
-RAISE NOTICE 'SELECT get_user_wallet_summary(''USER_ID_HERE'');';
-RAISE NOTICE '';
-RAISE NOTICE '-- Test admin function:';
-RAISE NOTICE 'SELECT is_admin();';
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '=== FUNCTION TEST COMMANDS ===';
+    RAISE NOTICE 'To test functions manually, run these commands:';
+    RAISE NOTICE '';
+    RAISE NOTICE '-- Test sync function (replace USER_ID with actual user ID):';
+    RAISE NOTICE 'SELECT sync_user_wallet_from_database(''USER_ID_HERE'');';
+    RAISE NOTICE '';
+    RAISE NOTICE '-- Test wallet summary function (replace USER_ID with actual user ID):';
+    RAISE NOTICE 'SELECT get_user_wallet_summary(''USER_ID_HERE'');';
+    RAISE NOTICE '';
+    RAISE NOTICE '-- Test admin function:';
+    RAISE NOTICE 'SELECT is_admin();';
+END $$;
 
 -- Step 5: Check RLS policies
 DO $$
