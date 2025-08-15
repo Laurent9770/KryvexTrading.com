@@ -76,17 +76,21 @@ BEGIN
     
     -- Test a sample query
     RAISE NOTICE 'Sample data from admin_user_balances view:';
-    FOR view_count IN 
-        SELECT email, full_name, total_balance, role 
-        FROM public.admin_user_balances 
-        LIMIT 3
-    LOOP
-        RAISE NOTICE '  - % (%): $% (role: %)', 
-            view_count.email, 
-            view_count.full_name, 
-            view_count.total_balance, 
-            view_count.role;
-    END LOOP;
+    DECLARE
+        sample_record RECORD;
+    BEGIN
+        FOR sample_record IN 
+            SELECT email, full_name, total_balance, role 
+            FROM public.admin_user_balances 
+            LIMIT 3
+        LOOP
+            RAISE NOTICE '  - % (%): $% (role: %)', 
+                sample_record.email, 
+                sample_record.full_name, 
+                sample_record.total_balance, 
+                sample_record.role;
+        END LOOP;
+    END;
     
     RAISE NOTICE '✅ admin_user_balances view test completed successfully';
 END $$;
