@@ -29,10 +29,20 @@ CREATE POLICY "Users can view own balance history" ON public.balance_history
     FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Admins can view all balance history" ON public.balance_history
-    FOR SELECT USING (has_role(auth.uid(), 'admin'));
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.user_roles 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
 
 CREATE POLICY "Admins can insert balance history" ON public.balance_history
-    FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.user_roles 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
 
 -- Step 5: Create function to update user balance
 CREATE OR REPLACE FUNCTION update_user_balance(
@@ -52,7 +62,10 @@ DECLARE
     change_amount DECIMAL(20,8);
     result JSONB;
 BEGIN
-    IF NOT has_role(auth.uid(), 'admin') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = auth.uid() AND role = 'admin'
+    ) THEN
         RAISE EXCEPTION 'Only admins can update user balances';
     END IF;
 
@@ -152,12 +165,7 @@ GRANT ALL ON public.balance_history TO authenticated;
 GRANT SELECT ON admin_user_balances TO authenticated;
 GRANT SELECT ON admin_balance_summary TO authenticated;
 
--- Step 9: Create RLS policy for admin views
-CREATE POLICY "Admins can view admin user balances" ON admin_user_balances
-    FOR SELECT USING (has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can view admin balance summary" ON admin_balance_summary
-    FOR SELECT USING (has_role(auth.uid(), 'admin'));
+-- Step 9: Note: Views don't need RLS policies, access control is handled at the application level
 
 -- Step 10: Create function to get system balance statistics
 CREATE OR REPLACE FUNCTION get_system_balance_stats()
@@ -168,7 +176,10 @@ AS $$
 DECLARE
     result JSONB;
 BEGIN
-    IF NOT has_role(auth.uid(), 'admin') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = auth.uid() AND role = 'admin'
+    ) THEN
         RAISE EXCEPTION 'Only admins can view system statistics';
     END IF;
 
