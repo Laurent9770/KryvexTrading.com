@@ -113,7 +113,7 @@ SELECT
     p.full_name,
     p.is_verified,
     p.kyc_status,
-    p.account_status,
+    COALESCE(p.account_status, 'active') as account_status,
     ur.role,
     uw.wallet_type,
     uw.asset,
@@ -174,7 +174,7 @@ BEGIN
 
     SELECT jsonb_build_object(
         'total_users', (SELECT COUNT(*) FROM auth.users),
-        'active_users', (SELECT COUNT(*) FROM public.profiles WHERE account_status = 'active'),
+        'active_users', (SELECT COUNT(*) FROM public.profiles),
         'total_usdt_balance', (SELECT COALESCE(SUM(balance), 0) FROM public.user_wallets WHERE asset = 'USDT'),
         'total_usd_balance', (SELECT COALESCE(SUM(balance), 0) FROM public.user_wallets WHERE asset = 'USD'),
         'total_trading_balance', (SELECT COALESCE(SUM(balance), 0) FROM public.user_wallets WHERE wallet_type = 'trading'),

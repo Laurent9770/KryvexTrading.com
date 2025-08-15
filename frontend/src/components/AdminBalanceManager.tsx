@@ -417,11 +417,11 @@ export default function AdminBalanceManager() {
                   </TableCell>
                   <TableCell>{balance.asset}</TableCell>
                   <TableCell>${balance.balance.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={balance.account_status === 'active' ? 'default' : 'destructive'}>
-                      {balance.account_status}
-                    </Badge>
-                  </TableCell>
+                                     <TableCell>
+                     <Badge variant={(balance.account_status || 'active') === 'active' ? 'default' : 'destructive'}>
+                       {balance.account_status || 'active'}
+                     </Badge>
+                   </TableCell>
                   <TableCell>
                     {balance.last_balance_update ? new Date(balance.last_balance_update).toLocaleDateString() : 'Never'}
                   </TableCell>
