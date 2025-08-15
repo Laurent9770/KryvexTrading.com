@@ -102,13 +102,20 @@ class WalletSyncService {
       // Get wallet summary from database
       const walletSummary = await this.getWalletSummary(userId);
       
+      console.log('📊 Raw wallet summary from database:', walletSummary);
+      
       if (walletSummary.success) {
         console.log('✅ Wallet synced successfully:', walletSummary);
-        return {
+        
+        const result = {
           tradingAccount: walletSummary.trading_account || {},
           fundingAccount: walletSummary.funding_account || { USDT: { balance: '0.00', usdValue: '$0.00', available: '0.00' } }
         };
+        
+        console.log('🎯 Formatted result for frontend:', result);
+        return result;
       } else {
+        console.error('❌ Wallet summary indicates failure:', walletSummary);
         throw new Error('Failed to sync wallet');
       }
     } catch (error) {
