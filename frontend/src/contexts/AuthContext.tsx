@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useToast } from '@/hooks/use-toast';
 import supabaseAuthService, { AuthUser, AuthState } from '@/services/supabaseAuthService';
 import supabase from '@/lib/supabaseClient';
+import walletSyncService from '@/services/walletSyncService';
 
 interface User {
   id: string;
@@ -104,6 +105,7 @@ interface AuthContextType {
   addActivity: (activity: Omit<ActivityItem, 'id' | 'userId' | 'timestamp' | 'time'>) => void;
   addTrade: (trade: any) => void;
   updatePortfolioStats: () => void;
+  refreshWalletFromDatabase: () => Promise<void>;
   updateRealTimePrice: (symbol: string, price: number, change: number, volume: number) => void;
 }
 
@@ -844,39 +846,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // Try to load from localStorage first
-      const loadedFromStorage = loadWalletFromStorage();
-      
-      if (!loadedFromStorage) {
-        // If no stored data, initialize with default values for new authenticated users
-        const defaultTradingAccount = {
-          USDT: { balance: '1000.00000000', usdValue: '$1000.00', available: '1000.00000000' },
-          BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
-          ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
-        };
+      // Try to sync from database first
+      try {
+        console.log('🔄 Attempting to sync wallet from database for user:', user.id);
+        const { tradingAccount: dbTradingAccount, fundingAccount: dbFundingAccount } = 
+          await walletSyncService.syncAndUpdateWallet(user.id);
         
-        const defaultFundingAccount = {
-          USDT: { balance: '5000.00', usdValue: '$5000.00', available: '5000.00' }
-        };
+        console.log('✅ Wallet synced from database:', { dbTradingAccount, dbFundingAccount });
+        
+        // Update state with database data
+        setTradingAccount(dbTradingAccount);
+        setFundingAccount(dbFundingAccount);
+        
+        // Save to localStorage for offline access
+        saveWalletToStorage(dbTradingAccount, dbFundingAccount);
+        
+      } catch (dbError) {
+        console.warn('⚠️ Could not sync from database, using localStorage fallback:', dbError);
+        
+        // Fallback to localStorage
+        const loadedFromStorage = loadWalletFromStorage();
+        
+        if (!loadedFromStorage) {
+          // If no stored data, initialize with default values for new authenticated users
+          const defaultTradingAccount = {
+            USDT: { balance: '1000.00000000', usdValue: '$1000.00', available: '1000.00000000' },
+            BTC: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' },
+            ETH: { balance: '0.00000000', usdValue: '$0.00', available: '0.00000000' }
+          };
+          
+          const defaultFundingAccount = {
+            USDT: { balance: '5000.00', usdValue: '$5000.00', available: '5000.00' }
+          };
 
-        setTradingAccount(defaultTradingAccount);
-        setFundingAccount(defaultFundingAccount);
-        saveWalletToStorage(defaultTradingAccount, defaultFundingAccount);
-        
-        console.log('✅ Wallet initialized with default values for authenticated user:', user.id);
+          setTradingAccount(defaultTradingAccount);
+          setFundingAccount(defaultFundingAccount);
+          saveWalletToStorage(defaultTradingAccount, defaultFundingAccount);
+          
+          console.log('✅ Wallet initialized with default values for authenticated user:', user.id);
+        }
       }
 
       // Load activity feed and trading history from localStorage
       loadActivityFeedFromStorage();
       loadTradingHistoryFromStorage();
-
-      // TODO: In the future, load from backend API here
-      // const walletData = await supabaseWalletService.getWallet(user?.id);
-      // if (walletData.success) {
-      //   setTradingAccount(walletData.tradingAccount);
-      //   setFundingAccount(walletData.fundingAccount);
-      //   saveWalletToStorage(walletData.tradingAccount, walletData.fundingAccount);
-      // }
 
     } catch (error) {
       console.error('Error initializing wallet:', error);
@@ -987,6 +1000,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }));
   }, [tradingAccount]);
 
+  const refreshWalletFromDatabase = useCallback(async () => {
+    if (!user?.id) {
+      console.warn('⚠️ No user ID available for wallet refresh');
+      return;
+    }
+
+    try {
+      console.log('🔄 Force refreshing wallet from database for user:', user.id);
+      setWalletLoading(true);
+      
+      const { tradingAccount: dbTradingAccount, fundingAccount: dbFundingAccount } = 
+        await walletSyncService.forceRefreshWallet(user.id);
+      
+      console.log('✅ Wallet refreshed from database:', { dbTradingAccount, dbFundingAccount });
+      
+      // Update state with fresh database data
+      setTradingAccount(dbTradingAccount);
+      setFundingAccount(dbFundingAccount);
+      
+      // Save to localStorage
+      saveWalletToStorage(dbTradingAccount, dbFundingAccount);
+      
+      // Update portfolio stats
+      updatePortfolioStats();
+      
+    } catch (error) {
+      console.error('❌ Failed to refresh wallet from database:', error);
+      setWalletError('Failed to refresh wallet data');
+    } finally {
+      setWalletLoading(false);
+    }
+  }, [user?.id, saveWalletToStorage, updatePortfolioStats]);
+
   const updateRealTimePrice = useCallback((symbol: string, price: number, change: number, volume: number) => {
     setRealTimePrices(prev => ({
       ...prev,
@@ -1077,6 +1123,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     addActivity,
     addTrade,
     updatePortfolioStats,
+    initializeWallet,
+    refreshWalletFromDatabase,
     updateRealTimePrice,
     debugAuthAndWallet, // Add debug function to context
   }), [
@@ -1111,6 +1159,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     addActivity,
     addTrade,
     updatePortfolioStats,
+    initializeWallet,
+    refreshWalletFromDatabase,
     updateRealTimePrice,
     debugAuthAndWallet, // Add debug function to dependencies
   ]);

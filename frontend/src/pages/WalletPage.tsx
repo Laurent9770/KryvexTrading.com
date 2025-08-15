@@ -38,7 +38,8 @@ const WalletPage = () => {
     walletError,
     updateTradingBalance, 
     updateFundingBalance, 
-    addActivity 
+    addActivity,
+    refreshWalletFromDatabase
   } = useAuth();
   
   const [showSmallBalances, setShowSmallBalances] = useState(true);
@@ -139,13 +140,24 @@ const WalletPage = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
+    try {
+      // Sync wallet from database
+      await refreshWalletFromDatabase();
+      
       toast({
         title: "Wallet Updated",
-        description: "All balances have been refreshed successfully",
+        description: "All balances have been refreshed from database successfully",
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Error refreshing wallet:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh wallet from database",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleHideSmallBalances = () => {
