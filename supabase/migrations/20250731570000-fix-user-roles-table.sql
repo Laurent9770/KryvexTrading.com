@@ -100,18 +100,23 @@ BEGIN
     WHERE u.email = 'kryvextrading@gmail.com';
     
     IF admin_user_id IS NOT NULL THEN
-        -- Ensure admin role exists
-        BEGIN
-            INSERT INTO public.user_roles (user_id, role)
-            VALUES (admin_user_id, 'admin')
-            ON CONFLICT (user_id, role) DO NOTHING;
-            RAISE NOTICE '✅ Admin role ensured for kryvextrading@gmail.com';
-        EXCEPTION WHEN OTHERS THEN
-            -- If constraint doesn't exist, just insert without conflict handling
-            INSERT INTO public.user_roles (user_id, role)
-            VALUES (admin_user_id, 'admin');
-            RAISE NOTICE '✅ Admin role created for kryvextrading@gmail.com (no constraint)';
-        END;
+        -- Check if admin role already exists
+        IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = admin_user_id AND role = 'admin') THEN
+            -- Ensure admin role exists
+            BEGIN
+                INSERT INTO public.user_roles (user_id, role)
+                VALUES (admin_user_id, 'admin')
+                ON CONFLICT (user_id, role) DO NOTHING;
+                RAISE NOTICE '✅ Admin role ensured for kryvextrading@gmail.com';
+            EXCEPTION WHEN OTHERS THEN
+                -- If constraint doesn't exist, just insert without conflict handling
+                INSERT INTO public.user_roles (user_id, role)
+                VALUES (admin_user_id, 'admin');
+                RAISE NOTICE '✅ Admin role created for kryvextrading@gmail.com (no constraint)';
+            END;
+        ELSE
+            RAISE NOTICE '✅ Admin role already exists for kryvextrading@gmail.com';
+        END IF;
     ELSE
         RAISE NOTICE '⚠️ kryvextrading@gmail.com not found';
     END IF;
@@ -122,16 +127,21 @@ BEGIN
         FROM auth.users u 
         WHERE u.email IN ('admin@kryvex.com', 'jeanlaurentkoterumutima@gmail.com')
     LOOP
-        BEGIN
-            INSERT INTO public.user_roles (user_id, role)
-            VALUES (user_record.id, 'admin')
-            ON CONFLICT (user_id, role) DO NOTHING;
-            RAISE NOTICE '✅ Admin role ensured for %', user_record.email;
-        EXCEPTION WHEN OTHERS THEN
-            INSERT INTO public.user_roles (user_id, role)
-            VALUES (user_record.id, 'admin');
-            RAISE NOTICE '✅ Admin role created for % (no constraint)', user_record.email;
-        END;
+        -- Check if admin role already exists
+        IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = user_record.id AND role = 'admin') THEN
+            BEGIN
+                INSERT INTO public.user_roles (user_id, role)
+                VALUES (user_record.id, 'admin')
+                ON CONFLICT (user_id, role) DO NOTHING;
+                RAISE NOTICE '✅ Admin role ensured for %', user_record.email;
+            EXCEPTION WHEN OTHERS THEN
+                INSERT INTO public.user_roles (user_id, role)
+                VALUES (user_record.id, 'admin');
+                RAISE NOTICE '✅ Admin role created for % (no constraint)', user_record.email;
+            END;
+        ELSE
+            RAISE NOTICE '✅ Admin role already exists for %', user_record.email;
+        END IF;
     END LOOP;
     
     -- Ensure all users have at least a 'user' role
