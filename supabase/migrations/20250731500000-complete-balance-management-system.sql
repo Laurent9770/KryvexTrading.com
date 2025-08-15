@@ -95,89 +95,159 @@ ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.balance_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Step 4: Create RLS policies
--- User roles policies
-CREATE POLICY "Users can view own roles" ON public.user_roles
-    FOR SELECT USING (auth.uid() = user_id);
+-- Step 4: Create RLS policies (only if they don't exist)
+DO $$
+BEGIN
+    RAISE NOTICE '=== CREATING RLS POLICIES ===';
+    
+    -- User roles policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_roles' AND policyname = 'Users can view own roles') THEN
+        CREATE POLICY "Users can view own roles" ON public.user_roles
+            FOR SELECT USING (auth.uid() = user_id);
+        RAISE NOTICE '✅ Created "Users can view own roles" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Users can view own roles" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can view all roles" ON public.user_roles
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_roles' AND policyname = 'Admins can view all roles') THEN
+        CREATE POLICY "Admins can view all roles" ON public.user_roles
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can view all roles" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can view all roles" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can manage roles" ON public.user_roles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_roles' AND policyname = 'Admins can manage roles') THEN
+        CREATE POLICY "Admins can manage roles" ON public.user_roles
+            FOR ALL USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can manage roles" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can manage roles" policy already exists';
+    END IF;
 
--- User wallets policies
-CREATE POLICY "Users can view own wallets" ON public.user_wallets
-    FOR SELECT USING (auth.uid() = user_id);
+    -- User wallets policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_wallets' AND policyname = 'Users can view own wallets') THEN
+        CREATE POLICY "Users can view own wallets" ON public.user_wallets
+            FOR SELECT USING (auth.uid() = user_id);
+        RAISE NOTICE '✅ Created "Users can view own wallets" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Users can view own wallets" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can view all wallets" ON public.user_wallets
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_wallets' AND policyname = 'Admins can view all wallets') THEN
+        CREATE POLICY "Admins can view all wallets" ON public.user_wallets
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can view all wallets" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can view all wallets" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can manage wallets" ON public.user_wallets
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_wallets' AND policyname = 'Admins can manage wallets') THEN
+        CREATE POLICY "Admins can manage wallets" ON public.user_wallets
+            FOR ALL USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can manage wallets" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can manage wallets" policy already exists';
+    END IF;
 
--- Balance history policies
-CREATE POLICY "Users can view own balance history" ON public.balance_history
-    FOR SELECT USING (auth.uid() = user_id);
+    -- Balance history policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'balance_history' AND policyname = 'Users can view own balance history') THEN
+        CREATE POLICY "Users can view own balance history" ON public.balance_history
+            FOR SELECT USING (auth.uid() = user_id);
+        RAISE NOTICE '✅ Created "Users can view own balance history" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Users can view own balance history" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can view all balance history" ON public.balance_history
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'balance_history' AND policyname = 'Admins can view all balance history') THEN
+        CREATE POLICY "Admins can view all balance history" ON public.balance_history
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can view all balance history" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can view all balance history" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can insert balance history" ON public.balance_history
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'balance_history' AND policyname = 'Admins can insert balance history') THEN
+        CREATE POLICY "Admins can insert balance history" ON public.balance_history
+            FOR INSERT WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can insert balance history" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can insert balance history" policy already exists';
+    END IF;
 
--- Profiles policies
-CREATE POLICY "Users can view own profile" ON public.profiles
-    FOR SELECT USING (auth.uid() = user_id);
+    -- Profiles policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Users can view own profile') THEN
+        CREATE POLICY "Users can view own profile" ON public.profiles
+            FOR SELECT USING (auth.uid() = user_id);
+        RAISE NOTICE '✅ Created "Users can view own profile" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Users can view own profile" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can view all profiles" ON public.profiles
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Admins can view all profiles') THEN
+        CREATE POLICY "Admins can view all profiles" ON public.profiles
+            FOR SELECT USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can view all profiles" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can view all profiles" policy already exists';
+    END IF;
 
-CREATE POLICY "Users can update own profile" ON public.profiles
-    FOR UPDATE USING (auth.uid() = user_id);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Users can update own profile') THEN
+        CREATE POLICY "Users can update own profile" ON public.profiles
+            FOR UPDATE USING (auth.uid() = user_id);
+        RAISE NOTICE '✅ Created "Users can update own profile" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Users can update own profile" policy already exists';
+    END IF;
 
-CREATE POLICY "Admins can manage all profiles" ON public.profiles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.user_roles 
-            WHERE user_id = auth.uid() AND role = 'admin'
-        )
-    );
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Admins can manage all profiles') THEN
+        CREATE POLICY "Admins can manage all profiles" ON public.profiles
+            FOR ALL USING (
+                EXISTS (
+                    SELECT 1 FROM public.user_roles 
+                    WHERE user_id = auth.uid() AND role = 'admin'
+                )
+            );
+        RAISE NOTICE '✅ Created "Admins can manage all profiles" policy';
+    ELSE
+        RAISE NOTICE 'ℹ️ "Admins can manage all profiles" policy already exists';
+    END IF;
+END $$;
 
 -- Step 5: Create or replace all functions
 -- Function to check if user is admin
