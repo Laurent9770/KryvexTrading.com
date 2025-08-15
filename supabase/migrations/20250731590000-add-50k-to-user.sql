@@ -8,8 +8,36 @@ DECLARE
     target_user_id UUID;
     current_balance NUMERIC;
     new_balance NUMERIC;
+    column_exists BOOLEAN;
 BEGIN
     RAISE NOTICE '=== ADDING 50K TO USER ACCOUNT ===';
+    
+    -- First, check if account_balance column exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'profiles' 
+        AND column_name = 'account_balance'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        RAISE NOTICE '❌ account_balance column does not exist in profiles table';
+        RAISE NOTICE '📋 Available columns in profiles table:';
+        
+        DECLARE
+            col RECORD;
+        BEGIN
+            FOR col IN 
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_schema = 'public' AND table_name = 'profiles'
+                ORDER BY ordinal_position
+            LOOP
+                RAISE NOTICE '   - % (%)', col.column_name, col.data_type;
+            END LOOP;
+        END;
+        RETURN;
+    END IF;
     
     -- Get the user ID
     SELECT id INTO target_user_id 
