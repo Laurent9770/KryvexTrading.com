@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabaseClient';
+import supabase from '../lib/supabaseClient';
 
 export interface AdminWalletTransactionParams {
   target_user_email: string;
