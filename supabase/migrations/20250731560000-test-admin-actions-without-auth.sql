@@ -17,24 +17,32 @@ BEGIN
     
     -- Check table columns
     RAISE NOTICE '📋 admin_actions table columns:';
-    FOR col IN 
-        SELECT column_name, data_type, is_nullable 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = 'admin_actions'
-        ORDER BY ordinal_position
-    LOOP
-        RAISE NOTICE '   - % (%): %', col.column_name, col.data_type, col.is_nullable;
-    END LOOP;
+    DECLARE
+        col RECORD;
+    BEGIN
+        FOR col IN 
+            SELECT column_name, data_type, is_nullable 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = 'admin_actions'
+            ORDER BY ordinal_position
+        LOOP
+            RAISE NOTICE '   - % (%): %', col.column_name, col.data_type, col.is_nullable;
+        END LOOP;
+    END;
     
     -- Check RLS policies
     RAISE NOTICE '🔒 RLS policies on admin_actions:';
-    FOR pol IN 
-        SELECT policyname, permissive, roles, cmd, qual, with_check
-        FROM pg_policies 
-        WHERE tablename = 'admin_actions'
-    LOOP
-        RAISE NOTICE '   - %: % %', pol.policyname, pol.cmd, pol.roles;
-    END LOOP;
+    DECLARE
+        pol RECORD;
+    BEGIN
+        FOR pol IN 
+            SELECT policyname, permissive, roles, cmd, qual, with_check
+            FROM pg_policies 
+            WHERE tablename = 'admin_actions'
+        LOOP
+            RAISE NOTICE '   - %: % %', pol.policyname, pol.cmd, pol.roles;
+        END LOOP;
+    END;
     
     -- Check if function exists
     IF EXISTS (SELECT FROM information_schema.routines WHERE routine_schema = 'public' AND routine_name = 'log_admin_action_safe') THEN
