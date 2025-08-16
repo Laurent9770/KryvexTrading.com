@@ -1,219 +1,249 @@
-// Global Error Handler - Handles DevTools extension errors and HTTP errors
-// This prevents the DevTools extension error from affecting the application
+import logger from './logger';
 
-interface ErrorInfo {
-  message: string;
-  stack?: string;
-  source?: string;
-  lineno?: number;
-  colno?: number;
+// =============================================
+// GLOBAL ERROR HANDLER UTILITY
+// =============================================
+
+interface ErrorHandlerConfig {
+  enableConsoleLogging: boolean;
+  enableErrorReporting: boolean;
+  maxErrorCount: number;
+  errorTimeout: number;
 }
 
-// Filter out DevTools extension errors
-const isDevToolsError = (error: Error | string): boolean => {
-  const errorMessage = typeof error === 'string' ? error : error.message;
-  return (
-    errorMessage.includes('hook.js') ||
-    errorMessage.includes('chrome.runtime') ||
-    errorMessage.includes('extension') ||
-    errorMessage.includes('message channel closed') ||
-    errorMessage.includes('asynchronous response') ||
-    errorMessage.includes('Failed to load user role') ||
-    errorMessage.includes('Request failed with status 403') ||
-    errorMessage.includes('Request failed with status 406')
-  );
+const defaultConfig: ErrorHandlerConfig = {
+  enableConsoleLogging: import.meta.env.DEV,
+  enableErrorReporting: true,
+  maxErrorCount: 10,
+  errorTimeout: 5000,
 };
 
-// Filter out common HTTP errors that are expected
-const isExpectedHttpError = (error: Error | string): boolean => {
-  const errorMessage = typeof error === 'string' ? error : error.message;
-  return (
-    errorMessage.includes('403 Forbidden') ||
-    errorMessage.includes('406 Not Acceptable') ||
-    errorMessage.includes('429 Too Many Requests') ||
-    errorMessage.includes('Failed to load resource') ||
-    errorMessage.includes('smartsupp') ||
-    errorMessage.includes('ftkeczodadvtnxofrwps') ||
-    errorMessage.includes('bootstrap.smartsupp')
-  );
-};
+class GlobalErrorHandler {
+  private config: ErrorHandlerConfig;
+  private errorCount = 0;
+  private lastErrorTime = 0;
+  private errorQueue: Array<{ error: Error; context: string; timestamp: number }> = [];
 
-// Global error handler
-export const setupGlobalErrorHandler = () => {
-  // Handle unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    const error = event.reason;
-    
-    // Filter out DevTools extension errors
-    if (isDevToolsError(error)) {
-      console.log('🔧 Ignoring DevTools extension error:', error);
-      event.preventDefault();
-      return;
-    }
-    
-    // Filter out expected HTTP errors
-    if (isExpectedHttpError(error)) {
-      console.log('🔧 Ignoring expected HTTP error:', error);
-      event.preventDefault();
-      return;
-    }
-    
-    // Log other errors for debugging
-    console.error('❌ Unhandled promise rejection:', error);
-  });
-
-  // Handle global errors
-  window.addEventListener('error', (event) => {
-    const error = event.error || event.message;
-    
-    // Filter out DevTools extension errors
-    if (isDevToolsError(error)) {
-      console.log('🔧 Ignoring DevTools extension error:', error);
-      event.preventDefault();
-      return;
-    }
-    
-    // Filter out expected HTTP errors
-    if (isExpectedHttpError(error)) {
-      console.log('🔧 Ignoring expected HTTP error:', error);
-      event.preventDefault();
-      return;
-    }
-    
-    // Log other errors for debugging
-    console.error('❌ Global error:', {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      error: event.error
-    });
-  });
-
-  // Handle console errors more aggressively
-  const originalConsoleError = console.error;
-  console.error = (...args) => {
-    const errorMessage = args.join(' ');
-    
-    // Filter out DevTools extension errors
-    if (isDevToolsError(errorMessage)) {
-      console.log('🔧 Ignoring DevTools extension error in console:', errorMessage);
-      return;
-    }
-    
-    // Filter out expected HTTP errors
-    if (isExpectedHttpError(errorMessage)) {
-      console.log('🔧 Ignoring expected HTTP error in console:', errorMessage);
-      return;
-    }
-    
-    // Call original console.error for other errors
-    originalConsoleError.apply(console, args);
-  };
-
-  // Also filter console.warn for these specific errors
-  const originalConsoleWarn = console.warn;
-  console.warn = (...args) => {
-    const errorMessage = args.join(' ');
-    
-    // Filter out DevTools extension errors
-    if (isDevToolsError(errorMessage)) {
-      console.log('🔧 Ignoring DevTools extension warning:', errorMessage);
-      return;
-    }
-    
-    // Filter out expected HTTP errors
-    if (isExpectedHttpError(errorMessage)) {
-      console.log('🔧 Ignoring expected HTTP warning:', errorMessage);
-      return;
-    }
-    
-    // Call original console.warn for other warnings
-    originalConsoleWarn.apply(console, args);
-  };
-
-  console.log('🛡️ Enhanced global error handler setup complete');
-};
-
-// HTTP error handler for specific status codes
-export const handleHttpError = (status: number, message?: string): string => {
-  switch (status) {
-    case 403:
-      return 'Access denied. Please check your authentication and permissions.';
-    case 406:
-      return 'Content negotiation failed. Please check request headers.';
-    case 401:
-      return 'Authentication required. Please sign in again.';
-    case 429:
-      return 'Too many requests. Please try again later.';
-    case 500:
-      return 'Internal server error. Please try again later.';
-    case 502:
-      return 'Bad gateway. Please try again later.';
-    case 503:
-      return 'Service unavailable. Please try again later.';
-    case 504:
-      return 'Gateway timeout. Please try again later.';
-    default:
-      return message || 'An unexpected error occurred. Please try again.';
+  constructor(config: Partial<ErrorHandlerConfig> = {}) {
+    this.config = { ...defaultConfig, ...config };
+    this.setupGlobalHandlers();
   }
-};
 
-// Retry logic for failed requests
-export const retryRequest = async <T>(
-  requestFn: () => Promise<T>,
-  maxRetries = 3,
-  delay = 1000
-): Promise<T> => {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await requestFn();
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
+  private setupGlobalHandlers() {
+    // Handle unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      this.handleError(event.reason, 'Unhandled Promise Rejection');
+      event.preventDefault();
+    });
+
+    // Handle global errors
+    window.addEventListener('error', (event) => {
+      this.handleError(event.error || new Error(event.message), 'Global Error');
+      event.preventDefault();
+    });
+
+    // Handle React errors (if React is available)
+    if (typeof window !== 'undefined' && (window as any).React) {
+      const originalConsoleError = console.error;
+      console.error = (...args) => {
+        // Check for React error patterns
+        const errorMessage = args.join(' ');
+        if (errorMessage.includes('React') || errorMessage.includes('Warning')) {
+          this.handleError(new Error(errorMessage), 'React Error');
+        }
+        originalConsoleError.apply(console, args);
+      };
+    }
+
+    // Handle CSP violations
+    if ('SecurityPolicyViolationEvent' in window) {
+      document.addEventListener('securitypolicyviolation', (event) => {
+        this.handleCSPViolation(event);
+      });
+    }
+
+    // Handle network errors
+    window.addEventListener('online', () => {
+      logger.log('Network connection restored');
+    });
+
+    window.addEventListener('offline', () => {
+      this.handleError(new Error('Network connection lost'), 'Network Error');
+    });
+  }
+
+  public handleError(error: Error, context: string) {
+    const now = Date.now();
+    
+    // Rate limiting
+    if (now - this.lastErrorTime < this.config.errorTimeout) {
+      this.errorCount++;
+      if (this.errorCount > this.config.maxErrorCount) {
+        return; // Ignore excessive errors
       }
-      
-      // Wait before retry with exponential backoff
-      const waitTime = delay * Math.pow(2, attempt - 1);
-      console.log(`⏳ Request failed, retrying in ${waitTime}ms (attempt ${attempt}/${maxRetries})`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+    } else {
+      this.errorCount = 1;
+      this.lastErrorTime = now;
     }
-  }
-  
-  throw new Error('All retry attempts failed');
-};
 
-// Safe JSON parsing with error handling
-export const safeJsonParse = <T>(json: string, fallback: T): T => {
-  try {
-    return JSON.parse(json);
-  } catch (error) {
-    console.warn('⚠️ Failed to parse JSON, using fallback:', error);
-    return fallback;
-  }
-};
-
-// Safe fetch with timeout
-export const safeFetch = async (
-  url: string,
-  options: RequestInit = {},
-  timeout = 10000
-): Promise<Response> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
+    // Add to queue
+    this.errorQueue.push({
+      error,
+      context,
+      timestamp: now,
     });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeout}ms`);
+
+    // Keep only recent errors
+    if (this.errorQueue.length > 20) {
+      this.errorQueue.shift();
     }
-    throw error;
+
+    // Log error
+    if (this.config.enableConsoleLogging) {
+      logger.error(`[${context}] ${error.message}`, {
+        stack: error.stack,
+        timestamp: new Date(now).toISOString(),
+        errorCount: this.errorCount,
+      });
+    }
+
+    // Report error if enabled
+    if (this.config.enableErrorReporting) {
+      this.reportError(error, context);
+    }
+  }
+
+  private handleCSPViolation(event: SecurityPolicyViolationEvent) {
+    const cspError = new Error(
+      `CSP Violation: ${event.violatedDirective} directive violated by ${event.blockedURI}`
+    );
+
+    logger.warn('Content Security Policy Violation', {
+      directive: event.violatedDirective,
+      blockedURI: event.blockedURI,
+      sourceFile: event.sourceFile,
+      lineNumber: event.lineNumber,
+      columnNumber: event.columnNumber,
+    });
+
+    this.handleError(cspError, 'CSP Violation');
+  }
+
+  private async reportError(error: Error, context: string) {
+    try {
+      // You can integrate with error reporting services here
+      // Example: Sentry, LogRocket, etc.
+      
+      const errorReport = {
+        message: error.message,
+        stack: error.stack,
+        context,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        errorCount: this.errorCount,
+      };
+
+      // For now, just log to console in development
+      if (import.meta.env.DEV) {
+        console.group('🚨 Error Report');
+        console.log('Error:', errorReport);
+        console.groupEnd();
+      }
+
+      // You could send to your backend or error reporting service
+      // await fetch('/api/error-report', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(errorReport),
+      // });
+
+    } catch (reportError) {
+      // Don't let error reporting cause more errors
+      if (import.meta.env.DEV) {
+        console.error('Failed to report error:', reportError);
+      }
+    }
+  }
+
+  // Public methods
+  public getErrorQueue() {
+    return [...this.errorQueue];
+  }
+
+  public clearErrorQueue() {
+    this.errorQueue = [];
+    this.errorCount = 0;
+  }
+
+  public getErrorStats() {
+    return {
+      totalErrors: this.errorQueue.length,
+      recentErrorCount: this.errorCount,
+      lastErrorTime: this.lastErrorTime,
+    };
+  }
+}
+
+// Create global instance
+const globalErrorHandler = new GlobalErrorHandler();
+
+// Export setup function
+export const setupGlobalErrorHandler = () => {
+  return globalErrorHandler;
+};
+
+// Export utility functions
+export const handleAsyncError = async <T>(
+  asyncFn: () => Promise<T>,
+  context: string = 'Async Operation'
+): Promise<T | null> => {
+  try {
+    return await asyncFn();
+  } catch (error) {
+    globalErrorHandler.handleError(error as Error, context);
+    return null;
   }
 };
+
+export const handleSyncError = <T>(
+  syncFn: () => T,
+  context: string = 'Sync Operation'
+): T | null => {
+  try {
+    return syncFn();
+  } catch (error) {
+    globalErrorHandler.handleError(error as Error, context);
+    return null;
+  }
+};
+
+// Supabase-specific error handler
+export const handleSupabaseError = (error: any, operation: string) => {
+  const errorMessage = error?.message || 'Unknown Supabase error';
+  const context = `Supabase ${operation}`;
+  
+  logger.error(`[${context}] ${errorMessage}`, {
+    error,
+    operation,
+    timestamp: new Date().toISOString(),
+  });
+
+  globalErrorHandler.handleError(new Error(errorMessage), context);
+};
+
+// React-specific error handler
+export const handleReactError = (error: Error, errorInfo?: any) => {
+  const context = 'React Component Error';
+  
+  logger.error(`[${context}] ${error.message}`, {
+    error,
+    errorInfo,
+    componentStack: errorInfo?.componentStack,
+    timestamp: new Date().toISOString(),
+  });
+
+  globalErrorHandler.handleError(error, context);
+};
+
+export default globalErrorHandler;
