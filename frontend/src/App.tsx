@@ -27,8 +27,10 @@ const LoadingSpinner = ({ size = "default" }: { size?: "sm" | "default" | "lg" }
   );
 };
 
-// Simple environment status function
+// Simple environment status function - only in development
 const logEnvironmentStatus = () => {
+  if (!import.meta.env.DEV) return;
+  
   try {
     console.log('🔍 ENVIRONMENT STATUS:');
     console.log('NODE_ENV:', import.meta.env.MODE);
@@ -113,7 +115,7 @@ function App() {
       // Setup global error handler to catch DevTools extension errors
       setupGlobalErrorHandler();
       
-      // Log environment status
+      // Log environment status only in development
       logEnvironmentStatus();
       
       // Simulate loading time

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // =============================================
-// SIMPLIFIED SUPABASE CLIENT INITIALIZATION
+// PRODUCTION-OPTIMIZED SUPABASE CLIENT
 // =============================================
 
 // Get environment variables with validation
@@ -32,18 +32,17 @@ const getSupabaseConfig = () => {
   return { supabaseUrl, supabaseAnonKey };
 };
 
-// Create Supabase client with minimal configuration
+// Create Supabase client with production-optimized configuration
 let supabase: any = null;
 
 try {
-  console.log('🔐 Initializing Enhanced Supabase client...');
-  
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
   
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
-      autoRefreshToken: true
+      autoRefreshToken: true,
+      detectSessionInUrl: true
     },
     global: {
       headers: {
@@ -51,17 +50,31 @@ try {
         'Content-Type': 'application/json',
         'X-Client-Info': 'supabase-js/2.0.0'
       }
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
     }
   });
   
-  console.log('✅ Enhanced Supabase client initialized successfully');
+  // Only log in development
+  if (import.meta.env.DEV) {
+    console.log('✅ Supabase client initialized successfully');
+  }
   
 } catch (error) {
-  console.error('❌ Failed to create Enhanced Supabase client:', error);
+  // Log error in development, handle gracefully in production
+  if (import.meta.env.DEV) {
+    console.error('❌ Failed to create Supabase client:', error);
+  }
   
+  // Create fallback client for graceful degradation
   supabase = {
     from: (table: string) => {
-      console.error(`❌ Supabase client not initialized. Cannot query table: ${table}`);
+      if (import.meta.env.DEV) {
+        console.error(`❌ Supabase client not initialized. Cannot query table: ${table}`);
+      }
       return {
         select: () => ({ data: null, error: { message: `Supabase client not initialized. Cannot query table: ${table}.` } }),
         insert: () => ({ data: null, error: { message: `Supabase client not initialized. Cannot insert into table: ${table}.` } }),
