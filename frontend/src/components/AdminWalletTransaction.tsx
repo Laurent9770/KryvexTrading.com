@@ -25,7 +25,7 @@ const AdminWalletTransaction: React.FC<AdminWalletTransactionProps> = ({ classNa
   const [transactionHistory, setTransactionHistory] = useState<UserTransactionHistory | null>(null);
   const [showUserInfo, setShowUserInfo] = useState(false);
 
-  const currencies = ['USD', 'EUR', 'GBP', 'BTC', 'ETH'];
+  const currencies = ['USDT', 'USD', 'EUR', 'GBP', 'BTC', 'ETH'];
   const walletTypes = ['funding', 'trading'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -45,7 +45,7 @@ const AdminWalletTransaction: React.FC<AdminWalletTransactionProps> = ({ classNa
       const result = await adminWalletService.sendMoneyToUser(formData);
       setMessage({
         type: 'success',
-        text: `Successfully sent ${adminWalletService.formatCurrency(result.amount, result.currency)} to ${result.target_user_email}`
+        text: `Successfully sent $${result.amount.toFixed(2)} ${result.currency} to ${result.target_user_email}`
       });
       
       // Reset form
@@ -254,11 +254,11 @@ const AdminWalletTransaction: React.FC<AdminWalletTransactionProps> = ({ classNa
             </div>
             <div>
               <p className="text-gray-400 text-sm">Account Balance</p>
-              <p className="text-white">{adminWalletService.formatCurrency(userBalance.account_balance)}</p>
+              <p className="text-white">${userBalance.account_balance.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Total USD Balance</p>
-              <p className="text-white">{adminWalletService.formatCurrency(userBalance.total_balance_usd)}</p>
+              <p className="text-white">${userBalance.total_balance_usd.toFixed(2)}</p>
             </div>
           </div>
 
@@ -270,7 +270,7 @@ const AdminWalletTransaction: React.FC<AdminWalletTransactionProps> = ({ classNa
                 <div key={index} className="bg-gray-700 p-3 rounded">
                   <p className="text-gray-400 text-sm">{wallet.wallet_type} ({wallet.asset})</p>
                   <p className="text-white font-medium">
-                    {adminWalletService.formatCurrency(wallet.balance, wallet.asset)}
+                    ${wallet.balance.toFixed(2)} {wallet.asset}
                   </p>
                 </div>
               ))}
@@ -290,7 +290,7 @@ const AdminWalletTransaction: React.FC<AdminWalletTransactionProps> = ({ classNa
                         transaction.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'
                       }`}>
                         {transaction.transaction_type === 'deposit' ? '+' : '-'}
-                        {adminWalletService.formatCurrency(transaction.amount, transaction.currency)}
+                        ${transaction.amount.toFixed(2)} {transaction.currency}
                       </span>
                     </div>
                     <div className="text-gray-500 text-xs">

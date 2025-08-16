@@ -57,30 +57,69 @@ export interface UserTransactionHistory {
 
 class AdminWalletService {
   /**
-   * Send money from admin to user
+   * Send money from admin to user (FUND)
    */
   async sendMoneyToUser(params: AdminWalletTransactionParams): Promise<WalletTransactionResult> {
     try {
+      console.log('🔄 Admin sending money to user:', params);
+      
       const { data, error } = await supabase.rpc('admin_send_money_to_user', {
-        target_user_email: params.target_user_email,
-        amount: params.amount,
-        currency: params.currency || 'USD',
-        wallet_type: params.wallet_type || 'funding',
-        description: params.description || 'Admin funding',
-        admin_notes: params.admin_notes || null
+        target_user_email_param: params.target_user_email,
+        amount_param: params.amount,
+        currency_param: params.currency || 'USDT',
+        wallet_type_param: params.wallet_type || 'funding',
+        description_param: params.description || 'Admin funding',
+        admin_notes_param: params.admin_notes || null
       });
 
       if (error) {
+        console.error('❌ Error sending money:', error);
         throw new Error(`Failed to send money: ${error.message}`);
       }
 
       if (!data || !data.success) {
+        console.error('❌ Transaction failed:', data);
         throw new Error('Transaction failed');
       }
 
+      console.log('✅ Money sent successfully:', data);
       return data as WalletTransactionResult;
     } catch (error) {
-      console.error('Error sending money to user:', error);
+      console.error('❌ Error sending money to user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deduct money from user (REMOVE FUNDS)
+   */
+  async deductMoneyFromUser(params: AdminWalletTransactionParams): Promise<WalletTransactionResult> {
+    try {
+      console.log('🔄 Admin deducting money from user:', params);
+      
+      const { data, error } = await supabase.rpc('admin_deduct_money_from_user', {
+        target_user_email_param: params.target_user_email,
+        amount_param: params.amount,
+        currency_param: params.currency || 'USDT',
+        wallet_type_param: params.wallet_type || 'funding',
+        description_param: params.description || 'Admin deduction',
+        admin_notes_param: params.admin_notes || null
+      });
+
+      if (error) {
+        console.error('❌ Error deducting money:', error);
+        throw new Error(`Failed to deduct money: ${error.message}`);
+      }
+
+      if (!data || !data.success) {
+        console.error('❌ Transaction failed:', data);
+        throw new Error('Transaction failed');
+      }
+
+      console.log('✅ Money deducted successfully:', data);
+      return data as WalletTransactionResult;
+    } catch (error) {
+      console.error('❌ Error deducting money from user:', error);
       throw error;
     }
   }
@@ -106,7 +145,7 @@ class AdminWalletService {
 
       return data as UserWalletBalance;
     } catch (error) {
-      console.error('Error getting wallet balance:', error);
+      console.error('Error getting user wallet balance:', error);
       throw error;
     }
   }
@@ -122,8 +161,8 @@ class AdminWalletService {
     try {
       const { data, error } = await supabase.rpc('get_user_transaction_history', {
         target_user_email: target_user_email || null,
-        limit_count: limit,
-        offset_count: offset
+        limit_param: limit,
+        offset_param: offset
       });
 
       if (error) {
@@ -132,57 +171,212 @@ class AdminWalletService {
 
       return data as UserTransactionHistory;
     } catch (error) {
-      console.error('Error getting transaction history:', error);
+      console.error('Error getting user transaction history:', error);
       throw error;
     }
   }
 
   /**
-   * Get current user's wallet balance
+   * Subscribe to real-time wallet updates
    */
-  async getMyWalletBalance(): Promise<UserWalletBalance> {
-    return this.getUserWalletBalance();
+  subscribeToWalletUpdates(callback: (payload: any) => void) {
+    try {
+      const subscription = supabase
+        .channel('wallet_updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_wallets'
+          },
+          (payload) => {
+            console.log('🔄 Wallet update received:', payload);
+            callback(payload);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'wallet_transactions'
+          },
+          (payload) => {
+            console.log('🔄 Transaction update received:', payload);
+            callback(payload);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error('Error subscribing to wallet updates:', error);
+      return () => {};
+    }
   }
 
   /**
-   * Get current user's transaction history
+   * Subscribe to admin actions
    */
-  async getMyTransactionHistory(limit: number = 50, offset: number = 0): Promise<UserTransactionHistory> {
-    return this.getUserTransactionHistory(undefined, limit, offset);
+  subscribeToAdminActions(callback: (payload: any) => void) {
+    try {
+      const subscription = supabase
+        .channel('admin_actions')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'admin_actions'
+          },
+          (payload) => {
+            console.log('🔄 Admin action received:', payload);
+            callback(payload);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error('Error subscribing to admin actions:', error);
+      return () => {};
+    }
   }
 
   /**
-   * Format currency for display
+   * Get all users with wallet balances (admin only)
    */
-  formatCurrency(amount: number, currency: string = 'USD'): string {
-    const formatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    return formatter.format(amount);
+  async getAllUsersWithWallets(): Promise<UserWalletBalance[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Get all users
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('user_id, email, full_name, account_balance');
+
+      if (usersError) throw usersError;
+
+      // Get wallet data for all users
+      const { data: wallets, error: walletsError } = await supabase
+        .from('user_wallets')
+        .select('*');
+
+      if (walletsError) throw walletsError;
+
+      // Combine user and wallet data
+      const result: UserWalletBalance[] = users?.map(userProfile => {
+        const userWallets = wallets?.filter(w => w.user_id === userProfile.user_id) || [];
+        const totalBalance = userWallets.reduce((sum, wallet) => sum + (wallet.balance || 0), 0);
+
+        return {
+          user_id: userProfile.user_id,
+          email: userProfile.email,
+          full_name: userProfile.full_name || '',
+          account_balance: userProfile.account_balance || 0,
+          wallets: userWallets.map(wallet => ({
+            wallet_type: wallet.wallet_type,
+            asset: wallet.asset,
+            balance: wallet.balance || 0,
+            updated_at: wallet.updated_at
+          })),
+          total_balance_usd: totalBalance,
+          last_updated: new Date().toISOString()
+        };
+      }) || [];
+
+      return result;
+    } catch (error) {
+      console.error('Error getting all users with wallets:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get total balance across all wallets
+   * Get system statistics (admin only)
    */
-  getTotalBalance(wallets: UserWalletBalance['wallets']): number {
-    return wallets.reduce((total, wallet) => total + wallet.balance, 0);
+  async getSystemStats() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Get total users
+      const { count: totalUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Get total wallet balance
+      const { data: wallets } = await supabase
+        .from('user_wallets')
+        .select('balance');
+
+      const totalBalance = wallets?.reduce((sum, wallet) => sum + (wallet.balance || 0), 0) || 0;
+
+      // Get recent transactions
+      const { data: recentTransactions } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      // Get admin actions
+      const { data: recentAdminActions } = await supabase
+        .from('admin_actions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      return {
+        totalUsers: totalUsers || 0,
+        totalBalance,
+        recentTransactions: recentTransactions || [],
+        recentAdminActions: recentAdminActions || [],
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error getting system stats:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get balance for specific wallet type and currency
+   * Force refresh user wallet (admin only)
    */
-  getWalletBalance(
-    wallets: UserWalletBalance['wallets'],
-    wallet_type: string,
-    currency: string
-  ): number {
-    const wallet = wallets.find(w => w.wallet_type === wallet_type && w.asset === currency);
-    return wallet ? wallet.balance : 0;
+  async forceRefreshUserWallet(targetUserEmail: string) {
+    try {
+      // Get user ID from email
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('email', targetUserEmail)
+        .single();
+
+      if (userError || !userData) {
+        throw new Error(`User not found: ${targetUserEmail}`);
+      }
+
+      // Call the sync function
+      const { data, error } = await supabase.rpc('sync_user_wallet_from_database', {
+        user_id_param: userData.user_id
+      });
+
+      if (error) {
+        throw new Error(`Failed to refresh wallet: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error forcing wallet refresh:', error);
+      throw error;
+    }
   }
 }
 
-export const adminWalletService = new AdminWalletService();
+const adminWalletService = new AdminWalletService();
 export default adminWalletService;

@@ -1009,6 +1009,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔄 Force refreshing wallet from database for user:', user.id);
       setWalletLoading(true);
+      setWalletError(null);
+      
+      // Clear localStorage to force fresh data
+      localStorage.removeItem(`kryvex_trading_account_${user.id}`);
+      localStorage.removeItem(`kryvex_funding_account_${user.id}`);
       
       const { tradingAccount: dbTradingAccount, fundingAccount: dbFundingAccount } = 
         await walletSyncService.forceRefreshWallet(user.id);
@@ -1024,6 +1029,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Update portfolio stats
       updatePortfolioStats();
+      
+      // Clear any previous errors
+      setWalletError(null);
       
     } catch (error) {
       console.error('❌ Failed to refresh wallet from database:', error);
