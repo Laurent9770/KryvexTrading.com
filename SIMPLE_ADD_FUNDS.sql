@@ -1,7 +1,7 @@
 -- =====================================================
--- ADD FUNDS TO USER WALLET
+-- SIMPLE ADD FUNDS TO USER WALLET
 -- =====================================================
--- Add funds to test frontend connection
+-- Add funds without transaction record to avoid constraint issues
 -- =====================================================
 
 DO $$
@@ -47,17 +47,6 @@ BEGIN
         AND wallet_type = 'funding' 
         AND asset = 'USDT';
         
-        -- Create transaction record with correct action value
-        INSERT INTO public.wallet_transactions (
-            user_id, action, wallet_type, amount, asset, 
-            transaction_type, status, currency, remarks, 
-            balance, admin_email, processed_at
-        ) VALUES (
-            target_user_id, 'deposit', 'funding', amount_to_add, 'USDT',
-            'admin_funding', 'completed', 'USDT', 'Admin added funds for testing',
-            new_balance, 'admin@kryvex.com', NOW()
-        );
-        
         -- Update profile account_balance
         UPDATE public.profiles
         SET account_balance = (
@@ -68,7 +57,6 @@ BEGIN
         WHERE user_id = target_user_id;
         
         RAISE NOTICE '✅ Successfully added $% to funding wallet', amount_to_add;
-        RAISE NOTICE '✅ Transaction record created';
         RAISE NOTICE '✅ Profile account_balance updated';
         
         -- Verify the update

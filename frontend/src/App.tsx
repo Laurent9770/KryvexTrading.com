@@ -12,41 +12,6 @@ import AdminLayout from '@/layouts/AdminLayout';
 import NoNavbarLayout from '@/layouts/NoNavbarLayout';
 import { setupGlobalErrorHandler } from '@/utils/errorHandler';
 
-// Safe lazy loading wrapper with error handling
-const safeLazyLoad = (importFunc: () => Promise<any>) => {
-  const LazyComponent = React.lazy(importFunc);
-  
-  return React.forwardRef<any, any>((props, ref) => {
-    return (
-      <SafeComponent componentName="LazyComponent">
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingSpinner size="lg" />}>
-            <LazyComponent {...props} ref={ref} />
-          </Suspense>
-        </ErrorBoundary>
-      </SafeComponent>
-    );
-  });
-};
-
-// Lazy load pages with error boundaries
-const LandingPage = safeLazyLoad(() => import('@/pages/LandingPage'));
-const Auth = safeLazyLoad(() => import('@/pages/Auth'));
-const Dashboard = safeLazyLoad(() => import('@/pages/Dashboard'));
-const AdminDashboard = safeLazyLoad(() => import('@/pages/AdminDashboard'));
-const TradingPage = safeLazyLoad(() => import('@/pages/TradingPage'));
-const DepositPage = safeLazyLoad(() => import('@/pages/DepositPage'));
-const WithdrawalRequestPage = safeLazyLoad(() => import('@/pages/WithdrawalRequestPage'));
-const WithdrawPage = safeLazyLoad(() => import('@/pages/WithdrawPage'));
-const SettingsPage = safeLazyLoad(() => import('@/pages/SettingsPage'));
-const KYCPage = safeLazyLoad(() => import('@/pages/KYCPage'));
-const SupportPage = safeLazyLoad(() => import('@/pages/SupportPage'));
-const TradingHistoryPage = safeLazyLoad(() => import('@/pages/TradingHistoryPage'));
-const WalletPage = safeLazyLoad(() => import('@/pages/WalletPage'));
-const DepositGuidePage = safeLazyLoad(() => import('@/pages/DepositGuidePage'));
-const AuthCallback = safeLazyLoad(() => import('@/pages/AuthCallback'));
-const LogoutTest = safeLazyLoad(() => import('@/components/LogoutTest'));
-
 // Loading Spinner Component
 const LoadingSpinner = ({ size = "default" }: { size?: "sm" | "default" | "lg" }) => {
   const sizeClasses = {
@@ -121,6 +86,24 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Lazy load pages with error boundaries - simplified to avoid hook violations
+const LandingPage = React.lazy(() => import('@/pages/LandingPage'));
+const Auth = React.lazy(() => import('@/pages/Auth'));
+const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
+const AdminDashboard = React.lazy(() => import('@/pages/AdminDashboard'));
+const TradingPage = React.lazy(() => import('@/pages/TradingPage'));
+const DepositPage = React.lazy(() => import('@/pages/DepositPage'));
+const WithdrawalRequestPage = React.lazy(() => import('@/pages/WithdrawalRequestPage'));
+const WithdrawPage = React.lazy(() => import('@/pages/WithdrawPage'));
+const SettingsPage = React.lazy(() => import('@/pages/SettingsPage'));
+const KYCPage = React.lazy(() => import('@/pages/KYCPage'));
+const SupportPage = React.lazy(() => import('@/pages/SupportPage'));
+const TradingHistoryPage = React.lazy(() => import('@/pages/TradingHistoryPage'));
+const WalletPage = React.lazy(() => import('@/pages/WalletPage'));
+const DepositGuidePage = React.lazy(() => import('@/pages/DepositGuidePage'));
+const AuthCallback = React.lazy(() => import('@/pages/AuthCallback'));
+const LogoutTest = React.lazy(() => import('@/components/LogoutTest'));
+
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -184,17 +167,23 @@ function App() {
                     {/* Public routes without navbar */}
                     <Route path="/" element={
                       <SafeRoute>
-                        <LandingPage />
+                        <Suspense fallback={<LoadingSpinner size="lg" />}>
+                          <LandingPage />
+                        </Suspense>
                       </SafeRoute>
                     } />
                     <Route path="/auth" element={
                       <SafeRoute>
-                        <Auth />
+                        <Suspense fallback={<LoadingSpinner size="lg" />}>
+                          <Auth />
+                        </Suspense>
                       </SafeRoute>
                     } />
                     <Route path="/auth/callback" element={
                       <SafeRoute>
-                        <AuthCallback />
+                        <Suspense fallback={<LoadingSpinner size="lg" />}>
+                          <AuthCallback />
+                        </Suspense>
                       </SafeRoute>
                     } />
                     
@@ -208,7 +197,9 @@ function App() {
                     }>
                       <Route index element={
                         <SafeRoute>
-                          <AdminDashboard />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <AdminDashboard />
+                          </Suspense>
                         </SafeRoute>
                       } />
                     </Route>
@@ -223,62 +214,86 @@ function App() {
                     }>
                       <Route path="/dashboard" element={
                         <SafeRoute>
-                          <Dashboard />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <Dashboard />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/trading" element={
                         <SafeRoute>
-                          <TradingPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <TradingPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/deposit" element={
                         <SafeRoute>
-                          <DepositPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <DepositPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/withdraw" element={
                         <SafeRoute>
-                          <WithdrawPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <WithdrawPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/withdrawal" element={
                         <SafeRoute>
-                          <WithdrawalRequestPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <WithdrawalRequestPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/settings" element={
                         <SafeRoute>
-                          <SettingsPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <SettingsPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/kyc" element={
                         <SafeRoute>
-                          <KYCPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <KYCPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/support" element={
                         <SafeRoute>
-                          <SupportPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <SupportPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/trading-history" element={
                         <SafeRoute>
-                          <TradingHistoryPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <TradingHistoryPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/wallet" element={
                         <SafeRoute>
-                          <WalletPage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <WalletPage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/deposit-guide" element={
                         <SafeRoute>
-                          <DepositGuidePage />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <DepositGuidePage />
+                          </Suspense>
                         </SafeRoute>
                       } />
                       <Route path="/logout-test" element={
                         <SafeRoute>
-                          <LogoutTest />
+                          <Suspense fallback={<LoadingSpinner size="lg" />}>
+                            <LogoutTest />
+                          </Suspense>
                         </SafeRoute>
                       } />
                     </Route>

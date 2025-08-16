@@ -11,6 +11,10 @@ DO $$
 DECLARE
     target_user_id UUID;
     target_email TEXT := 'jeanlaurentkoterumutima@gmail.com';
+    user_role TEXT;
+    wallet_record RECORD;
+    tx_record RECORD;
+    action_record RECORD;
 BEGIN
     RAISE NOTICE '🔍 Checking user: %', target_email;
     
@@ -31,11 +35,15 @@ BEGIN
     
     RAISE NOTICE '🔍 Checking user roles...';
     
-    SELECT role INTO STRICT
+    SELECT role INTO user_role
     FROM public.user_roles
     WHERE user_id = target_user_id;
     
-    RAISE NOTICE '✅ User role: %', role;
+    IF user_role IS NULL THEN
+        RAISE NOTICE '⚠️ No role found for user';
+    ELSE
+        RAISE NOTICE '✅ User role: %', user_role;
+    END IF;
     
     -- 3. CHECK USER WALLETS
     -- =====================================================
@@ -99,20 +107,22 @@ BEGIN
     
     RAISE NOTICE '📊 Total transactions: %', COUNT;
     
-    -- Show recent transactions
+    -- Show recent transactions with correct column names
     FOR tx_record IN 
-        SELECT transaction_type, amount, currency, wallet_type, description, created_at
+        SELECT transaction_type, amount, currency, wallet_type, action, remarks, created_at
         FROM public.wallet_transactions
         WHERE user_id = target_user_id
         ORDER BY created_at DESC
         LIMIT 5
     LOOP
-        RAISE NOTICE '💳 Transaction: % % % (%s) - %s', 
+        RAISE NOTICE '💳 Transaction: % % % (%s) - Action: % - Remarks: % - Created: %', 
             tx_record.transaction_type, 
             tx_record.amount, 
             tx_record.currency, 
             tx_record.wallet_type, 
-            tx_record.description;
+            tx_record.action,
+            tx_record.remarks,
+            tx_record.created_at;
     END LOOP;
     
     -- 7. CHECK ADMIN ACTIONS
