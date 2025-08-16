@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { config as envConfig, isValidConfig } from './envConfig';
 
 // =============================================
 // PRODUCTION-OPTIMIZED SUPABASE CLIENT
@@ -6,27 +7,27 @@ import { createClient } from '@supabase/supabase-js';
 
 // Get environment variables with validation
 const getSupabaseConfig = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseUrl = envConfig.SUPABASE_URL;
+  const supabaseAnonKey = envConfig.SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || supabaseUrl === 'undefined' || supabaseUrl === '') {
-    throw new Error('VITE_SUPABASE_URL is not properly defined. Check your .env file and deployment configuration.');
+    throw new Error('SUPABASE_URL is not properly defined. Check your environment configuration.');
   }
   
   if (!supabaseAnonKey || supabaseAnonKey === 'undefined' || supabaseAnonKey === '') {
-    throw new Error('VITE_SUPABASE_ANON_KEY is not properly defined. Check your .env file and deployment configuration.');
+    throw new Error('SUPABASE_ANON_KEY is not properly defined. Check your environment configuration.');
   }
   
   // Validate URL format
   try {
     new URL(supabaseUrl);
   } catch (error) {
-    throw new Error(`Invalid VITE_SUPABASE_URL format: ${supabaseUrl}`);
+    throw new Error(`Invalid SUPABASE_URL format: ${supabaseUrl}`);
   }
   
   // Validate key format (should be a JWT starting with eyJ)
   if (!supabaseAnonKey.startsWith('eyJ')) {
-    throw new Error('Invalid VITE_SUPABASE_ANON_KEY format. Should be a JWT token starting with "eyJ".');
+    throw new Error('Invalid SUPABASE_ANON_KEY format. Should be a JWT token starting with "eyJ".');
   }
   
   return { supabaseUrl, supabaseAnonKey };

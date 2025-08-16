@@ -43,6 +43,27 @@
     <meta name="twitter:image" content="https://www.kryvextrading.com/images/og-image.png" />
     <meta name="twitter:image:alt" content="Kryvex - Advanced Crypto Trading Platform" />
 
+    <!-- Environment Configuration (Production Fallback) -->
+    <script>
+      // Provide environment variables as fallback for production builds
+      window.env = {
+        SUPABASE_URL: 'https://ftkeczodadvtnxofrwps.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0a2Vjem9kYWR2dG54b2Zyd3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE5NzI5NzQsImV4cCI6MjA0NzU0ODk3NH0.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8',
+        NODE_ENV: 'production',
+        BASE_URL: '/'
+      };
+      
+      // Environment debugging (only in development)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔍 ENVIRONMENT DEBUGGING:');
+        console.log('NODE ENV:', window.env.NODE_ENV);
+        console.log('BASE_URL:', window.env.BASE_URL);
+        console.log('SUPABASE URL defined:', !!window.env.SUPABASE_URL);
+        console.log('SUPABASE ANON KEY defined:', !!window.env.SUPABASE_ANON_KEY);
+        console.log('All required environment variables are defined.');
+      }
+    </script>
+
     <!-- Smartsupp Live Chat script with error handling -->
     <script type="text/javascript">
       var _smartsupp = _smartsupp || {};
@@ -57,14 +78,14 @@
         
         // Add error handling for script loading
         c.onerror = function() {
-          if (import.meta.env.DEV) {
+          if (window.env && window.env.NODE_ENV === 'development') {
             console.log('🔧 Smartsupp script failed to load, using fallback');
           }
           window.smartsupp = null;
         };
         
         c.onload = function() {
-          if (import.meta.env.DEV) {
+          if (window.env && window.env.NODE_ENV === 'development') {
             console.log('✅ Smartsupp script loaded successfully');
           }
         };
@@ -78,13 +99,13 @@
           try {
             window.smartsupp('open');
           } catch (error) {
-            if (import.meta.env.DEV) {
+            if (window.env && window.env.NODE_ENV === 'development') {
               console.log('🔧 Smartsupp widget failed, opening direct URL');
             }
             window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');
           }
         } else {
-          if (import.meta.env.DEV) {
+          if (window.env && window.env.NODE_ENV === 'development') {
             console.log('🔧 Smartsupp not available, opening direct URL');
           }
           window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');

@@ -29,7 +29,23 @@ const prodLogger: Logger = {
 };
 
 // Export the appropriate logger based on environment
-const logger = import.meta.env.DEV ? devLogger : prodLogger;
+const logger = (() => {
+  try {
+    // Try import.meta first (development)
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) {
+      return devLogger;
+    }
+  } catch (error) {
+    // import.meta not available, fall back to window.env
+  }
+  
+  // Fallback to window.env (production)
+  if (typeof window !== 'undefined' && (window as any).env && (window as any).env.NODE_ENV === 'development') {
+    return devLogger;
+  }
+  
+  return prodLogger;
+})();
 
 export default logger;
 

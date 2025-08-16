@@ -54,10 +54,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    target: 'esnext', // Ensure modern features stay
+    modulePreload: true,
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
+        // Ensure ES modules are properly configured
+        format: 'es',
         // Better chunk splitting to avoid missing assets
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],

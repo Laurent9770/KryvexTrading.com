@@ -29,15 +29,47 @@ const LoadingSpinner = ({ size = "default" }: { size?: "sm" | "default" | "lg" }
 
 // Simple environment status function - only in development
 const logEnvironmentStatus = () => {
-  if (!import.meta.env.DEV) return;
-  
   try {
+    // Check if we're in development
+    let isDev = false;
+    
+    try {
+      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) {
+        isDev = true;
+      }
+    } catch (error) {
+      // import.meta not available
+    }
+    
+    if (!isDev && typeof window !== 'undefined' && (window as any).env && (window as any).env.NODE_ENV === 'development') {
+      isDev = true;
+    }
+    
+    if (!isDev) return;
+    
     console.log('🔍 ENVIRONMENT STATUS:');
-    console.log('NODE_ENV:', import.meta.env.MODE);
-    console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? 'Defined ✓' : 'Missing ✗');
-    console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Defined ✓' : 'Missing ✗');
-    console.log('VITE_API_URL:', import.meta.env.VITE_API_URL ? 'Defined ✓' : 'Missing ✗');
-    console.log('VITE_WS_URL:', import.meta.env.VITE_WS_URL ? 'Defined ✓' : 'Missing ✗');
+    
+    // Try import.meta first
+    try {
+      if (typeof import.meta !== 'undefined' && import.meta.env) {
+        console.log('NODE_ENV:', import.meta.env.MODE);
+        console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? 'Defined ✓' : 'Missing ✗');
+        console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Defined ✓' : 'Missing ✗');
+        console.log('VITE_API_URL:', import.meta.env.VITE_API_URL ? 'Defined ✓' : 'Missing ✗');
+        console.log('VITE_WS_URL:', import.meta.env.VITE_WS_URL ? 'Defined ✓' : 'Missing ✗');
+        return;
+      }
+    } catch (error) {
+      // import.meta not available
+    }
+    
+    // Fallback to window.env
+    if (typeof window !== 'undefined' && (window as any).env) {
+      console.log('NODE_ENV:', (window as any).env.NODE_ENV);
+      console.log('SUPABASE_URL:', (window as any).env.SUPABASE_URL ? 'Defined ✓' : 'Missing ✗');
+      console.log('SUPABASE_ANON_KEY:', (window as any).env.SUPABASE_ANON_KEY ? 'Defined ✓' : 'Missing ✗');
+      console.log('BASE_URL:', (window as any).env.BASE_URL);
+    }
   } catch (error) {
     console.error('❌ Error logging environment status:', error);
   }
