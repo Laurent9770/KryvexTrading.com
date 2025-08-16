@@ -72,16 +72,21 @@ $$;
 
 grant execute on function public.is_admin(uuid) to anon, authenticated;
 
--- 7) View for role check used by frontend
+-- 7) Drop existing user_roles if it exists (could be table, view, or function)
+drop view if exists public.user_roles;
+drop table if exists public.user_roles;
+drop function if exists public.user_roles(uuid);
+
+-- 8) Create view for role check used by frontend
 create or replace view public.user_roles as
 select u.id as user_id, case when public.is_admin(u.id) then 'admin' else 'user' end as role
 from auth.users u;
 grant select on public.user_roles to anon, authenticated;
 
--- 8) Drop existing admin_adjust_balance function if it exists
+-- 9) Drop existing admin_adjust_balance function if it exists
 drop function if exists public.admin_adjust_balance(uuid, text, text, numeric, text);
 
--- 9) Create admin RPC to credit/debit simulation money
+-- 10) Create admin RPC to credit/debit simulation money
 create or replace function public.admin_adjust_balance(
   target_user uuid,
   wallet text,
@@ -125,23 +130,23 @@ $$;
 
 grant execute on function public.admin_adjust_balance(uuid, text, text, numeric, text) to authenticated;
 
--- 10) RLS escalation notes:
+-- 11) RLS escalation notes:
 -- RPC uses SECURITY DEFINER to bypass RLS. Ensure owner is postgres; revoke direct update/insert perms from anon/authenticated on user_wallets.
 revoke insert, update, delete on public.user_wallets from anon, authenticated;
 revoke insert, update, delete on public.wallet_transactions from anon, authenticated;
 
--- 11) Create indexes for performance
+-- 12) Create indexes for performance
 create index if not exists idx_user_wallets_user_id on public.user_wallets(user_id);
 create index if not exists idx_wallet_transactions_user_id on public.wallet_transactions(user_id);
 create index if not exists idx_wallet_transactions_created_at on public.wallet_transactions(created_at);
 create index if not exists idx_admin_actions_admin_id on public.admin_actions(admin_id);
 create index if not exists idx_admin_actions_created_at on public.admin_actions(created_at);
 
--- 12) Enable realtime for wallet updates
+-- 13) Enable realtime for wallet updates
 alter publication supabase_realtime add table public.user_wallets;
 alter publication supabase_realtime add table public.wallet_transactions;
 
--- 13) Verify the migration
+-- 14) Verify the migration
 select 'Migration completed successfully' as status;
 select count(*) as admin_users_count from public.admin_users;
 select count(*) as user_wallets_count from public.user_wallets;
