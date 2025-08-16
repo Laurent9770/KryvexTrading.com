@@ -34,6 +34,12 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 GRANT ALL ON public.user_roles TO authenticated;
 GRANT ALL ON public.user_roles TO service_role;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Users can insert own roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Admins can view all roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Admins can manage all roles" ON public.user_roles;
+
 -- Create RLS policies
 CREATE POLICY "Users can view own roles" ON public.user_roles
     FOR SELECT USING (auth.uid() = user_id);
@@ -84,6 +90,10 @@ ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 GRANT ALL ON public.admins TO authenticated;
 GRANT ALL ON public.admins TO service_role;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Admins can view all admins" ON public.admins;
+DROP POLICY IF EXISTS "Admins can manage all admins" ON public.admins;
+
 -- Create RLS policies for admins table
 CREATE POLICY "Admins can view all admins" ON public.admins
     FOR SELECT USING (
@@ -129,6 +139,10 @@ ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
 -- Grant permissions
 GRANT ALL ON public.admin_actions TO authenticated;
 GRANT ALL ON public.admin_actions TO service_role;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Admins can view all admin actions" ON public.admin_actions;
+DROP POLICY IF EXISTS "Admins can insert admin actions" ON public.admin_actions;
 
 -- Create RLS policies for admin_actions table
 CREATE POLICY "Admins can view all admin actions" ON public.admin_actions
@@ -176,6 +190,12 @@ ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
 -- Grant permissions
 GRANT ALL ON public.wallet_transactions TO authenticated;
 GRANT ALL ON public.wallet_transactions TO service_role;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own transactions" ON public.wallet_transactions;
+DROP POLICY IF EXISTS "Users can insert own transactions" ON public.wallet_transactions;
+DROP POLICY IF EXISTS "Admins can view all transactions" ON public.wallet_transactions;
+DROP POLICY IF EXISTS "Admins can insert all transactions" ON public.wallet_transactions;
 
 -- Create RLS policies for wallet_transactions table
 CREATE POLICY "Users can view own transactions" ON public.wallet_transactions
@@ -226,6 +246,12 @@ ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 -- Grant permissions
 GRANT ALL ON public.user_wallets TO authenticated;
 GRANT ALL ON public.user_wallets TO service_role;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Users can update own wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Admins can view all wallets" ON public.user_wallets;
+DROP POLICY IF EXISTS "Admins can update all wallets" ON public.user_wallets;
 
 -- Create RLS policies for user_wallets table
 CREATE POLICY "Users can view own wallets" ON public.user_wallets
