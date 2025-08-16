@@ -536,8 +536,8 @@ BEGIN
         
         IF admin_user_id IS NOT NULL THEN
             -- Ensure admin role exists
-            INSERT INTO public.user_roles (user_id, role, created_at, updated_at)
-            VALUES (admin_user_id, 'admin', NOW(), NOW())
+            INSERT INTO public.user_roles (user_id, role, created_at)
+            VALUES (admin_user_id, 'admin', NOW())
             ON CONFLICT (user_id, role) DO NOTHING;
             
             -- Ensure admin record exists
