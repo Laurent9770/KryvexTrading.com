@@ -2,8 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { validateEnvironment } from './utils/envChecker';
-import './lib/envDebugger';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Global error handler to catch headers errors only
 window.addEventListener('error', (event) => {
@@ -51,12 +50,7 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Validate environment variables before app initialization
-try {
-  validateEnvironment();
-} catch (error) {
-  console.error('❌ Environment validation failed:', error);
-}
+// Environment validation is now handled in supabaseClient.ts
 
 // Create root with error handling
 const rootElement = document.getElementById('root');
@@ -70,7 +64,9 @@ try {
   // Render with error boundary
   root.render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </React.StrictMode>,
   );
 } catch (error) {

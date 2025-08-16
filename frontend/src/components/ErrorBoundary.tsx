@@ -1,142 +1,168 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import logger from '@/utils/logger';
+import React from 'react';
 
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
-
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  errorInfo: React.ErrorInfo | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ComponentType<{ error: Error | null; resetError: () => void }>;
+}
+
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-      errorInfo: null,
-    };
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log the error
-    logger.error('React Error caught by boundary:', error);
-    logger.error('Error stack:', error.stack);
-    logger.error('Component stack:', errorInfo.componentStack);
-
-    // Update state with error info
-    this.setState({
-      error,
-      errorInfo,
-    });
-
-    // You can also log the error to an error reporting service here
-    // Example: Sentry.captureException(error, { extra: errorInfo });
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+    this.setState({ error, errorInfo });
   }
 
-  handleRetry = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    });
-  };
-
-  handleRefresh = () => {
-    window.location.reload();
-  };
-
-  handleGoHome = () => {
-    window.location.href = '/';
+  resetError = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
   render() {
     if (this.state.hasError) {
-      // Custom fallback UI
       if (this.props.fallback) {
-        return this.props.fallback;
+        const FallbackComponent = this.props.fallback;
+        return <FallbackComponent error={this.state.error} resetError={this.resetError} />;
       }
 
-      // Default error UI
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="max-w-md w-full text-center">
-            <div className="text-yellow-500 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          padding: '1rem'
+        }}>
+          <div style={{
+            maxWidth: '500px',
+            textAlign: 'center',
+            background: 'white',
+            padding: '2rem',
+            borderRadius: '0.75rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontWeight: 'bold',
+              marginBottom: '0.5rem',
+              color: '#1f2937'
+            }}>
               Something went wrong
             </h1>
-            <p className="text-muted-foreground mb-6">
+            <p style={{
+              color: '#6b7280',
+              marginBottom: '2rem',
+              lineHeight: '1.5'
+            }}>
               We're sorry, but something unexpected happened. Please try refreshing the page.
             </p>
             
-            <div className="space-y-3">
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
-                onClick={this.handleRetry}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                onClick={this.resetError}
+                style={{
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <span>🔄</span>
                 Try Again
               </button>
               
               <button
-                onClick={this.handleRefresh}
-                className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                onClick={() => window.location.reload()}
+                style={{
+                  background: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#4b5563'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#6b7280'}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <span>🔄</span>
                 Refresh Page
               </button>
               
               <button
-                onClick={this.handleGoHome}
-                className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                onClick={() => window.location.href = '/'}
+                style={{
+                  background: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#4b5563'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#6b7280'}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
+                <span>🏠</span>
                 Go to Home
               </button>
             </div>
 
-            {/* Error details for development */}
-            {import.meta.env.DEV && this.state.error && (
-              <details className="mt-6 text-left">
-                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                  Error Details (Development)
+            {/* Show error details only in development */}
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details style={{
+                marginTop: '2rem',
+                padding: '1rem',
+                background: '#f3f4f6',
+                borderRadius: '0.5rem',
+                textAlign: 'left'
+              }}>
+                <summary style={{ cursor: 'pointer', fontWeight: '600', color: '#374151' }}>
+                  Error Details (Development Only)
                 </summary>
-                <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono overflow-auto max-h-40">
-                  <div className="mb-2">
-                    <strong>Error:</strong>
-                    <pre className="whitespace-pre-wrap">{this.state.error.toString()}</pre>
-                  </div>
-                  {this.state.errorInfo && (
-                    <div className="mb-2">
-                      <strong>Error stack:</strong>
-                      <pre className="whitespace-pre-wrap">{this.state.error.stack}</pre>
-                    </div>
-                  )}
-                  {this.state.errorInfo && (
-                    <div>
-                      <strong>Component stack:</strong>
-                      <pre className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</pre>
-                    </div>
-                  )}
-                </div>
+                <pre style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: '#dc2626',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}>
+                  {this.state.error.toString()}
+                  {this.state.errorInfo?.componentStack}
+                </pre>
               </details>
             )}
           </div>
@@ -146,6 +172,4 @@ class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
-}
-
-export default ErrorBoundary; 
+} 

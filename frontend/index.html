@@ -4,18 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Content Security Policy - FIXED FOR FONT LOADING AND SMARTSUPP -->
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.smartsuppchat.com">
+    <link rel="preconnect" href="https://bootstrap.smartsuppchat.com">
+    
+    <!-- Content Security Policy - STRICT PRODUCTION POLICY -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com https://cdn.jsdelivr.net;
+      script-src 'self' 'unsafe-inline' https://www.smartsuppchat.com https://*.smartsuppchat.com;
+      connect-src 'self' https://*.supabase.co https://api.supabase.com wss://*.supabase.co https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com https://*.smartsuppchat.com https://widget-v3.smartsuppcdn.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://fonts.googleapis.com;
       img-src 'self' data: https: blob:;
-      connect-src 'self' https://*.supabase.co https://api.supabase.com wss://*.supabase.co https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com https://*.smartsuppchat.com;
-      frame-src 'self' https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com;
-      object-src 'none';
+      font-src 'self' https://fonts.gstatic.com data:;
+      frame-src 'self' https://www.smartsuppchat.com https://*.smartsuppchat.com;
+      worker-src 'self' blob:;
       base-uri 'self';
-      form-action 'self';
+      object-src 'none';
     ">
     
     <title>Kryvex - Advanced Crypto Trading Platform</title>

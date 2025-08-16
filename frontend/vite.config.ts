@@ -52,38 +52,18 @@ export default defineConfig({
   },
   base: '/',
   build: {
-    outDir: 'dist',
+    target: 'es2019',
     sourcemap: false,
-    target: 'esnext', // Ensure modern features stay
-    modulePreload: true,
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000,
+    outDir: 'dist',
     rollupOptions: {
       output: {
-        // Ensure ES modules are properly configured
         format: 'es',
-        // Better chunk splitting to avoid missing assets
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           supabase: ['@supabase/supabase-js'],
           ui: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
           utils: ['clsx', 'class-variance-authority', 'tailwind-merge', 'date-fns']
-        },
-        // Ensure assets are properly named and included
-        assetFileNames: (assetInfo) => {
-          if (!assetInfo.name) return 'assets/[name]-[hash].[ext]'
-          const info = assetInfo.name.split('.')
-          const ext = info[info.length - 1]
-          if (/\.(css)$/.test(assetInfo.name)) {
-            return `assets/css/[name]-[hash].${ext}`
-          }
-          if (/\.(png|jpe?g|gif|svg|ico|webp)$/.test(assetInfo.name)) {
-            return `assets/images/[name]-[hash].${ext}`
-          }
-          return `assets/[name]-[hash].${ext}`
-        },
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js'
+        }
       }
     }
   },
