@@ -4,15 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Content Security Policy - FIXED FOR FONT LOADING -->
+    <!-- Content Security Policy - FIXED FOR FONT LOADING AND SMARTSUPP -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.smartsuppchat.com https://cdn.jsdelivr.net;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com https://cdn.jsdelivr.net;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://fonts.googleapis.com;
       img-src 'self' data: https: blob:;
-      connect-src 'self' https://*.supabase.co https://api.supabase.com wss://*.supabase.co https://www.smartsuppchat.com;
-      frame-src 'self' https://www.smartsuppchat.com;
+      connect-src 'self' https://*.supabase.co https://api.supabase.com wss://*.supabase.co https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com https://*.smartsuppchat.com;
+      frame-src 'self' https://www.smartsuppchat.com https://bootstrap.smartsuppchat.com;
       object-src 'none';
       base-uri 'self';
       form-action 'self';
@@ -64,19 +64,29 @@
       }
     </script>
 
-    <!-- Smartsupp Live Chat script with error handling -->
+    <!-- Smartsupp Live Chat script with enhanced error handling -->
     <script type="text/javascript">
+      // Prevent Smartsupp errors from affecting React
+      window.smartsuppErrors = [];
+      
       var _smartsupp = _smartsupp || {};
       _smartsupp.key = '67805a30e60ab37fa695869a4b94967b14e41dbb';
       
-      // Enhanced Smartsupp loader with error handling
+      // Enhanced Smartsupp loader with comprehensive error handling
       window.smartsupp||(function(d) {
-        var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+        var s,c,o=smartsupp=function(){ 
+          try {
+            o._.push(arguments);
+          } catch (error) {
+            // Silently handle Smartsupp errors to prevent React crashes
+            window.smartsuppErrors.push(error);
+          }
+        };o._=[];
         s=d.getElementsByTagName('script')[0];c=d.createElement('script');
         c.type='text/javascript';c.charset='utf-8';c.async=true;
         c.src='https://www.smartsuppchat.com/loader.js?';
         
-        // Add error handling for script loading
+        // Add comprehensive error handling for script loading
         c.onerror = function() {
           if (window.env && window.env.NODE_ENV === 'development') {
             console.log('🔧 Smartsupp script failed to load, using fallback');
@@ -90,27 +100,51 @@
           }
         };
         
-        s.parentNode.insertBefore(c,s);
+        // Prevent Smartsupp from throwing errors that affect React
+        try {
+          s.parentNode.insertBefore(c,s);
+        } catch (error) {
+          if (window.env && window.env.NODE_ENV === 'development') {
+            console.log('🔧 Smartsupp insertion failed:', error);
+          }
+          window.smartsupp = null;
+        }
       })(document);
       
-      // Global function to open chat with fallback
+      // Global function to open chat with enhanced fallback
       window.openSmartsuppChat = function() {
-        if (window.smartsupp) {
-          try {
+        try {
+          if (window.smartsupp && typeof window.smartsupp === 'function') {
             window.smartsupp('open');
-          } catch (error) {
-            if (window.env && window.env.NODE_ENV === 'development') {
-              console.log('🔧 Smartsupp widget failed, opening direct URL');
-            }
-            window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');
+          } else {
+            throw new Error('Smartsupp not available');
           }
-        } else {
+        } catch (error) {
+          // Log error but don't let it crash the app
           if (window.env && window.env.NODE_ENV === 'development') {
-            console.log('🔧 Smartsupp not available, opening direct URL');
+            console.log('🔧 Smartsupp widget failed, opening direct URL');
           }
-          window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');
+          
+          // Open direct URL as fallback
+          try {
+            window.open('https://widget-page.smartsupp.com/widget/67805a30e60ab37fa695869a4b94967b14e41dbb', '_blank', 'width=400,height=600');
+          } catch (fallbackError) {
+            // Even the fallback failed, but don't crash the app
+            if (window.env && window.env.NODE_ENV === 'development') {
+              console.log('🔧 All Smartsupp fallbacks failed:', fallbackError);
+            }
+          }
         }
       };
+      
+      // Prevent Smartsupp from throwing global errors
+      window.addEventListener('error', function(event) {
+        if (event.filename && event.filename.includes('smartsupp')) {
+          event.preventDefault();
+          window.smartsuppErrors.push(event.error);
+          return false;
+        }
+      });
     </script>
   </head>
 

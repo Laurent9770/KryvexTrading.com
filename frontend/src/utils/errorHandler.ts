@@ -32,12 +32,30 @@ class GlobalErrorHandler {
   private setupGlobalHandlers() {
     // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
+      // Filter out Smartsupp-related errors
+      if (this.isSmartsuppError(event.reason)) {
+        if (import.meta.env.DEV) {
+          console.log('🔧 Ignoring Smartsupp promise rejection:', event.reason);
+        }
+        event.preventDefault();
+        return;
+      }
+      
       this.handleError(event.reason, 'Unhandled Promise Rejection');
       event.preventDefault();
     });
 
     // Handle global errors
     window.addEventListener('error', (event) => {
+      // Filter out Smartsupp-related errors
+      if (this.isSmartsuppError(event.error || event.message)) {
+        if (import.meta.env.DEV) {
+          console.log('🔧 Ignoring Smartsupp error:', event.error || event.message);
+        }
+        event.preventDefault();
+        return;
+      }
+      
       this.handleError(event.error || new Error(event.message), 'Global Error');
       event.preventDefault();
     });
@@ -111,6 +129,23 @@ class GlobalErrorHandler {
     if (this.config.enableErrorReporting) {
       this.reportError(error, context);
     }
+  }
+
+  private isSmartsuppError(error: any): boolean {
+    if (!error) return false;
+    
+    const errorMessage = typeof error === 'string' ? error : error.message || '';
+    const errorStack = error.stack || '';
+    const errorSource = error.filename || '';
+    
+    return (
+      errorMessage.toLowerCase().includes('smartsupp') ||
+      errorMessage.toLowerCase().includes('bootstrap.smartsuppchat.com') ||
+      errorStack.toLowerCase().includes('smartsupp') ||
+      errorSource.toLowerCase().includes('smartsupp') ||
+      errorMessage.includes('Request failed with status 0') ||
+      errorMessage.includes('CSP Violation') && errorMessage.includes('smartsupp')
+    );
   }
 
   private handleCSPViolation(event: SecurityPolicyViolationEvent) {
