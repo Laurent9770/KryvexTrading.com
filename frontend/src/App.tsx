@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import SupabaseErrorBoundary from '@/components/SupabaseErrorBoundary';
 import SafeComponent from '@/components/SafeComponent';
 import NavbarLayout from '@/layouts/NavbarLayout';
