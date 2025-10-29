@@ -35,12 +35,22 @@ class SupabaseErrorBoundary extends Component<Props, State> {
     const isSupabaseError = this.isSupabaseError(error);
     
     if (isSupabaseError) {
-      logger.error('Supabase Error caught by boundary:', error);
-      logger.error('Error stack:', error.stack);
-      logger.error('Component stack:', errorInfo.componentStack);
+      // Limit noisy logging to development for clearer production consoles
+      if (import.meta && import.meta.env && import.meta.env.DEV) {
+        logger.error('Supabase Error caught by boundary:', error);
+        logger.error('Error stack:', error.stack);
+        logger.error('Component stack:', errorInfo.componentStack);
+      } else {
+        // Keep a single concise error entry in production
+        logger.error('Supabase Error caught by boundary:', error.message);
+      }
     } else {
-      // Re-throw non-Supabase errors to parent error boundaries
-      throw error;
+      // Re-throw non-Supabase errors to parent error boundaries in development
+      // to aid debugging. In production, capture and render a generic fallback
+      // to avoid duplicate console noise from multiple boundaries.
+      if (import.meta && import.meta.env && import.meta.env.DEV) {
+        throw error;
+      }
     }
 
     this.setState({
