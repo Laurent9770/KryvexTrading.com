@@ -168,3 +168,95 @@ export async function getAdminActions(limit = 100) {
 
   return data || [];
 }
+
+// =============================================
+// Backwards-compat adminWalletService API (used by UI components)
+// Provides a simple default-exported facade that the UI expects.
+// Where possible, these methods can be wired to real RPCs later.
+// =============================================
+
+// Types expected by components
+export interface AdminWalletTransactionParams {
+  target_user_email: string;
+  amount: number;
+  currency: string;
+  wallet_type: 'funding' | 'trading';
+  description?: string;
+  admin_notes?: string;
+}
+
+export interface UserWalletBalance {
+  email: string;
+  full_name?: string | null;
+  account_balance: number;
+  total_balance_usd: number;
+  last_updated: string;
+  wallets: Array<{
+    wallet_type: 'funding' | 'trading';
+    asset: string;
+    balance: number;
+  }>;
+}
+
+export interface UserTransactionHistory {
+  transactions: Array<{
+    id: string;
+    description: string;
+    transaction_type: 'deposit' | 'withdrawal' | 'transfer' | 'adjustment';
+    amount: number;
+    currency: string;
+    created_at: string;
+  }>;
+}
+
+// Minimal facade implementation with safe defaults so builds do not fail.
+// These can be replaced with real implementations as needed.
+const adminWalletService = {
+  async getSystemStats(): Promise<{ totalUsers: number; totalBalance: number; recentTransactions: any[]; lastUpdated: string; }> {
+    return {
+      totalUsers: 0,
+      totalBalance: 0,
+      recentTransactions: [],
+      lastUpdated: new Date().toISOString(),
+    };
+  },
+
+  async sendMoneyToUser(params: AdminWalletTransactionParams): Promise<{ target_user_email: string; amount: number; currency: string; }> {
+    // Placeholder: integrate with RPC or service layer when available
+    console.log('Admin sendMoneyToUser (simulation):', params);
+    return {
+      target_user_email: params.target_user_email,
+      amount: params.amount,
+      currency: params.currency,
+    };
+  },
+
+  async deductMoneyFromUser(params: AdminWalletTransactionParams): Promise<{ target_user_email: string; amount: number; currency: string; }> {
+    console.log('Admin deductMoneyFromUser (simulation):', params);
+    return {
+      target_user_email: params.target_user_email,
+      amount: params.amount,
+      currency: params.currency,
+    };
+  },
+
+  async getUserWalletBalance(email: string): Promise<UserWalletBalance> {
+    return {
+      email,
+      full_name: null,
+      account_balance: 0,
+      total_balance_usd: 0,
+      last_updated: new Date().toISOString(),
+      wallets: [],
+    };
+  },
+
+  async getUserTransactionHistory(email: string, limit = 10, offset = 0): Promise<UserTransactionHistory> {
+    void email; void limit; void offset;
+    return {
+      transactions: [],
+    };
+  },
+};
+
+export default adminWalletService;
