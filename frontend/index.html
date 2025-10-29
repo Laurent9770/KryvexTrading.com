@@ -70,16 +70,22 @@
       }
     </script>
 
-    <!-- Smartsupp Live Chat script with enhanced error handling -->
+    <!-- Smartsupp Live Chat script with enhanced error handling (feature-flagged) -->
     <script type="text/javascript">
       // Prevent Smartsupp errors from affecting React
       window.smartsuppErrors = [];
       
-      var _smartsupp = _smartsupp || {};
-      _smartsupp.key = '67805a30e60ab37fa695869a4b94967b14e41dbb';
+      // Only enable Smartsupp when explicitly allowed. This prevents 403/blocked
+      // requests from causing user-visible errors in production when the
+      // domain is not whitelisted on Smartsupp.
+      var enableSmartsupp = (window.env && window.env.ENABLE_SMARTSUPP === 'true');
       
-      // Enhanced Smartsupp loader with comprehensive error handling
-      window.smartsupp||(function(d) {
+      if (enableSmartsupp) {
+        var _smartsupp = _smartsupp || {};
+        _smartsupp.key = '67805a30e60ab37fa695869a4b94967b14e41dbb';
+        
+        // Enhanced Smartsupp loader with comprehensive error handling
+        window.smartsupp||(function(d) {
         var s,c,o=smartsupp=function(){ 
           try {
             o._.push(arguments);
@@ -115,7 +121,16 @@
           }
           window.smartsupp = null;
         }
-      })(document);
+        })(document);
+      } else {
+        // Ensure globals exist but do nothing when disabled
+        window.smartsupp = null;
+        window.openSmartsuppChat = function() {
+          if (window.env && window.env.NODE_ENV === 'development') {
+            console.log('Smartsupp disabled via feature flag');
+          }
+        };
+      }
       
       // Global function to open chat with enhanced fallback
       window.openSmartsuppChat = function() {
