@@ -37,12 +37,18 @@ class GlobalErrorHandler {
         if (import.meta.env.DEV) {
           console.log('🔧 Ignoring Smartsupp promise rejection:', event.reason);
         }
-        event.preventDefault();
+        // Avoid altering default behavior in production to reduce noise
+        if (import.meta.env.DEV) {
+          event.preventDefault();
+        }
         return;
       }
       
       this.handleError(event.reason, 'Unhandled Promise Rejection');
-      event.preventDefault();
+      // Only prevent default in development so we still see full traces locally
+      if (import.meta.env.DEV) {
+        event.preventDefault();
+      }
     });
 
     // Handle global errors
@@ -52,16 +58,20 @@ class GlobalErrorHandler {
         if (import.meta.env.DEV) {
           console.log('🔧 Ignoring Smartsupp error:', event.error || event.message);
         }
-        event.preventDefault();
+        if (import.meta.env.DEV) {
+          event.preventDefault();
+        }
         return;
       }
       
       this.handleError(event.error || new Error(event.message), 'Global Error');
-      event.preventDefault();
+      if (import.meta.env.DEV) {
+        event.preventDefault();
+      }
     });
 
     // Handle React errors (if React is available)
-    if (typeof window !== 'undefined' && (window as any).React) {
+    if (import.meta.env.DEV && typeof window !== 'undefined' && (window as any).React) {
       const originalConsoleError = console.error;
       console.error = (...args) => {
         // Check for React error patterns
